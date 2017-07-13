@@ -4,7 +4,7 @@
 # BUILD: docker build --rm -t mrmaksimize/airflow .
 # SOURCE: https://github.com/mrmaksimize/airflow
 
-FROM debian:jessie
+FROM debian:latest
 MAINTAINER mrmaksimize
 
 # Never prompts the user for choices on installation/configuration of packages
@@ -25,7 +25,7 @@ ENV LC_ALL  en_US.UTF-8
 ENV LC_ALL=C
 
 # GDAL data env
-ENV GDAL_DATA /usr/share/gdal
+ENV GDAL_DATA /usr/share/gdal/2.1
 
 # Oracle Essentials
 ENV ORACLE_HOME /opt/oracle
@@ -57,6 +57,7 @@ RUN set -ex \
         libfreetype6-dev \
         libxml2-dev \
         libxslt-dev \
+        gnupg2 \
     ' \
     && echo "deb http://http.debian.net/debian jessie-backports main" >/etc/apt/sources.list.d/backports.list \
     && apt-get clean -yqq \
@@ -86,6 +87,7 @@ RUN set -ex \
     && apt-get install -y nodejs \
     && npm install -g mapshaper \
     && npm install -g turf-cli \
+    && npm install -g geobuf \
     #&& apt-get install -yqq --no-install-recommends \
     #    r-base \
     #    r-recommended \
