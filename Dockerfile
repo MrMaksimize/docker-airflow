@@ -33,6 +33,7 @@ ENV ARCH x86_64
 ENV DYLD_LIBRARY_PATH /opt/oracle
 ENV LD_LIBRARY_PATH /opt/oracle
 
+# Debian packages and libraries
 RUN set -ex \
     && buildDeps=' \
         python-dev \
@@ -58,6 +59,8 @@ RUN set -ex \
         libxml2-dev \
         libxslt-dev \
         gnupg2 \
+        libsqlite3-dev \
+        zlib1g-dev \
     ' \
     && echo "deb http://http.debian.net/debian jessie-backports main" >/etc/apt/sources.list.d/backports.list \
     && apt-get clean -yqq \
@@ -82,28 +85,32 @@ RUN set -ex \
         wget \
         gdal-bin \
         sqlite3 \
-    && apt-get install -yqq -t jessie-backports python-requests libpq-dev \
-    && curl -sL https://deb.nodesource.com/setup_7.x | bash - \
+    && apt-get install -yqq -t jessie-backports python-requests libpq-dev
+
+#Locales
+RUN sed -i 's/^# en_US.UTF-8 UTF-8$/en_US.UTF-8 UTF-8/g' /etc/locale.gen \
+    && locale-gen \
+    && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
+    && useradd -ms /bin/bash -d ${AIRFLOW_HOME} airflow
+
+# Tippecanoe
+WORKDIR /tmp
+RUN git clone https://github.com/mapbox/tippecanoe.git \
+    && cd ./tippecanoe \
+    && make \
+    && make install
+WORKDIR {AIRFLOW_HOME}
+
+# NodeJS packages
+RUN curl -sL https://deb.nodesource.com/setup_7.x | bash - \
     && apt-get install -y nodejs \
     && npm install -g mapshaper \
     && npm install -g turf-cli \
     && npm install -g geobuf \
-    #&& apt-get install -yqq --no-install-recommends \
-    #    r-base \
-    #    r-recommended \
-    #    littler \
-    #&& echo 'options(repos = c(CRAN = "https://cran.rstudio.com/"), download.file.method = "libcurl")' >> /etc/R/Rprofile.site \
-    #&& echo 'source("/etc/R/Rprofile.site")' >> /etc/littler.r \
-    #&& ln -s /usr/share/doc/littler/examples/install.r /usr/local/bin/install.r \
-    #&& ln -s /usr/share/doc/littler/examples/install2.r /usr/local/bin/install2.r \
-    #&& ln -s /usr/share/doc/littler/examples/installGithub.r /usr/local/bin/installGithub.r \
-    #&& ln -s /usr/share/doc/littler/examples/testInstalled.r /usr/local/bin/testInstalled.r \
-    #&& install.r docopt \
-    && sed -i 's/^# en_US.UTF-8 UTF-8$/en_US.UTF-8 UTF-8/g' /etc/locale.gen \
-    && locale-gen \
-    && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
-    && useradd -ms /bin/bash -d ${AIRFLOW_HOME} airflow \
-    && pip install -U pip \
+    && npm install -g @mapbox/mapbox-tile-copy
+
+# Python packages
+RUN pip install -U pip \
     && pip install Cython \
     && pip install packaging \
     && pip install appdirs \
@@ -140,9 +147,10 @@ RUN set -ex \
     && pip install requests==2.13.0 \
     && pip install PyGithub==1.32 \
     && pip install keen==0.3.31 \
-    && pip install airflow[celery,postgres,hive,slack,jdbc,s3,crypto,jdbc]==$AIRFLOW_VERSION \
-    #&& apt-get remove --purge -yqq $buildDeps libpq-dev \
-    && apt-get clean \
+    && pip install airflow[celery,postgres,hive,slack,jdbc,s3,crypto,jdbc]==$AIRFLOW_VERSION
+
+# Cleaning & setup
+RUN apt-get clean \
     && rm -rf \
         /var/lib/apt/lists/* \
         /tmp/* \
