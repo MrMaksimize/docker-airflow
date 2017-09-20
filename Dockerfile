@@ -70,6 +70,7 @@ RUN set -ex \
         git \
         netcat \
         locales \
+        mdbtools \
         cython \
         python-numpy \
         python-gdal \
