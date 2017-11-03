@@ -89,7 +89,7 @@ def command_jupyter(args):
     url = "http://127.0.0.1:{0}".format(port)
     c_call = "docker exec -itd dockerairflow_{0}".format(CONTAINERS['webserver'])
     jupyter_pkill = "".join([
-        c_call, 
+        c_call,
         " pkill -f jupyter"
     ])
     jupyter_exec = "".join([
@@ -231,17 +231,17 @@ def build_argparser():
     setup_parser.set_defaults(func=command_setup)
 
     ssh_parser = subparsers.add_parser('ssh', help='connect to a specified container')
-    ssh_parser.add_argument('container', help="".join([
-        "Container to ssh into. Valid values: ",
-        CONTAINERS.keys()
-    ]))
+    ssh_parser.add_argument(
+        'container',
+        help="".join(
+            ["Container to ssh into. Valid values: ".join(CONTAINERS.keys())]))
 
     ssh_parser.set_defaults(func=command_ssh)
 
     docker_commands_help = 'Executes docker-compose {0} for a specified executor'
     docker_commands_arg_help = "".join([
-        "Specifies which docker-compose file to use. Valid values: ",
-        EXECUTORS.keys()
+        "Specifies which docker-compose file to use. Valid values: ".join(
+            EXECUTORS.keys())
     ])
 
     down_parser = subparsers.add_parser('down', help=docker_commands_help.format('down'))
