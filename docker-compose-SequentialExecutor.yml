@@ -34,16 +34,5 @@ services:
             - "8080:8080"
             - "8888:8888"
             - "9999:9999"
-        links:
-            - fmeengine:fmeengine
         entrypoint: /usr/local/airflow/poseidon/custom_entrypoint.sh
         command: webserver
-    fmeengine:
-        image: safesoftware/fme-engine-2017:latest
-        restart: always
-        volumes:
-            - ${PATH_PREFIX}/poseidon:/poseidon
-            - ${PATH_PREFIX}/poseidon/data:/data
-            - ${PATH_PREFIX}/poseidon/logs:/fmeengine/logs
-        ports:
-            - "7777:7777"
