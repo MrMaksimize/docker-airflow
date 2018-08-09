@@ -86,8 +86,8 @@ def command_down(args):
 
 def command_jupyter(args):
     port = "8888"
-    url = "http://127.0.0.1:{0}".format(port)
-    c_call = "docker exec -itd dockerairflow_{0}".format(CONTAINERS['webserver'])
+    url = "http://127.0.0.1:{}".format(port)
+    c_call = "docker exec -itd docker-airflow_{0}".format(CONTAINERS['webserver'])
     jupyter_pkill = "".join([
         c_call,
         " pkill -f jupyter"
@@ -95,7 +95,7 @@ def command_jupyter(args):
     jupyter_exec = "".join([
         c_call,
         " jupyter notebook --no-browser ",
-        "--port {1} ".format(port),
+        "--port {} ".format(port),
         "--ip=0.0.0.0 ",
         "--NotebookApp.token=''"
     ])
