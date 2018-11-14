@@ -6,6 +6,18 @@ services:
             - POSTGRES_USER=${AIRFLOW_DB_USER}
             - POSTGRES_PASSWORD=${AIRFLOW_DB_PASS}
             - POSTGRES_DB=airflow
+    mysql:
+        image: mysql
+        command: --default-authentication-plugin=mysql_native_password
+        restart: always
+        ports:
+            - "3306:3306"
+        environment:
+            - MYSQL_ROOT_PASSWORD=${AIRFLOW_DB_PASS}
+            - MYSQL_DATABASE=vpm_temp
+            - MYSQL_USER=${AIRFLOW_DB_USER}
+            - MYSQL_PASSWORD=${AIRFLOW_DB_PASS}
+
     webserver:
         image: mrmaksimize/airflow:latest
         restart: always
@@ -15,6 +27,7 @@ services:
             #- ${PATH_PREFIX}/poseidon/logs:/usr/local/airflow/logs
         depends_on:
             - postgres
+            - mysql
         environment:
             - LOAD_EX=n
             - FERNET_KEY=9IoTgQ_EJ0hCsamBU3Mctc7F9OkODnndOKCwkwXCAA
@@ -34,5 +47,8 @@ services:
             - "8080:8080"
             - "8888:8888"
             - "9999:9999"
+        links:
+            - postgres:postgres
+            - mysql:mysql
         entrypoint: /usr/local/airflow/poseidon/custom_entrypoint.sh
         command: webserver
