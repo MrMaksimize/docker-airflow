@@ -15,8 +15,6 @@ services:
         environment:
             - MYSQL_ROOT_PASSWORD=${AIRFLOW_DB_PASS}
             - MYSQL_DATABASE=vpm_temp
-            - MYSQL_USER=${AIRFLOW_DB_USER}
-            - MYSQL_PASSWORD=${AIRFLOW_DB_PASS}
 
     webserver:
         image: mrmaksimize/airflow:latest
@@ -41,6 +39,7 @@ services:
             - AIRFLOW__CELERY__BROKER_URL=amqp://${AIRFLOW_RMQ_USER}:${AIRFLOW_RMQ_PASS}@rabbitmq:5672/airflow
             - AIRFLOW__CELERY__CELERY_RESULT_BACKEND=amqp://${AIRFLOW_RMQ_USER}:${AIRFLOW_RMQ_PASS}@rabbitmq:5672/airflow
             - AIRFLOW_CONN_AIRFLOW_DB=sqlite:////usr/local/airflow/airflow.db
+            - AIRFLOW_CONN_VPM_TEMP=mysql+mysqldb://root:${AIRFLOW_DB_PASS}@mysql:3306/vpm_temp
         env_file:
             - ${PATH_PREFIX}/poseidon/${ENV_FILE}
         ports:
