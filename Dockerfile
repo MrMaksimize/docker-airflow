@@ -119,6 +119,7 @@ RUN pip install -U pip \
     && pip install ndg-httpsclient \
     && pip install pyasn1 \
     && pip install psycopg2 \
+    && pip install mysql-python \
     && pip install requests \
     && pip install logging \
     && pip install boto3 \
