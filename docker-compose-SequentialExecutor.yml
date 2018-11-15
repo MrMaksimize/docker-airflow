@@ -22,7 +22,6 @@ services:
         volumes:
             - ${PATH_PREFIX}/poseidon:/usr/local/airflow/poseidon
             - ${PATH_PREFIX}/poseidon/data:/data
-            #- ${PATH_PREFIX}/poseidon/logs:/usr/local/airflow/logs
         depends_on:
             - postgres
             - mysql
