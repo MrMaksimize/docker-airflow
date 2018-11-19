@@ -6,15 +6,25 @@ services:
             - POSTGRES_USER=${AIRFLOW_DB_USER}
             - POSTGRES_PASSWORD=${AIRFLOW_DB_PASS}
             - POSTGRES_DB=airflow
+    mysql:
+        image: mysql
+        command: --default-authentication-plugin=mysql_native_password
+        restart: always
+        ports:
+            - "3306:3306"
+        environment:
+            - MYSQL_ROOT_PASSWORD=${AIRFLOW_DB_PASS}
+            - MYSQL_DATABASE=vpm_temp
+
     webserver:
         image: mrmaksimize/airflow:latest
         restart: always
         volumes:
             - ${PATH_PREFIX}/poseidon:/usr/local/airflow/poseidon
             - ${PATH_PREFIX}/poseidon/data:/data
-            #- ${PATH_PREFIX}/poseidon/logs:/usr/local/airflow/logs
         depends_on:
             - postgres
+            - mysql
         environment:
             - LOAD_EX=n
             - FERNET_KEY=9IoTgQ_EJ0hCsamBU3Mctc7F9OkODnndOKCwkwXCAA
@@ -28,11 +38,15 @@ services:
             - AIRFLOW__CELERY__BROKER_URL=amqp://${AIRFLOW_RMQ_USER}:${AIRFLOW_RMQ_PASS}@rabbitmq:5672/airflow
             - AIRFLOW__CELERY__CELERY_RESULT_BACKEND=amqp://${AIRFLOW_RMQ_USER}:${AIRFLOW_RMQ_PASS}@rabbitmq:5672/airflow
             - AIRFLOW_CONN_AIRFLOW_DB=sqlite:////usr/local/airflow/airflow.db
+            - AIRFLOW_CONN_VPM_TEMP=mysql+mysqldb://root:${AIRFLOW_DB_PASS}@mysql:3306/vpm_temp
         env_file:
             - ${PATH_PREFIX}/poseidon/${ENV_FILE}
         ports:
             - "8080:8080"
             - "8888:8888"
             - "9999:9999"
+        links:
+            - postgres:postgres
+            - mysql:mysql
         entrypoint: /usr/local/airflow/poseidon/custom_entrypoint.sh
         command: webserver

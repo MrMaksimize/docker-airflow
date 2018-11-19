@@ -22,6 +22,18 @@ services:
         volumes:
             - ${PATH_PREFIX}/poseidon/db/data:/var/lib/postgresql/data
 
+
+    mysql:
+        image: mysql
+        command: --default-authentication-plugin=mysql_native_password
+        restart: always
+        ports:
+            - "3306:3306"
+        environment:
+            - MYSQL_ROOT_PASSWORD=${AIRFLOW_DB_PASS}
+            - MYSQL_DATABASE=vpm_temp
+
+
     webserver:
         image: mrmaksimize/airflow:latest
         restart: always
@@ -32,6 +44,7 @@ services:
         depends_on:
             - postgres
             - rabbitmq
+            - mysql
         environment:
             - LOAD_EX=n
             - FERNET_KEY=9IoTgQ_EJ0hCsamBU3Mctc7F9OkODnndOKCwkwXCAA
@@ -45,12 +58,14 @@ services:
             - AIRFLOW__CELERY__BROKER_URL=amqp://${AIRFLOW_RMQ_USER}:${AIRFLOW_RMQ_PASS}@rabbitmq:5672/airflow
             - AIRFLOW__CELERY__CELERY_RESULT_BACKEND=amqp://${AIRFLOW_RMQ_USER}:${AIRFLOW_RMQ_PASS}@rabbitmq:5672/airflow
             - AIRFLOW_CONN_AIRFLOW_DB=postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASS}@postgres/airflow
+            - AIRFLOW_CONN_VPM_TEMP=mysql+mysqldb://root:${AIRFLOW_DB_PASS}@mysql:3306/vpm_temp
         env_file:
             - ${PATH_PREFIX}/poseidon/${ENV_FILE}
         ports:
             - "8080:8080"
         links:
             - postgres:postgres
+            - mysql:mysql
             - fmeengine:fmeengine
         entrypoint: /usr/local/airflow/poseidon/custom_entrypoint.sh
         command: webserver
@@ -75,6 +90,7 @@ services:
             - AIRFLOW__CELERY__BROKER_URL=amqp://${AIRFLOW_RMQ_USER}:${AIRFLOW_RMQ_PASS}@rabbitmq:5672/airflow
             - AIRFLOW__CELERY__CELERY_RESULT_BACKEND=amqp://${AIRFLOW_RMQ_USER}:${AIRFLOW_RMQ_PASS}@rabbitmq:5672/airflow
             - AIRFLOW_CONN_AIRFLOW_DB=postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASS}@postgres/airflow
+            - AIRFLOW_CONN_VPM_TEMP=mysql+mysqldb://root:${AIRFLOW_DB_PASS}@mysql:3306/vpm_temp
         env_file:
             - ${PATH_PREFIX}/poseidon/${ENV_FILE}
         ports:
@@ -106,9 +122,11 @@ services:
             - AIRFLOW__CELERY__BROKER_URL=amqp://${AIRFLOW_RMQ_USER}:${AIRFLOW_RMQ_PASS}@rabbitmq:5672/airflow
             - AIRFLOW__CELERY__CELERY_RESULT_BACKEND=amqp://${AIRFLOW_RMQ_USER}:${AIRFLOW_RMQ_PASS}@rabbitmq:5672/airflow
             - AIRFLOW_CONN_AIRFLOW_DB=postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASS}@postgres/airflow
+            - AIRFLOW_CONN_VPM_TEMP=mysql+mysqldb://root:${AIRFLOW_DB_PASS}@mysql:3306/vpm_temp
         env_file:
             - ${PATH_PREFIX}/poseidon/${ENV_FILE}
         links:
+            - mysql:mysql
             - fmeengine:fmeengine
         entrypoint: /usr/local/airflow/poseidon/custom_entrypoint.sh
         command: scheduler -n 1
@@ -135,9 +153,11 @@ services:
             - AIRFLOW__CELERY__BROKER_URL=amqp://${AIRFLOW_RMQ_USER}:${AIRFLOW_RMQ_PASS}@rabbitmq:5672/airflow
             - AIRFLOW__CELERY__CELERY_RESULT_BACKEND=amqp://${AIRFLOW_RMQ_USER}:${AIRFLOW_RMQ_PASS}@rabbitmq:5672/airflow
             - AIRFLOW_CONN_AIRFLOW_DB=postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASS}@postgres/airflow
+            - AIRFLOW_CONN_VPM_TEMP=mysql+mysqldb://root:${AIRFLOW_DB_PASS}@mysql:3306/vpm_temp
         env_file:
             - ${PATH_PREFIX}/poseidon/${ENV_FILE}
         links:
+            - mysql:mysql
             - fmeengine:fmeengine
         entrypoint: /usr/local/airflow/poseidon/custom_entrypoint.sh
         command: worker
