@@ -1,0 +1,62 @@
+version: '2.1'
+services:
+    postgres:
+        image: postgres:9.6
+        environment:
+            - POSTGRES_USER=${AIRFLOW_DB_USER}
+            - POSTGRES_PASSWORD=${AIRFLOW_DB_PASS}
+            - POSTGRES_DB=airflow
+            - PGDATA=/var/lib/postgresql/data/pgdata
+        ports:
+            - "5432:5432"
+        volumes:
+            - ${PATH_PREFIX}/poseidon/db/data/pgdata:/var/lib/postgresql/data/pgdata
+
+ #    mysql:
+ #        image: mysql
+ #        command: --default-authentication-plugin=mysql_native_password
+ #        restart: always
+ #        ports:
+ #            - "3306:3306"
+ #        environment:
+ #            - MYSQL_ROOT_PASSWORD=${AIRFLOW_DB_PASS}
+ #            - MYSQL_DATABASE=vpm_temp
+
+    webserver:
+        image: mrmaksimize/docker-airflow:1.10.1
+        restart: always
+        volumes:
+            - ${PATH_PREFIX}/poseidon:/usr/local/airflow/poseidon
+            - ${PATH_PREFIX}/poseidon/data:/data
+              #- ./dags:/usr/local/airflow/dags
+              # - ./plugins:/usr/local/airflow/plugins
+              #        depends_on:
+              #            - postgres
+        environment:
+            - LOAD_EX=n
+            - EXECUTOR=Local
+            - FERNET_KEY=9IoTgQ_EJ0hCsamBU3Mctc7F9OkODnndOKCwkwXCAA
+            - AIRFLOW_HOME=/usr/local/airflow
+            - AIRFLOW_DB_USER=${AIRFLOW_DB_USER}
+            - AIRFLOW_DB_PASS=${AIRFLOW_DB_PASS}
+            - AIRFLOW_RMQ_USER=${AIRFLOW_RMQ_USER}
+            - AIRFLOW_RMQ_PASS=${AIRFLOW_RMQ_PASS}
+            - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASS}@postgres/airflow
+            - AIRFLOW__CELERY__BROKER_URL=amqp://${AIRFLOW_RMQ_USER}:${AIRFLOW_RMQ_PASS}@rabbitmq:5672/airflow
+            - AIRFLOW__CELERY__CELERY_RESULT_BACKEND=amqp://${AIRFLOW_RMQ_USER}:${AIRFLOW_RMQ_PASS}@rabbitmq:5672/airflow
+            - AIRFLOW_CONN_AIRFLOW_DB=postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASS}@postgres/airflow
+            - AIRFLOW_CONN_VPM_TEMP=mysql+mysqldb://root:${AIRFLOW_DB_PASS}@mysql:3306/vpm_temp
+        env_file:
+            - ${PATH_PREFIX}/poseidon/${ENV_FILE}
+        ports:
+            - "8080:8080"
+        links:
+            - postgres:postgres
+        entrypoint: /usr/local/airflow/poseidon/custom_entrypoint.sh
+        command: webserver
+        healthcheck:
+            test: ["CMD-SHELL", "[ -f /usr/local/airflow/airflow-webserver.pid ]"]
+            interval: 30s
+            timeout: 30s
+            retries: 3
+
