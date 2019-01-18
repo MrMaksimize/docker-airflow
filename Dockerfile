@@ -44,7 +44,7 @@ RUN set -ex \
         libpq-dev \
         git \
     ' \
-    && additions='
+    && additions=' \
         #python-dev \
         #build-essential \
         #libcurl4-gnutls-dev \
@@ -107,47 +107,47 @@ RUN sed -i 's/^# en_US.UTF-8 UTF-8$/en_US.UTF-8 UTF-8/g' /etc/locale.gen \
     && useradd -ms /bin/bash -d ${AIRFLOW_HOME} airflow
 
 # NodeJS packages
-RUN curl -sL https://deb.nodesource.com/setup_7.x | bash - \
+RUN curl -sL https://deb.nodesource.com/setup_10.x | bash - \
     && apt-get install -y nodejs \
-    #&& npm install -g mapshaper \
-    #&& npm install -g turf-cli \
-    #&& npm install -g geobuf \
-    #&& npm install -g @mapbox/mapbox-tile-copy
+    && npm install -g mapshaper \
+    && npm install -g geobuf
 
 RUN pip install -U pip setuptools wheel \
     && pip install pytz \
     && pip install pyOpenSSL \
     && pip install ndg-httpsclient \
     && pip install pyasn1 \
+    && pip install git+https://github.com/jguthmiller/pygeobuf.git@geobuf-v3 \
     ## Additions
     #&& pip install Cython \
     #&& pip install packaging \
     #&& pip install appdirs \
     ##&& pip install pytz==2015.7 \
-    #&& pip install psycopg2 \
+    && pip install psycopg2 \
     #&& pip install mysql-python \
-    #&& pip install requests \
+    && pip install requests \
     #&& pip install logging \
-    #&& pip install boto3 \
-    #&& pip install geojson \
+    && pip install boto3 \
+    && pip install boto \
+    && pip install geojson \
     #&& pip install httplib2 \
-    #&& pip install pymssql \
+    && pip install pymssql \
     && pip install pandas \
     && pip install xlrd \
     #&& pip install autodoc==0.3 \
     #&& pip install Sphinx==1.5.1 \
     #&& pip install celery==4.0.2 \
     #&& pip install beautifulsoup4==4.5.3 \
-    && pip install lxml==3.7.3 \
+    && pip install lxml \
     #&& pip install ipython==5.3.0 \
     #&& pip install jupyter \
     #&& pip install password \
     #&& pip install Flask-Bcrypt \
-    #&& pip install geomet==0.1.1 \
+    && pip install geomet \
     #&& pip install geopy==1.11 \
     #&& pip install rtree \
-    #&& pip install shapely \
-    #&& pip install fiona \
+    && pip install shapely \
+    && pip install fiona \
     #&& pip install descartes \
     #&& pip install pyproj \
     && pip install geopandas \

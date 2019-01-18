@@ -5,8 +5,8 @@ services:
         ports:
             - "5432:5432"
         environment:
-            - POSTGRES_USER=${AIRFLOW_DB_USER}
-            - POSTGRES_PASSWORD=${AIRFLOW_DB_PASS}
+            - POSTGRES_USER=airmaster
+            - POSTGRES_PASSWORD=airmasterPass
             - POSTGRES_DB=airflow
             # Uncomment these lines to persist data on the local filesystem.
             #     - PGDATA=/var/lib/postgresql/data/pgdata
@@ -26,8 +26,8 @@ services:
             - AIRFLOW_HOME=/usr/local/airflow
             - EXECUTOR=Sequential
             - FERNET_KEY=9IoTgQ_EJ0hCsamBU3Mctc7F9OkODnndOKCwkwXCAA
-            - AIRFLOW_DB_USER=${AIRFLOW_DB_USER}
-            - AIRFLOW_DB_PASS=${AIRFLOW_DB_PASS}
+            - AIRFLOW_DB_USER=airmaster
+            - AIRFLOW_DB_PASS=airmasterPass
         env_file:
             - ${PATH_PREFIX}/poseidon/${ENV_FILE}
         ports:
