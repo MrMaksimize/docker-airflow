@@ -18,7 +18,7 @@ services:
         restart: always
         volumes:
             - ./dags:/usr/local/airflow/poseidon
-            - ./data:/data
+            - ./dags/data:/data
         environment:
             - LOAD_EX=n
             - AIRFLOW_HOME=/usr/local/airflow
