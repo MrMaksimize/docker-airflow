@@ -25,5 +25,5 @@ sftp-config.json
 # Python
 __pycache__
 oracle.zip
-.env
+*.env
 

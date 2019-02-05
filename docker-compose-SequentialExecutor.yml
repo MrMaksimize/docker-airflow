@@ -1,36 +1,35 @@
 version: '2.1'
 services:
-    postgres:
-        image: postgres:9.6
-        ports:
-            - "5432:5432"
-        environment:
-            - POSTGRES_USER=airmaster
-            - POSTGRES_PASSWORD=airmasterPass
-            - POSTGRES_DB=airflow
-            # Uncomment these lines to persist data on the local filesystem.
-            #     - PGDATA=/var/lib/postgresql/data/pgdata
-            # volumes:
-            #     - ./pgdata:/var/lib/postgresql/data/pgdata
+  ##postgres:
+  #      image: postgres:9.6
+  #      ports:
+  #          - "5432:5432"
+  #      environment:
+  #          - POSTGRES_USER=airmaster
+  #          - POSTGRES_PASSWORD=airmasterPass
+  #          - POSTGRES_DB=airflow
+  #          # Uncomment these lines to persist data on the local filesystem.
+  #          #     - PGDATA=/var/lib/postgresql/data/pgdata
+  #          # volumes:
+  #          #     - ./pgdata:/var/lib/postgresql/data/pgdata
 
     webserver:
-        image: mrmaksimize/docker-airflow:1.10.1
+        image: mrmaksimize/docker-airflow:1.10.2
         restart: always
         volumes:
-            - ${PATH_PREFIX}/poseidon:/usr/local/airflow/poseidon
-            - ${PATH_PREFIX}/poseidon/data:/data
-        depends_on:
-            - postgres
+            - ./dags:/usr/local/airflow/poseidon
+            - ./data:/data
         environment:
             - LOAD_EX=n
             - AIRFLOW_HOME=/usr/local/airflow
             - EXECUTOR=Sequential
-            - FERNET_KEY=9IoTgQ_EJ0hCsamBU3Mctc7F9OkODnndOKCwkwXCAA
-            - AIRFLOW_DB_USER=airmaster
-            - AIRFLOW_DB_PASS=airmasterPass
         env_file:
-            - ${PATH_PREFIX}/poseidon/${ENV_FILE}
+            - ./${ENV_FILE}
         ports:
             - "8080:8080"
-        entrypoint: /usr/local/airflow/poseidon/custom_entrypoint.sh
         command: webserver
+        healthcheck:
+            test: ["CMD-SHELL", "[ -f /usr/local/airflow/airflow-webserver.pid ]"]
+            interval: 30s
+            timeout: 30s
+            retries: 3
