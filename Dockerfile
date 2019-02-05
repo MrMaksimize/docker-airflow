@@ -1,4 +1,4 @@
-# VERSION 1.10.1
+# VERSION 1.10.2
 # AUTHOR: Maksim Pecherskiy
 # DESCRIPTION: Airflow container for running City of San Diego Airflow Instances.  Original work by Puckel_
 # BUILD: docker build --rm -t mrmaksimize/docker-airflow .
@@ -13,10 +13,8 @@ ENV DEBIAN_FRONTEND noninteractive
 ENV TERM linux
 
 # Airflow
-ARG AIRFLOW_VERSION=1.10.1
+ARG AIRFLOW_VERSION=1.10.2
 ARG AIRFLOW_HOME=/usr/local/airflow
-ARG AIRFLOW_DEPS=""
-ARG PYTHON_DEPS=""
 ENV AIRFLOW_GPL_UNIDECODE yes
 
 # Define en_US.
@@ -154,10 +152,8 @@ RUN pip install -U pip setuptools wheel \
     #&& pip install requests==2.13.0 \
     && pip install PyGithub \
     && pip install keen \
-    #&& pip install apache-airflow[crypto,celery,postgres,hive,slack,s3,jdbc,mysql,ssh${AIRFLOW_DEPS:+,}${AIRFLOW_DEPS}]==${AIRFLOW_VERSION} \
     && pip install apache-airflow[crypto,celery,postgres,slack,s3,jdbc,mysql,mssql,ssh,password,rabbitmq,samba,redis]==${AIRFLOW_VERSION} \
     && pip install 'redis>=2.10.5,<3' \
-    #&& if [ -n "${PYTHON_DEPS}" ]; then pip install ${PYTHON_DEPS}; fi \
     && apt-get purge --auto-remove -yqq $buildDeps \
     && apt-get purge --auto-remove -yqq $additions \
     && apt-get autoremove -yqq --purge \
