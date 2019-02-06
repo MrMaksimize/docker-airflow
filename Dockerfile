@@ -166,15 +166,30 @@ RUN pip install -U pip setuptools wheel \
         /usr/share/doc \
         /usr/share/doc-base
 
-COPY script/entrypoint.sh /entrypoint.sh
-COPY config/airflow.cfg ${AIRFLOW_HOME}/airflow.cfg
+# Get Oracle Client
+RUN wget http://datasd-dev-assets.s3.amazonaws.com/oracle.zip -O ${AIRFLOW_HOME}/oracle.zip
 
-RUN chown -R airflow: ${AIRFLOW_HOME}
+COPY script/entrypoint.sh ${AIRFLOW_HOME}/entrypoint.sh
+COPY config/airflow.cfg ${AIRFLOW_HOME}/airflow.cfg
+#COPY assets/oracle.zip ${AIRFLOW_HOME}/oracle.zip
+
+
+RUN unzip ${AIRFLOW_HOME}/oracle.zip -d /opt \
+&& env ARCHFLAGS="-arch $ARCH" pip install cx_Oracle \
+&& rm ${AIRFLOW_HOME}/oracle.zip
+
+RUN chown -R airflow: ${AIRFLOW_HOME} \
+    && chmod +x ${AIRFLOW_HOME}/entrypoint.sh \
+    && chown -R airflow /usr/lib/python* /usr/local/lib/python* \
+    #&& chown -R airflow /usr/lib/python2.7/* /usr/local/lib/python2.7/* \
+    && chown -R airflow /usr/local/bin* /usr/local/bin/*
+    #&& sed -i "s|flask.ext.cache|flask_cache|g" /usr/local/lib/python2.7/dist-packages/flask_cache/jinja2ext.py
 
 EXPOSE 8080 5555 8793
 
 USER airflow
 WORKDIR ${AIRFLOW_HOME}
+ENTRYPOINT ["./entrypoint.sh"]
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["webserver"] # set default arg for entrypoint
 
