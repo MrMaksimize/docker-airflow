@@ -17,8 +17,8 @@ services:
         image: mrmaksimize/docker-airflow:1.10.2
         restart: always
         volumes:
-            - ./dags:/usr/local/airflow/poseidon
-            - ./dags/data:/data
+            - ./poseidon:/usr/local/airflow/poseidon
+            - ./data:/data
         environment:
             - LOAD_EX=n
             - AIRFLOW_HOME=/usr/local/airflow
