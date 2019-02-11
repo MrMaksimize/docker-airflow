@@ -24,6 +24,9 @@ ENV LC_ALL en_US.UTF-8
 ENV LC_CTYPE en_US.UTF-8
 ENV LC_MESSAGES en_US.UTF-8
 
+# GDAL ENV
+ENV GDAL_DATA /usr/share/gdal/2.1
+
 
 # Oracle Essentials
 ENV ORACLE_HOME /opt/oracle
@@ -35,16 +38,15 @@ ENV LD_LIBRARY_PATH /opt/oracle
 RUN set -ex \
     && buildDeps=' \
         freetds-dev \
-        libkrb5-dev \
-        libsasl2-dev \
-        libssl-dev \
-        libffi-dev \
-        libpq-dev \
+        #libkrb5-dev \
+        #libsasl2-dev \
+        #libssl-dev \
+        #libffi-dev \
+        #libpq-dev \
         git \
     ' \
     && additions=' \
-        #python-dev \
-        #build-essential \
+        python-dev \
         #libcurl4-gnutls-dev \
         #libnetcdf-dev \
         #libpoppler-dev \
@@ -53,34 +55,35 @@ RUN set -ex \
         #libblas-dev \
         #liblapack-dev \
         #libpq-dev \
-        #libgdal-dev \
-        #libproj-dev \
-        #libgeos-dev \
-        #libspatialite-dev \
-        #libspatialindex-dev \
-        #libfreetype6-dev \
-        #libxml2-dev \
-        #libxslt-dev \
-        #gnupg2 \
-        #libsqlite3-dev \
-        #zlib1g-dev \
+        libgdal-dev \
+        libproj-dev \
+        libgeos-dev \
+        libspatialite-dev \
+        libspatialindex-dev \
+        libfreetype6-dev \
+        libxml2-dev \
+        libxslt-dev \
+        gnupg2 \
+        libsqlite3-dev \
+        zlib1g \
+        zlib1g-dev \
         #python-pip \
         curl \
         #netcat \
         #cython \
         #python-numpy \
-        #python-gdal \
-        #libaio1 \
+        python-gdal \
+        libaio1 \
         unzip \
         less \
         #freetds-dev \
         smbclient \
         vim \
         wget \
-        #gdal-bin \
-        #sqlite3 \
+        gdal-bin \
+        osm2pgsql \
+        sqlite3 \
         #python-requests \
-        #libpq-dev \
     '
 
 # Update apt and install
@@ -91,7 +94,7 @@ RUN apt-get update -yqq \
         $additions \
         freetds-bin \
         build-essential \
-        default-libmysqlclient-dev \
+        #default-libmysqlclient-dev \
         apt-utils \
         curl \
         rsync \

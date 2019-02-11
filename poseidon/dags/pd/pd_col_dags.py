@@ -1,13 +1,14 @@
 """PD collisions _dags file."""
 from airflow.operators.python_operator import PythonOperator
-from poseidon.operators.s3_file_transfer_operator import S3FileTransferOperator
-from poseidon.operators.latest_only_operator import LatestOnlyOperator
+#import trident.testpack.pack
+from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
+from trident.operators.latest_only_operator import LatestOnlyOperator
 from airflow.models import DAG
 from datetime import datetime, timedelta
-from poseidon.dags.pd.pd_col_jobs import *
-from poseidon.util import general
-from poseidon.util.notifications import notify
-from poseidon.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag
+from dags.pd.pd_col_jobs import *
+from trident.util import general
+from trident.util.notifications import notify
+from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag
 
 args = general.args
 conf = general.config
@@ -57,14 +58,14 @@ update_pd_cls_md = get_seaboard_update_dag('police-collisions.md', dag)
 
 #: Execution rules:
 
-#: pd_col_latest_only must run before get_collisions_data
+##: pd_col_latest_only must run before get_collisions_data
 get_collisions_data.set_upstream(pd_col_latest_only)
-
-#: Data processing is triggered after data retrieval.
+#
+##: Data processing is triggered after data retrieval.
 process_collisions_data.set_upstream(get_collisions_data)
-
-#: Data upload to S3 is triggered after data processing completion.
+#
+##: Data upload to S3 is triggered after data processing completion.
 collisions_to_S3.set_upstream(process_collisions_data)
-
-#: Github update depends on S3 upload success.
+#
+##: Github update depends on S3 upload success.
 update_pd_cls_md.set_upstream(collisions_to_S3)
