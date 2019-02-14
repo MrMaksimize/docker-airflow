@@ -23,8 +23,9 @@ services:
             - LOAD_EX=n
             - AIRFLOW_HOME=/usr/local/airflow
             - EXECUTOR=Sequential
+## Poseidons secrets
         env_file:
-            - ./${ENV_FILE}
+            - ./env/local.env
         ports:
             - "8080:8080"
         command: webserver

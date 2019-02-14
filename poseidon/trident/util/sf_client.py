@@ -113,7 +113,7 @@ class Salesforce(object):
 
             return df
 
-        except Exception, e:
+        except Exception as e:
             logging.error(e)
 
 
@@ -141,7 +141,7 @@ class Salesforce(object):
 
             return "Retrieved last GID data"
 
-        except Exception, e:
+        except Exception as e:
             logging.error(e)
 
     def get_query_records(self, query_string):
@@ -157,7 +157,7 @@ class Salesforce(object):
                                 cookies={'sid': self.session_id})
             return resp.json()
 
-        except Exception, e:
+        except Exception as e:
             logging.error(e)
 
     def get_query_more(self, next_page_url):
@@ -172,7 +172,7 @@ class Salesforce(object):
 
             return resp.json()
 
-        except Exception, e:
+        except Exception as e:
             logging.error(e)
 
     def get_query_all(self, query_string):
