@@ -15,7 +15,7 @@
 import os, logging, requests
 
 from airflow.exceptions import AirflowException
-from trident.hooks.S3_hook import S3Hook
+from airflow.hooks.S3_hook import S3Hook
 from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
 from trident.util import general
