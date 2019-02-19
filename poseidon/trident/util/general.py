@@ -178,8 +178,8 @@ schedule = {
     'cip': '@daily'
 }
 
-source = {'ttcs': os.environ.get('CONN_ORACLETTCS'), 
-'cef':os.environ.get('CONN_ORACLE_CEF'), 
+source = {'ttcs': os.environ.get('CONN_ORACLETTCS'),
+'cef':os.environ.get('CONN_ORACLE_CEF'),
 'dsd_permits' : os.environ.get('CONN_ORACLE_PERMITS'),
 'cip': os.environ.get('CONN_ORACLECIP')
 }

@@ -20,10 +20,18 @@ services:
             - ./poseidon:/usr/local/airflow/poseidon
             - ./data:/data
         environment:
+            - SD_ENV=local
             - LOAD_EX=n
-            - AIRFLOW_HOME=/usr/local/airflow
             - EXECUTOR=Sequential
-## Poseidons secrets
+            - SECRETLY_NAMESPACE=local
+            # System
+            - AIRFLOW_TASKS_START_YMD=2017-02-01
+            - AIRFLOW_HOME=/usr/local/airflow
+            - AIRFLOW__CORE__BASE_LOG_FOLDER=/usr/local/airflow/logs
+            - AIRFLOW__EMAIL__EMAIL_BACKEND=poseidon.util.notifications.afsys_send_email
+            - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=True
+            - AIRFLOW__WEBSERVER__AUTHENTICATE=False
+            - AIRFLOW__WEBSERVER__AUTH_BACKEND=poseidon.util.poseidon_login
         env_file:
             - ./env/local.env
         ports:

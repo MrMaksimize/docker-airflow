@@ -41,6 +41,7 @@ ENV DYLD_LIBRARY_PATH /opt/oracle
 ENV LD_LIBRARY_PATH /opt/oracle
 
 
+
 # Update apt and install
 RUN apt-get update -yqq \
     && apt-get upgrade -yqq \
@@ -175,11 +176,12 @@ RUN pip install -U pip setuptools wheel \
 # Get Oracle Client
 # TODO -- ADD
 ADD http://datasd-dev-assets.s3.amazonaws.com/oracle.zip ${AIRFLOW_HOME}/
+ADD https://github.com/energyhub/secretly/releases/download/0.0.6/secretly-linux-amd64 /usr/local/bin/secretly
 
 COPY script/entrypoint.sh ${AIRFLOW_HOME}/entrypoint.sh
 COPY config/airflow.cfg ${AIRFLOW_HOME}/airflow.cfg
 
-
+RUN chmod +x /usr/local/bin/secretly
 
 
 RUN unzip ${AIRFLOW_HOME}/oracle.zip -d /opt \
@@ -198,5 +200,5 @@ EXPOSE 8080 5555 8793
 USER airflow
 WORKDIR ${AIRFLOW_HOME}
 ENTRYPOINT ["./entrypoint.sh"]
-CMD ["webserver"] # set default arg for entrypoint
+CMD ["secretly", "webserver"] # set default arg for entrypoint
 
