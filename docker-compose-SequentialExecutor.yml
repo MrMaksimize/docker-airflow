@@ -20,20 +20,28 @@ services:
             - ./poseidon:/usr/local/airflow/poseidon
             - ./data:/data
         environment:
-            - SD_ENV=local
+            - SD_ENV=${SD_ENV}
             - LOAD_EX=n
             - EXECUTOR=Sequential
-            - SECRETLY_NAMESPACE=local
-            # System
-            - AIRFLOW_TASKS_START_YMD=2017-02-01
+
+              # From environment specific .env
+            - SECRETLY_NAMESPACE=${SD_ENV}
+            - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+            - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+            - AWS_REGION=${AWS_REGION}
+            - AIRFLOW_TASKS_START_YMD=${AIRFLOW_TASKS_START_YMD}
+
+              # Dafaults
             - AIRFLOW_HOME=/usr/local/airflow
+            - AIRFLOW__CORE__REMOTE_LOG_CONN_ID=s3log
             - AIRFLOW__CORE__BASE_LOG_FOLDER=/usr/local/airflow/logs
             - AIRFLOW__EMAIL__EMAIL_BACKEND=poseidon.util.notifications.afsys_send_email
+            - AIRFLOW__WEBSERVER__AUTH_BACKEND=poseidon.util.poseidon_login
+
+              # NS
             - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=True
             - AIRFLOW__WEBSERVER__AUTHENTICATE=False
-            - AIRFLOW__WEBSERVER__AUTH_BACKEND=poseidon.util.poseidon_login
-        env_file:
-            - ./env/local.env
+
         ports:
             - "8080:8080"
         command: webserver
