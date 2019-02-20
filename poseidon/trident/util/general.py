@@ -14,8 +14,6 @@ import json
 
 from airflow.models import Variable
 
-
-
 def seven_days_ago():
     """Return the date seven days ago."""
     return datetime.combine(datetime.today() - timedelta(7),

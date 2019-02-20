@@ -37,8 +37,8 @@ mkdir -p /usr/local/airflow/logs
 
 
 # Install custom python package if requirements.txt is present
-if [ -e "/requirements.txt" ]; then
-    $(which pip) install --user -r /requirements.txt
+if [ -e "/usr/local/airflow/poseidon/requirements.txt" ]; then
+    $(which pip) install --user -r /usr/local/airflow/poseidon/requirements.txt
 fi
 
 
