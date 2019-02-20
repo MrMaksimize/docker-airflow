@@ -48,13 +48,15 @@ def get_sf_gid_requests():
 
     report_id = "00Ot0000000TUnb"
 
+    logging.info("Pulling requests to {}".format(temp_file_gid))
+
     # Init salesforce client
     sf = Salesforce(username, password, security_token)
 
     # Pull dataframe
     logging.info('Pull report {} from SF'.format(report_id))
 
-    sf.get_report_csv(report_id)
+    sf.get_report_csv(report_id, temp_file_gid)
 
     logging.info('Process report {} data.'.format(report_id))
 

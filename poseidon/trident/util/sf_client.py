@@ -119,30 +119,28 @@ class Salesforce(object):
 
 
 
-    def get_report_csv(self, report_id):
-        # TODO - this needs abstraction for file name
+    def get_report_csv(self, report_id, filename):
         """Get SF report and return csv file."""
-        temp_gid = conf['temp_data_dir'] + '/gid_temp.csv'
         url = "https://{domain}.salesforce.com/{report_id}?view=d&snip&export=1&enc=ISO-8859-1&xf=csv"
         url = url.format(report_id=report_id, domain=self.domain)
-        try:
-            resp = requests.get(url,
-                                headers=self.headers,
-                                cookies={'sid': self.session_id})
+        # If this doesn't work, it should fail
+        resp = requests.get(url,
+                            headers=self.headers,
+                            cookies={'sid': self.session_id})
 
-            lines = resp.content.splitlines()
-            reader = csv.reader(lines)
-            data = list(reader)
-            data = data[:-7]
 
-            with open(temp_gid, 'wb') as f:
-                writer = csv.writer(f, quoting=csv.QUOTE_ALL)
-                writer.writerows(data)
+        lines = resp.content.splitlines()
+        reader = csv.reader(lines)
 
-            return "Retrieved last GID data"
+        data = list(reader)
+        data = data[:-7]
 
-        except Exception as e:
-            logging.error(e)
+
+        with open(filename, 'w') as f:
+            writer = csv.writer(f, quoting=csv.QUOTE_ALL)
+            writer.writerows(data)
+
+        return "Retrieved last GID data"
 
     def get_query_records(self, query_string):
         """Query SF and return JSON response."""
