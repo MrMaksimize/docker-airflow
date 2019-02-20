@@ -119,6 +119,7 @@ RUN sed -i 's/^# en_US.UTF-8 UTF-8$/en_US.UTF-8 UTF-8/g' /etc/locale.gen \
 RUN pip install -U pip setuptools wheel \
     && pip install apache-airflow[crypto,celery,postgres,slack,s3,jdbc,mysql,mssql,ssh,password,rabbitmq,samba,redis]==${AIRFLOW_VERSION} \
     && pip install boto3 \
+    && pip install bs4 \
     && pip install fiona \
     && pip install gdal==2.1.0 \
     && pip install git+https://github.com/jguthmiller/pygeobuf.git@geobuf-v3 \
@@ -130,7 +131,7 @@ RUN pip install -U pip setuptools wheel \
     && pip install ndg-httpsclient \
     && pip install pandas \
     && pip install pymssql \
-    && pip install psycopg2 \
+    && pip install psycopg2-binary \
     && pip install pyasn1 \
     && pip install PyGithub \
     && pip install pyOpenSSL \
