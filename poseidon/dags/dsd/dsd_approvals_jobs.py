@@ -7,7 +7,7 @@ from lxml import etree
 from bs4 import BeautifulSoup as bs
 import requests
 import time
-from poseidon.util import general
+from trident.util import general
 import logging
 
 conf = general.config

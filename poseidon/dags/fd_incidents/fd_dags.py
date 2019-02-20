@@ -1,14 +1,14 @@
 """Fire_department_dags_file."""
 from __future__ import print_function
 from airflow.operators.python_operator import PythonOperator
-from poseidon.operators.s3_file_transfer_operator import S3FileTransferOperator
-from poseidon.operators.latest_only_operator import LatestOnlyOperator
-from poseidon.util.notifications import notify
+from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
+from airflow.operators.latest_only_operator import LatestOnlyOperator
+from trident.util.notifications import notify
 
 from airflow.models import DAG
-from poseidon.util import general
-from poseidon.dags.fd_incidents.fd_jobs import *
-from poseidon.util.seaboard_updates import *
+from trident.util import general
+from dags.fd_incidents.fd_jobs import *
+from trident.util.seaboard_updates import *
 
 
 

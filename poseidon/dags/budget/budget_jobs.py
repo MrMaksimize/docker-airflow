@@ -5,7 +5,7 @@ import os
 import glob
 import re
 import subprocess
-from poseidon.util import general
+from trident.util import general
 
 conf = general.config
 prod_path = conf['prod_data_dir']

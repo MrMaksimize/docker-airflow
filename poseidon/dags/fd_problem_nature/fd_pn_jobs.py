@@ -4,7 +4,7 @@ import requests
 from datetime import datetime, timedelta
 import logging
 from airflow.hooks.mssql_hook import MsSqlHook
-from poseidon.util import general
+from trident.util import general
 
 conf = general.config
 

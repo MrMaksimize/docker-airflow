@@ -2,7 +2,7 @@
 import os
 import pandas as pd
 import logging
-from poseidon.util import general
+from trident.util import general
 import requests
 import json
 import math

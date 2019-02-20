@@ -1,6 +1,6 @@
 """waze _jobs file."""
 from airflow.hooks.postgres_hook import PostgresHook
-from poseidon.util import general
+from trident.util import general
 from geojson import LineString
 from datetime import datetime
 from pytz import timezone

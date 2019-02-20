@@ -1,10 +1,10 @@
 """waze_dags file."""
 from airflow.operators.python_operator import PythonOperator
-from poseidon.operators.latest_only_operator import LatestOnlyOperator
+from airflow.operators.latest_only_operator import LatestOnlyOperator
 from airflow.models import DAG
-from poseidon.util import general
-from poseidon.util.notifications import notify
-from poseidon.dags.waze.waze_jobs import *
+from trident.util import general
+from trident.util.notifications import notify
+from dags.waze.waze_jobs import *
 from datetime import datetime, timedelta
 
 

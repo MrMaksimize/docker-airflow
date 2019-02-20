@@ -2,7 +2,7 @@ import requests
 import os
 import zipfile
 import glob
-from poseidon.util import general
+from trident.util import general
 
 #%%
 #target_dir = "/Users/MrMaksimize/Code/ETL/temp_source/dsd/"

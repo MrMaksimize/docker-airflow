@@ -5,7 +5,7 @@ import pandas as pd
 import glob
 import logging
 from datetime import datetime, timedelta, date
-from poseidon.util import general
+from trident.util import general
 
 
 conf = general.config

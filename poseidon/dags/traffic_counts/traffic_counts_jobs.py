@@ -2,7 +2,7 @@
 import pandas as pd
 import logging
 from subprocess import Popen, PIPE
-from poseidon.util import general
+from trident.util import general
 
 conf = general.config
 fy = general.get_FY_year()
@@ -50,7 +50,6 @@ def get_traffic_counts(out_fname='traffic_counts_file'):
         output, error = p.communicate()
         if p.returncode != 0:
             logging.info(fy1 + ' data does not exist.')
-            # print fy1 + ' data does not exist.'
             return 'Task failed.'
 
         else:

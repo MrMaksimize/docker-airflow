@@ -1,15 +1,15 @@
 """Streets imcat _dags file."""
 from __future__ import print_function
 from airflow.operators.python_operator import PythonOperator
-from poseidon.operators.s3_file_transfer_operator import S3FileTransferOperator
-from poseidon.operators.latest_only_operator import LatestOnlyOperator
-from poseidon.operators.poseidon_email_operator import PoseidonEmailFileUpdatedOperator
+from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
+from airflow.operators.latest_only_operator import LatestOnlyOperator
+from trident.operators.poseidon_email_operator import PoseidonEmailFileUpdatedOperator
 from airflow.models import DAG
 
-from poseidon.util import general
-from poseidon.util.notifications import notify
+from trident.util import general
+from trident.util.notifications import notify
 
-from poseidon.dags.streets.streets_jobs import *
+from dags.streets.streets_jobs import *
 
 # All times in Airflow UTC.  Set Start Time in PST?
 args = general.args

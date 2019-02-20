@@ -2,13 +2,13 @@
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.bash_operator import BashOperator
 from airflow.models import DAG
-from poseidon.operators.s3_file_transfer_operator import S3FileTransferOperator
-from poseidon.operators.latest_only_operator import LatestOnlyOperator
-from poseidon.dags.budget.budget_jobs import *
-from poseidon.dags.budget.actuals_jobs import *
-from poseidon.util import general
-from poseidon.util.notifications import notify
-from poseidon.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag
+from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
+from airflow.operators.latest_only_operator import LatestOnlyOperator
+from dags.budget.budget_jobs import *
+from dags.budget.actuals_jobs import *
+from trident.util import general
+from trident.util.notifications import notify
+from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag
 import os
 import glob
 

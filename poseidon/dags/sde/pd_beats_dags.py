@@ -1,8 +1,8 @@
 """_dags file for 'sdpd_divisions' sde extraction."""
 from airflow.models import DAG
-from poseidon.util import general
-from poseidon.dags.sde.pd_beats_jobs import sde_to_shp
-from poseidon.util.sde_extract_tasks import create_sde_tasks
+from trident.util import general
+from dags.sde.pd_beats_jobs import sde_to_shp
+from trident.util.sde_extract_tasks import create_sde_tasks
 
 
 args = general.args

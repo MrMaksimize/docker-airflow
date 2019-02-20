@@ -1,6 +1,6 @@
 """Jobs for dsd."""
 
-from poseidon.util import general
+from trident.util import general
 import logging
 
 conf = general.config

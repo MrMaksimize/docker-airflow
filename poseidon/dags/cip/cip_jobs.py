@@ -4,7 +4,7 @@ import requests
 from datetime import datetime, timedelta
 import logging
 import cx_Oracle
-from poseidon.util import general
+from trident.util import general
 
 conf = general.config
 fiscal_yr =  general.get_FY_year()

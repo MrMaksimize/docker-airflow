@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import logging
 import pymssql
 from airflow.hooks.mssql_hook import MsSqlHook
-from poseidon.util import general
+from trident.util import general
 
 conf = general.config
 cur_yr = general.get_year()

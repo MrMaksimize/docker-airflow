@@ -7,7 +7,7 @@ import re
 
 from datetime import datetime, timedelta
 
-from poseidon.util import general
+from trident.util import general
 
 conf = general.config
 

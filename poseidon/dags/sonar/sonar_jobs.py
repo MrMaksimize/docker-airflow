@@ -3,9 +3,9 @@ import pandas as pd
 import logging
 from datetime import datetime, timedelta
 import json
-from poseidon.util import general
+from trident.util import general
 from keen.client import KeenClient
-from poseidon.util.notifications import notify_keen
+from trident.util.notifications import notify_keen
 
 conf = general.config
 
@@ -17,7 +17,6 @@ def get_sonar_json(**kwargs):
         data = json.load(fp)
 
     template_data = {'metrics': data}
-    #print json.dumps(template_data, indent=4, sort_keys=True)
     return template_data
 
 
@@ -51,7 +50,6 @@ def build_sonar_json(**kwargs):
     sonar_payload = json.loads(df.to_json(orient='records'))
 
 
-    #print json.dumps(sonar_payload, indent=4, sort_keys=True)
 
     notify_keen(
         {

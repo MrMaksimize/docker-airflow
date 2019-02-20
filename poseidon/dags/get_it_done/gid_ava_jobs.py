@@ -8,8 +8,8 @@ from geopandas.tools import sjoin
 from shapely.geometry import Point
 import fiona.crs
 import logging
-from poseidon.util import general
-from poseidon.util.sf_client import Salesforce
+from trident.util import general
+from trident.util.sf_client import Salesforce
 
 conf = general.config
 

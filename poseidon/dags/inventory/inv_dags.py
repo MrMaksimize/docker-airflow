@@ -1,12 +1,12 @@
 """inventory_dags file."""
 from airflow.operators.python_operator import PythonOperator
-from poseidon.operators.s3_file_transfer_operator import S3FileTransferOperator
-from poseidon.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag
-from poseidon.operators.latest_only_operator import LatestOnlyOperator
+from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
+from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag
+from airflow.operators.latest_only_operator import LatestOnlyOperator
 from airflow.models import DAG
-from poseidon.util import general
-from poseidon.util.notifications import notify
-from poseidon.dags.inventory.inv_jobs import *
+from trident.util import general
+from trident.util.notifications import notify
+from dags.inventory.inv_jobs import *
 
 
 conf = general.config

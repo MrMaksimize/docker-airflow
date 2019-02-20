@@ -1,13 +1,13 @@
 """Parking meters _dags file."""
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.bash_operator import BashOperator
-from poseidon.operators.s3_file_transfer_operator import S3FileTransferOperator
-from poseidon.operators.latest_only_operator import LatestOnlyOperator
+from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
+from airflow.operators.latest_only_operator import LatestOnlyOperator
 from airflow.models import DAG
-from poseidon.util import general
-from poseidon.util.notifications import notify
-from poseidon.dags.parking_meters.parking_meters_jobs import *
-from poseidon.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag
+from trident.util import general
+from trident.util.notifications import notify
+from dags.parking_meters.parking_meters_jobs import *
+from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag
 
 args = general.args
 schedule = general.schedule['parking_meters']

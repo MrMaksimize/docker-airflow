@@ -6,7 +6,7 @@ import glob
 import pandas as pd
 import numpy as np
 from datetime import datetime
-from poseidon.util import general
+from trident.util import general
 
 conf = general.config
 curr_year = datetime.now().strftime('%Y')

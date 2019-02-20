@@ -3,14 +3,14 @@ import re
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.bash_operator import BashOperator
 from airflow.operators.mysql_operator import MySqlOperator
-from poseidon.operators.s3_file_transfer_operator import S3FileTransferOperator
-from poseidon.operators.latest_only_operator import LatestOnlyOperator
+from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
+from airflow.operators.latest_only_operator import LatestOnlyOperator
 from airflow.models import DAG
 
-from poseidon.util import general
-from poseidon.util.notifications import notify
+from trident.util import general
+from trident.util.notifications import notify
 
-from poseidon.dags.tsw_integration.tsw_integration_jobs import *
+from dags.tsw_integration.tsw_integration_jobs import *
 
 # All times in Airflow UTC.  Set Start Time in PST?
 args = general.args

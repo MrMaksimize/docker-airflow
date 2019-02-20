@@ -3,7 +3,7 @@
 from datetime import datetime, timedelta
 import pandas as pd
 import time
-from poseidon.util import general
+from trident.util import general
 import logging
 import cx_Oracle
 

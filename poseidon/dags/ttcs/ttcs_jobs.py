@@ -8,8 +8,8 @@ import string
 import datetime as dt
 import numpy as np
 
-from poseidon.util import general
-from poseidon.util import geospatial
+from trident.util import general
+from trident.util import geospatial
 
 conf = general.config
 credentials = general.source['ttcs']

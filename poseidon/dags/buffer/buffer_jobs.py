@@ -1,5 +1,5 @@
 """inventory_jobs file."""
-from poseidon.util import general
+from trident.util import general
 import pandas as pd
 import requests, json
 import logging
@@ -26,7 +26,6 @@ def get_random_message(gdoc_url, col_name):
     return message
 
 def buffer_add_message(message, access_token, profile_ids):
-    print profile_ids
     params = {'access_token': access_token}
     payload = {
         'profile_ids': profile_ids,

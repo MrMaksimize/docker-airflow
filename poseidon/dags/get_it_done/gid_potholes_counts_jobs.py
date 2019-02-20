@@ -1,8 +1,8 @@
 import os
 import pandas as pd
 import logging
-from poseidon.util import general
-from poseidon.util.sf_client import Salesforce
+from trident.util import general
+from trident.util.sf_client import Salesforce
 
 conf = general.config
 

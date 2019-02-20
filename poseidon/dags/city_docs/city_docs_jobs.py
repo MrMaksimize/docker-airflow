@@ -4,8 +4,8 @@ import string
 import pandas as pd
 import logging
 from airflow.hooks.mssql_hook import MsSqlHook
-from poseidon.util import general
-import poseidon.dags.city_docs.documentum_name as dn
+from trident.util import general
+import dags.city_docs.documentum_name as dn
 
 conf = general.config
 #prod_data_schedule_24 = general.create_path_if_not_exists(conf['prod_data_dir'] + '/schedule_24')

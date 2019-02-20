@@ -4,7 +4,7 @@ import requests
 from datetime import datetime, timedelta
 import logging
 from airflow.hooks.mssql_hook import MsSqlHook
-from poseidon.util import general
+from trident.util import general
 
 conf = general.config
 
@@ -208,7 +208,6 @@ def build_sonar_miles_aggs(mode='sdif', pav_type='total', **kwargs):
     dbl_spec = 2
 
     range_start_dt = kwargs['range_start']
-    print range_start_dt
 
     # Read CSV
     df = pd.read_csv(pav_csv)

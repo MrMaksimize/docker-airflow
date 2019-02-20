@@ -3,7 +3,7 @@ import os
 import ftplib
 import pandas as pd
 import numpy as np
-from poseidon.util import general
+from trident.util import general
 
 conf = general.config
 

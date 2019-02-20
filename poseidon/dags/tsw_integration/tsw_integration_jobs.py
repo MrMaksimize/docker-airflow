@@ -4,10 +4,10 @@ import pandas as pd
 import geopandas as gpd
 import logging
 from shapely.geometry import Point
-from poseidon.util import general
-from poseidon.util.geospatial import geocode_address_google
-from poseidon.util.geospatial import get_address_for_apn
-from poseidon.util.sf_client import Salesforce
+from trident.util import general
+from trident.util.geospatial import geocode_address_google
+from trident.util.geospatial import get_address_for_apn
+from trident.util.sf_client import Salesforce
 from airflow.hooks.postgres_hook import PostgresHook
 import cx_Oracle
 

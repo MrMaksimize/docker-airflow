@@ -1,14 +1,14 @@
 """ OnBase web tables _dags file"""
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.bash_operator import BashOperator
-from poseidon.operators.s3_file_transfer_operator import S3FileTransferOperator
-from poseidon.operators.latest_only_operator import LatestOnlyOperator
+from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
+from airflow.operators.latest_only_operator import LatestOnlyOperator
 from airflow.models import DAG
 
-from poseidon.util import general
-from poseidon.util.notifications import notify
+from trident.util import general
+from trident.util.notifications import notify
 
-from poseidon.dags.city_docs.city_docs_jobs import *
+from dags.city_docs.city_docs_jobs import *
 from datetime import datetime
 
 # All times in Airflow UTC.  Set Start Time in PST?

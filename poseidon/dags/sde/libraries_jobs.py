@@ -1,6 +1,6 @@
 """_jobs file for 'libraries' layer sde extraction."""
-from poseidon.util import general
-from poseidon.util import geospatial
+from trident.util import general
+from trident.util import geospatial
 import pandas as pd
 from collections import OrderedDict
 import logging

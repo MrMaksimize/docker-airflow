@@ -1,5 +1,5 @@
 """inventory_jobs file."""
-from poseidon.util import general
+from trident.util import general
 import pandas as pd
 import logging
 

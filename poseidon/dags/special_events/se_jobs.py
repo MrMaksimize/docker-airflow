@@ -3,8 +3,8 @@ import pandas as pd
 import logging
 import time
 from airflow.hooks.mssql_hook import MsSqlHook
-from poseidon.util import general
-from poseidon.util import geospatial
+from trident.util import general
+from trident.util import geospatial
 
 conf = general.config
 

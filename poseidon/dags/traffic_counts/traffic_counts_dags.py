@@ -1,12 +1,12 @@
 """Traffic counts _dags file."""
 from airflow.operators.python_operator import PythonOperator
 from airflow.models import DAG
-from poseidon.operators.s3_file_transfer_operator import S3FileTransferOperator
-from poseidon.operators.latest_only_operator import LatestOnlyOperator
-from poseidon.dags.traffic_counts.traffic_counts_jobs import *
-from poseidon.util import general
-from poseidon.util.notifications import notify
-from poseidon.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag
+from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
+from airflow.operators.latest_only_operator import LatestOnlyOperator
+from dags.traffic_counts.traffic_counts_jobs import *
+from trident.util import general
+from trident.util.notifications import notify
+from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag
 
 
 args = general.args

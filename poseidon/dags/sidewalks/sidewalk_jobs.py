@@ -6,8 +6,8 @@ from datetime import datetime, timedelta
 import logging
 import geopandas
 from airflow.hooks.mssql_hook import MsSqlHook
-from poseidon.util import general
-from poseidon.util import geospatial
+from trident.util import general
+from trident.util import geospatial
 from collections import OrderedDict
 import pymssql
 
