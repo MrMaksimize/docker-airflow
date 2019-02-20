@@ -37,11 +37,6 @@ services:
             - AIRFLOW__CORE__BASE_LOG_FOLDER=/usr/local/airflow/logs
             - AIRFLOW__EMAIL__EMAIL_BACKEND=poseidon.util.notifications.afsys_send_email
             - AIRFLOW__WEBSERVER__AUTH_BACKEND=poseidon.util.poseidon_login
-
-              # NS
-            - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=True
-            - AIRFLOW__WEBSERVER__AUTHENTICATE=False
-
         ports:
             - "8080:8080"
         command: webserver
