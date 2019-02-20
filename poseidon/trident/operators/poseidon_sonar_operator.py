@@ -106,7 +106,6 @@ class PoseidonSonarCreator(BaseOperator):
             'date_format_keen'])
         self.sonar = merge_dicts(self.sonar, sonar_data)
 
-        #print json.dumps(self.sonar, indent=4, sort_keys=True)
 
         notify_keen(
             self.sonar,

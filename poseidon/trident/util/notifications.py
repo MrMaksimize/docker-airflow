@@ -131,7 +131,6 @@ def send_email_swu(to,
                 payload[elisttype].append({"address": address})
 
 
-    #print json.dumps(payload, indent=4, sort_keys=True)
 
     # Dedupe all_receivers list
     all_receivers = list(set(all_receivers))
@@ -154,7 +153,6 @@ def send_email_swu(to,
           'version_name': version_name
         }
         logging.info('Notify keen about email to: ' + receiver)
-        #print json.dumps(keen_payload, indent=4, sort_keys=True)
         notify_keen(keen_payload,
                     "poseidon_{}_dispatched_emails".format(conf['env'].lower()))
 

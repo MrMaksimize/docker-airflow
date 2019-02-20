@@ -3,7 +3,7 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.operators.python_operator import PythonOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
 
-from trident.operators.latest_only_operator import LatestOnlyOperator
+from airflow.operators.latest_only_operator import LatestOnlyOperator
 
 from airflow.models import DAG
 from trident.util.notifications import notify

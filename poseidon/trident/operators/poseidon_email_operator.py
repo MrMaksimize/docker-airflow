@@ -81,7 +81,6 @@ class PoseidonEmailOperator(BaseOperator):
 
 
     def execute(self, context):
-        #print json.dumps(context, indent=4, sort_keys=True)
         contextual_meta = self.build_dispatch_meta(context)
         self.swu['dispatch_meta'] = merge_dicts(self.swu['dispatch_meta'], contextual_meta)
         send_email_swu(**self.swu)
@@ -127,7 +126,6 @@ class PoseidonEmailWithPythonOperator(PoseidonEmailOperator):
         new_template_data = self.python_callable(*self.op_args, **self.op_kwargs)
         self.swu['template_data'] = merge_dicts(self.swu['template_data'], new_template_data)
 
-        #print json.dumps(self.swu, indent=4, sort_keys=True)
 
         send_email_swu(**self.swu)
 
@@ -154,8 +152,6 @@ class PoseidonEmailFileUpdatedOperator(PoseidonEmailOperator):
         self.swu['template_data']['file_url'] = self.file_url
         self.swu['dispatch_type'] = 'file_updated'
         self.swu['template_id'] = conf['mail_swu_file_updated_tpl']
-
-        #print json.dumps(self.swu, indent=4, sort_keys=True)
 
         send_email_swu(**self.swu)
         
