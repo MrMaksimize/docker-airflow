@@ -139,7 +139,7 @@ def get_ref_sets():
     files = []
 
     for sheet in sheets:
-        file = pd.read_excel(accounts_path,sheetname=sheet)
+        file = pd.read_excel(accounts_path,sheet_name=sheet)
         logging.info("Read sheet "+sheet)
         file['(code)'] = file['(code)'].astype(str)
         files.append(file)

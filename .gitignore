@@ -1,4 +1,3 @@
-.DS_Store
 ### Vim ###
 [._]*.s[a-w][a-z]
 [._]s[a-w][a-z]
@@ -29,7 +28,6 @@ oracle.zip
 *.env
 *.pyc
 
-<<<<<<< HEAD
 # OSX
 ._*
 .AppleDouble
@@ -48,7 +46,6 @@ Icon
 data/temp/*.geojson
 data/**/*.json
 data/**/*.*
-=======
+
 # Secrets
 secrets.json
->>>>>>> c82cc08915f480993a1604335e3bbd7041bd1009

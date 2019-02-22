@@ -79,7 +79,7 @@ def clean_traffic_counts(src_fname='traffic_counts_file',
              'count_date']
 
     worksheet = pd.read_excel(xlsx_file,
-                              sheetname='TRAFFIC',
+                              sheet_name='TRAFFIC',
                               header_row=None,
                               skiprows=[0, 1, 2, 3],
                               parse_cols=[8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
