@@ -27,3 +27,22 @@ __pycache__
 oracle.zip
 *.env
 *.pyc
+
+# OSX
+._*
+.AppleDouble
+.DS_Store
+.localized
+.LSOverride
+.Spotlight-V100
+.Trashes
+Icon
+
+# data
+*.csv
+*.xml
+*.xls
+*.xlsx
+data/temp/*.geojson
+data/**/*.json
+data/**/*.*
