@@ -29,4 +29,5 @@ oracle.zip
 *.env
 *.pyc
 
-
+# Secrets
+secrets.json
