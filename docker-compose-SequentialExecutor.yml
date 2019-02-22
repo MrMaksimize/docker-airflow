@@ -33,12 +33,9 @@ services:
 
               # Dafaults
             - AIRFLOW_HOME=/usr/local/airflow
-            - AIRFLOW__CORE__REMOTE_LOG_CONN_ID=s3log
-            - AIRFLOW__CORE__BASE_LOG_FOLDER=/usr/local/airflow/logs
-            - AIRFLOW__EMAIL__EMAIL_BACKEND=poseidon.util.notifications.afsys_send_email
-            - AIRFLOW__WEBSERVER__AUTH_BACKEND=poseidon.util.poseidon_login
         ports:
             - "8080:8080"
+            - "1187:1187"
         command: webserver
         healthcheck:
             test: ["CMD-SHELL", "[ -f /usr/local/airflow/airflow-webserver.pid ]"]
