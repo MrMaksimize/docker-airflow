@@ -55,6 +55,7 @@ RUN apt-get update -yqq \
         gnupg2 \
         less \
         locales \
+        libaio1 \
         libcurl4-gnutls-dev \
         libgdal-dev \
         libgeos-dev \
@@ -96,7 +97,6 @@ RUN apt-get update -yqq \
     #    #cython \
     #    #python-numpy \
     #    #python-gdal \
-    #    #libaio1 \
     #    #freetds-dev \
     #    #gdal-bin \
     #    #osm2pgsql \
