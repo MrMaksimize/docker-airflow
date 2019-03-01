@@ -15,7 +15,7 @@ def get_traffic_counts(out_fname='traffic_counts_file'):
         + "--user={adname}%{adpass} -W ad -c " \
         + "'cd \"TSW-TEO-Shared/TEO/" \
         + "TEO-Transportation-Systems-and-Safety-Programs/" \
-        + "TEO-Traffic Data Gathering Services/{fy}/RECORD FINDER\";" \
+        + "Traffic Data/{fy}/RECORD FINDER\";" \
         + " ls; get Machine_Count_Index.xlsx {temp_dir}/{out_f}.xlsx;'"
 
     command = command.format(adname=conf['mrm_sannet_user'],
@@ -28,35 +28,11 @@ def get_traffic_counts(out_fname='traffic_counts_file'):
 
     p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
     output, error = p.communicate()
+    
     if p.returncode != 0:
-        logging.info(fy + ' folder does not exist.')
-
-        logging.info('Retieving data for previous FY.')
-        fy1 = general.get_prev_FY_year()
-
-        command = "smbclient //ad.sannet.gov/dfs " \
-            + "--user={adname}%{adpass} -W ad -c " \
-            + "'cd \"TSW-TEO-Shared/TEO/" \
-            + "TEO-Transportation-Systems-and-Safety-Programs/" \
-            + "TEO-Traffic Data Gathering Services/{fy}/RECORD FINDER\";" \
-            + " ls; get Machine_Count_Index.xlsx {temp_dir}/{out_f}.xlsx;'"
-
-        command = command.format(adname=conf['mrm_sannet_user'],
-                                 adpass=conf['mrm_sannet_pass'],
-                                 fy=fy1,
-                                 temp_dir=conf['temp_data_dir'],
-                                 out_f=out_fname)
-        p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
-        output, error = p.communicate()
-        if p.returncode != 0:
-            logging.info(fy1 + ' data does not exist.')
-            return 'Task failed.'
-
-        else:
-            return 'Successfully retrieved ' + fy1 + ' data.'
-
+        raise Exception(output)
     else:
-        return 'Successfully retrieved ' + fy + ' data.'
+        return 'Successfully retrieved {} data.'.format(fy)
 
 
 def clean_traffic_counts(src_fname='traffic_counts_file',
@@ -80,9 +56,9 @@ def clean_traffic_counts(src_fname='traffic_counts_file',
 
     worksheet = pd.read_excel(xlsx_file,
                               sheet_name='TRAFFIC',
-                              header_row=None,
+                              header=None,
                               skiprows=[0, 1, 2, 3],
-                              parse_cols=[8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+                              usecols=[8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
                               names=names)
 
     # Write temp csv
