@@ -102,10 +102,10 @@ class Salesforce(object):
                                 headers=self.headers,
                                 cookies={'sid': self.session_id})
 
-            lines = resp.content.splitlines()
-            reader = csv.reader(lines)
+            resp_decode = resp.content.decode('utf-8')
+            reader = csv.reader(resp_decode.splitlines(), delimiter=",")
             data = list(reader)
-            data = data[:-7]
+            data = data[:7]
 
             df = pd.DataFrame(data)
             df.columns = df.iloc[0]
@@ -129,12 +129,10 @@ class Salesforce(object):
                             cookies={'sid': self.session_id})
 
 
-        lines = resp.content.splitlines()
-        reader = csv.reader(lines)
-
+        resp_decode = resp.content.decode('latin-1')
+        reader = csv.reader(resp_decode.splitlines(), delimiter=",")
         data = list(reader)
-        data = data[:-7]
-
+        data = data[:7]
 
         with open(filename, 'w') as f:
             writer = csv.writer(f, quoting=csv.QUOTE_ALL)

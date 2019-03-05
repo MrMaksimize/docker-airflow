@@ -1,4 +1,3 @@
-.DS_Store
 ### Vim ###
 [._]*.s[a-w][a-z]
 [._]s[a-w][a-z]
@@ -28,6 +27,25 @@ __pycache__
 oracle.zip
 *.env
 *.pyc
+
+# OSX
+._*
+.AppleDouble
+.DS_Store
+.localized
+.LSOverride
+.Spotlight-V100
+.Trashes
+Icon
+
+# data
+*.csv
+*.xml
+*.xls
+*.xlsx
+data/temp/*.geojson
+data/**/*.json
+data/**/*.*
 
 # Secrets
 secrets.json

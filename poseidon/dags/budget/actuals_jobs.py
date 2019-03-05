@@ -116,10 +116,12 @@ def create_capital_act():
                 + "/actuals_capital_FY{}_datasd.csv".format(this_fy[0])
 
         df = pd.read_excel(budget)
-        df = df.iloc[:, [0,1,2,3]]
-        df.columns = ['amount','code','project_number','object_number']
+        df = df.iloc[:, [0,1,2,3,4]]
+        df.columns = ['amount','code','project_number_parent','project_number_child','object_number']
+        df = df.fillna('')
         df['code'] = df['code'].astype(str)
-        df['project_number'] = df['project_number'].astype(str)
+        df['project_number_parent'] = df['project_number_parent'].astype(str)
+        df['project_number_child'] = df['project_number_child'].astype(str)
         df['object_number'] = df['object_number'].astype(str)
 
         df = pd.merge(df,
@@ -129,7 +131,7 @@ def create_capital_act():
             how='left')
         df = pd.merge(df,
             proj_ref[['asset_owning_dept','project_name','project_number']],
-            left_on='project_number',
+            left_on='project_number_parent',
             right_on='project_number',
             how='left')
         df = pd.merge(df,
@@ -143,7 +145,8 @@ def create_capital_act():
         'fund_number',
         'asset_owning_dept',
         'project_name',
-        'project_number',
+        'project_number_parent',
+        'project_number_child',
         'account',
         'account_number']]
 

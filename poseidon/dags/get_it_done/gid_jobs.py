@@ -47,6 +47,7 @@ def get_sf_gid_requests():
     security_token = conf['mrm_sf_token']
 
     report_id = "00Ot0000000TUnb"
+    #report_id="00Ot0000000GsV4"
 
     logging.info("Pulling requests to {}".format(temp_file_gid))
 
