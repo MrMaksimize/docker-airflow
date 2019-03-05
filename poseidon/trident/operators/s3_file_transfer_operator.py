@@ -69,7 +69,7 @@ class S3FileTransferOperator(BaseOperator):
 
     def execute(self, context):
         ti = context['ti']
-        dest_s3 = S3Hook(s3_conn_id=self.dest_s3_conn_id)
+        dest_s3 = S3Hook(aws_conn_id=self.dest_s3_conn_id)
         local_fpath = "%s/%s" % (self.source_base_path, self.source_key)
         logging.info("%s >>>>> %s/%s" %
                      (local_fpath, self.dest_s3_bucket, self.dest_s3_key))
@@ -78,13 +78,8 @@ class S3FileTransferOperator(BaseOperator):
             filename=local_fpath,
             key=self.dest_s3_key,
             bucket_name=self.dest_s3_bucket,
-            #multipart_bytes=5242880,
-            multipart_bytes=10000000,
-            replace=self.replace,
-            use_gzip=self.use_gzip)
+            replace=self.replace)
         logging.info("Upload completed")
-
-        dest_s3.connection.close()
 
         if conf['env'] == 'prod':
             url = "http://seshat.datasd.org/{}".format(self.dest_s3_key)
