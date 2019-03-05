@@ -65,6 +65,7 @@ RUN apt-get update -yqq \
         libpoppler-dev \
         libproj-dev \
         libpq-dev \
+        libspatialindex-dev \
         libspatialite-dev \
         libxml2-dev \
         netcat \
@@ -86,7 +87,6 @@ RUN apt-get update -yqq \
     #    #libssl-dev \
     #    #libffi-dev \
     #    #libgdal-dev \
-    #    #libspatialindex-dev \
     #    #libfreetype6-dev \
     #    #libxslt-dev \
     #    #libsqlite3-dev \
@@ -111,10 +111,10 @@ RUN sed -i 's/^# en_US.UTF-8 UTF-8$/en_US.UTF-8 UTF-8/g' /etc/locale.gen \
     && useradd -ms /bin/bash -d ${AIRFLOW_HOME} airflow
 
 # NodeJS packages
-#RUN curl -sL https://deb.nodesource.com/setup_10.x | bash - \
-#    && apt-get install -y nodejs \
-#    && npm install -g mapshaper \
-#    && npm install -g geobuf
+RUN curl -sL https://deb.nodesource.com/setup_10.x | bash - \
+    && apt-get install -y nodejs \
+    && npm install -g mapshaper \
+    && npm install -g geobuf
 
 RUN pip install -U pip setuptools wheel \
     && pip install apache-airflow[crypto,celery,postgres,slack,s3,jdbc,mysql,mssql,ssh,password,rabbitmq,samba,redis]==${AIRFLOW_VERSION} \
@@ -138,6 +138,7 @@ RUN pip install -U pip setuptools wheel \
     && pip install pytz \
     && pip install 'redis>=2.10.5,<3' \
     && pip install requests \
+    && pip install rtree \
     && pip install shapely \
     && pip install xlrd \
     ## Additions
@@ -158,7 +159,6 @@ RUN pip install -U pip setuptools wheel \
     #&& pip install password \
     #&& pip install Flask-Bcrypt \
     #&& pip install geopy==1.11 \
-    #&& pip install rtree \
     #&& pip install descartes \
     #&& pip install pyproj \
     #&& pip install requests==2.13.0 \
