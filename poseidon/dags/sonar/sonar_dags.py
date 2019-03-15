@@ -14,9 +14,10 @@ from dags.sonar.sonar_jobs import build_sonar_json, get_sonar_json
 args = general.args
 conf = general.config
 schedule = general.schedule['sonar']
+start_date = general.start_date['sonar']
 
 #: Dag spec
-dag = DAG(dag_id='sonar', default_args=args, schedule_interval=schedule)
+dag = DAG(dag_id='sonar', default_args=args, start_date=start_date, schedule_interval=schedule)
 
 sonar_latest_only = LatestOnlyOperator(
     task_id='sonar_latest_only', dag=dag)

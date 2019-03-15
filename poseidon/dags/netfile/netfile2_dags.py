@@ -17,10 +17,11 @@ from dags.netfile.netfile2_jobs import *
 args = general.args
 conf = general.config
 schedule = general.schedule['campaign_fin']
+start_date = general.start_date['campaign_fin']
 cur_yr = general.get_year()
 
 #: Dag spec
-dag = DAG(dag_id='campaign_fin_reports', default_args=args, schedule_interval=schedule)
+dag = DAG(dag_id='campaign_fin_reports', default_args=args, start_date=start_date, schedule_interval=schedule)
 
 campaign_fin_latest_only = LatestOnlyOperator(task_id='campaign_fin_latest_only', dag=dag)
 

@@ -14,9 +14,10 @@ from dags.city_docs.city_docs_jobs import *
 args = general.args
 conf = general.config
 schedule = general.schedule['sire']
+start_date = general.start_date['sire']
 
 #: Dag spec
-dag = DAG(dag_id='sire_docs', default_args=args, schedule_interval=schedule)
+dag = DAG(dag_id='sire_docs', default_args=args, start_date=start_date, schedule_interval=schedule)
 
 sire_docs_latest_only = LatestOnlyOperator(task_id='sire_docs_latest_only', dag=dag)
 

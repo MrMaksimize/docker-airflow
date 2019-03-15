@@ -17,9 +17,10 @@ from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_upd
 args = general.args
 conf = general.config
 schedule = general.schedule['public_art']
+start_date = general.start_date['public_art']
 
 #: Dag spec
-dag = DAG(dag_id='public_art', default_args=args, schedule_interval=schedule)
+dag = DAG(dag_id=='public_art', default_args=args, start_date=start_date, schedule_interval=schedule)
 
 public_art_latest_only = LatestOnlyOperator(task_id='public_art_latest_only', dag=dag)
 

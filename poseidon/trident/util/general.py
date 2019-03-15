@@ -85,10 +85,6 @@ def buildConfig(env):
     """Take the current environment, generate build configuration."""
     config = {
         'env': (env or 'local').upper(),
-        'op_start': datetime.strptime(
-            # set default to prevent errors
-            Variable.get('AIRFLOW_TASKS_START_DATE', '2017-02-01'),
-            '%Y-%m-%d'),
         'default_s3_conn_id': 's3data',
         'prod_data_dir': "/data/prod",
         'temp_data_dir': "/data/temp",
@@ -176,6 +172,40 @@ schedule = {
     'cip': '@daily'
 }
 
+start_date = {
+    'fd_incidents' : datetime('2019-03-15'),
+    'pd_cfs': datetime('2019-03-15'),
+    'pd_col': datetime('2019-03-15'),
+    'ttcs': datetime('2019-03-15'),
+    'indicator_bacteria_tests': datetime('2019-03-15'),
+    'parking_meters': datetime('2019-03-15'),
+    'traffic_counts': datetime('2019-03-15'),
+    'read': datetime('2019-03-15'),
+    'dsd_approvals': datetime('2019-03-15'),
+    'dsd_code_enforcement': datetime('2019-03-15'),
+    'streets_sdif': datetime('2019-03-15'),
+    'streets_imcat': datetime('2019-03-15'),
+    'get_it_done': datetime('2019-03-15'),
+    'gid_potholes': datetime('2019-03-15'),
+    'gid_ava': datetime('2019-03-15'),
+    'special_events': datetime('2019-03-15'),
+    'waze': datetime('2019-03-15'),
+    'inventory': datetime('2019-03-15'),
+    'buffer_post_promo': datetime('2019-03-15'),
+    'sonar': datetime('2019-03-15'),
+    'gis_daily': datetime('2019-03-15'),
+    'gis_weekly': datetime('2019-03-15'),
+    'budget': datetime('2019-03-15'),
+    'campaign_fin': datetime('2019-03-15'),
+    'public_art': datetime('2019-03-15'),
+    'sire': datetime('2019-03-15'),
+    'onbase': datetime('2019-03-15'),
+    'documentum_24' : datetime('2019-03-15'),
+    'documentum_others' : datetime('2019-03-15'),
+    'tsw_integration': datetime('2019-03-15'),
+    'cip': datetime('2019-03-15')
+}
+
 source = {'ttcs': os.environ.get('CONN_ORACLETTCS'),
 'cef':os.environ.get('CONN_ORACLE_CEF'),
 'dsd_permits' : os.environ.get('CONN_ORACLE_PERMITS'),
@@ -183,8 +213,7 @@ source = {'ttcs': os.environ.get('CONN_ORACLETTCS'),
 }
 
 args = {
-    'owner': 'airflow',
-    'start_date': config['op_start'],
+    'owner': 'airflow'
     'depends_on_past': False,
     'email': config['mail_default_receivers'],
     'email_on_failure': config['mail_notify'],

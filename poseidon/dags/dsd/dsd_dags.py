@@ -19,6 +19,7 @@ from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_upd
 args = general.args
 conf = general.config
 schedule = general.schedule
+start_date = general.schedule['dsd_code_enforcement']
 
 fname_list = ['code_enf_past_6_mo', 'code_enf_past_3_yr']
 
@@ -27,6 +28,7 @@ dsd_temp_dir = general.create_path_if_not_exists(conf['temp_data_dir'] + '/')
 #: Dag spec for dsd code enforcement.
 dag = DAG(dag_id='dsd_code_enforcement',
           default_args=args,
+          start_date=start_date,
           schedule_interval=schedule['dsd_code_enforcement'])
 
 #: Latest Only Operator for dsd code enforcement

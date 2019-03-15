@@ -13,10 +13,12 @@ from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_upd
 args = general.args
 conf = general.config
 schedule = general.schedule['special_events']
+start_date = general.start_date['special_events']
 
 #: Dag spec
 dag = DAG(dag_id='special_events',
           default_args=args,
+          start_date=start_date,
           schedule_interval=schedule)
 
 

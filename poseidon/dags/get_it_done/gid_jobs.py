@@ -203,7 +203,8 @@ def update_close_dates():
     'cases_with_no_children_02_07_19.xlsx',
     'cases_with_children_02_07_19.xlsx',
     'cases_2_22_19_and_3_1_19.xlsx',
-    'cases_3_8_19.xlsx'
+    'cases_3_8_19.xlsx',
+    'cases_3_15_19.xlsx'
     ]
 
     # We loop through these files and join back to the df

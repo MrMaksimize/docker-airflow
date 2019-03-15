@@ -19,9 +19,10 @@ from dags.get_it_done.gid_jobs import *
 args = general.args
 conf = general.config
 schedule = general.schedule['get_it_done']
+start_date = general.start_date['get_it_done']
 
 #: Dag spec
-dag = DAG(dag_id='get_it_done', default_args=args, schedule_interval=schedule)
+dag = DAG(dag_id='get_it_done', default_args=args, start_date=start_date, schedule_interval=schedule)
 
 gid_latest_only = LatestOnlyOperator(task_id='gid_latest_only', dag=dag)
 
