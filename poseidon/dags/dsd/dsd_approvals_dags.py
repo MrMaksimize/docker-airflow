@@ -13,7 +13,7 @@ from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_upd
 conf = general.config
 args = general.args
 schedule = general.schedule['dsd_approvals']
-start_date = general.schedule['dsd_approvals']
+start_date = general.start_date['dsd_approvals']
 dsd_temp_dir = general.create_path_if_not_exists(conf['temp_data_dir'] + '/')
 
 fnames = [

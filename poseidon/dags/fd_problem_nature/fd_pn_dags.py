@@ -15,7 +15,7 @@ from trident.util.seaboard_updates import *
 args = general.args
 conf = general.config
 schedule = general.schedule['fd_incidents']
-start_date = general.schedule['fd_incidents']
+start_date = general.start_date['fd_incidents']
 cur_yr = general.get_year()
 
 #: Dag spec

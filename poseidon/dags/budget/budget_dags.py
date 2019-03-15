@@ -16,12 +16,14 @@ import glob
 args = general.args
 conf = general.config
 schedule = general.schedule['budget']
+start_date = general.start_date['budget']
 budget_fy = general.get_FY_short() + 1
 
 
 dag = DAG(
     dag_id='budget',
     default_args=args,
+    start_date=start_date,
     schedule_interval=schedule)
 
 

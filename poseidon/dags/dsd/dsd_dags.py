@@ -19,7 +19,7 @@ from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_upd
 args = general.args
 conf = general.config
 schedule = general.schedule
-start_date = general.schedule['dsd_code_enforcement']
+start_date = general.start_date['dsd_code_enforcement']
 
 fname_list = ['code_enf_past_6_mo', 'code_enf_past_3_yr']
 

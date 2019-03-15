@@ -11,6 +11,7 @@ from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_upd
 
 args = general.args
 schedule = general.schedule['parking_meters']
+start_date = general.start_date['parking_meters']
 conf = general.config
 cur_yr = general.get_year()
 
@@ -25,6 +26,7 @@ flist = {
 dag = DAG(
     dag_id='parking_meters',
     default_args=args,
+    start_date=start_date,
     schedule_interval=schedule)
 
 #: Latest Only Operator for parking meters

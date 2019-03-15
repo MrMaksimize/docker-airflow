@@ -14,11 +14,12 @@ from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_upd
 
 args = general.args
 conf = general.config
-
+start_date = general.start_date['indicator_bacteria_tests']
 
 dag = DAG(
     dag_id='indicator_bacteria_tests',
     default_args=args,
+    start_date=start_date,
     schedule_interval=general.schedule['indicator_bacteria_tests'])
 
 
