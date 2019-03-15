@@ -1,18 +1,5 @@
 version: '2.1'
 services:
-  ##postgres:
-  #      image: postgres:9.6
-  #      ports:
-  #          - "5432:5432"
-  #      environment:
-  #          - POSTGRES_USER=airmaster
-  #          - POSTGRES_PASSWORD=airmasterPass
-  #          - POSTGRES_DB=airflow
-  #          # Uncomment these lines to persist data on the local filesystem.
-  #          #     - PGDATA=/var/lib/postgresql/data/pgdata
-  #          # volumes:
-  #          #     - ./pgdata:/var/lib/postgresql/data/pgdata
-
     webserver:
         image: mrmaksimize/docker-airflow:1.10.2
         restart: always
@@ -20,6 +7,7 @@ services:
             - ./poseidon:/usr/local/airflow/poseidon
             - ./data:/data
         environment:
+            - AIRFLOW_HOME=/usr/local/airflow
             - LOAD_EX=n
             - EXECUTOR=Sequential
               # From environment specific .env
@@ -30,12 +18,8 @@ services:
             - AWS_REGION=${AWS_REGION}
             - AIRFLOW_TASKS_START_YMD=${AIRFLOW_TASKS_START_YMD}
             - AIRFLOW_CONN_S3DATA="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@S3"
-            - AIRFLOW_CONN_S3DATA="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@poseidon-logs-${SD_ENV}"
-
-              # Dafaults
-            - AIRFLOW_HOME=/usr/local/airflow
+            - AIRFLOW_CONN_S3LOG="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@poseidon-logs-${SD_ENV}"
         ports:
-            - "8080:8080"
             - "1187:1187"
         command: webserver
         healthcheck:
