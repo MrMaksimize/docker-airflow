@@ -22,7 +22,7 @@ def fix_title(df):
 def get_sire():
     """Get tables from Sire."""
     logging.info('Getting files sire')
-    for root, dirs, files in os.walk('./poseidon/poseidon/dags/city_docs/sql/sire'):
+    for root, dirs, files in os.walk('./poseidon/dags/city_docs/sql/sire'):
         for name in files:
             logging.info('Querying for '+name)
             path = './sql/sire/{}'.format(name)
@@ -45,7 +45,7 @@ def get_sire():
 def get_onbase():
     """Get tables from OnBase."""
     logging.info('Getting files from onbase')
-    for root, dirs, files in os.walk('./poseidon/poseidon/dags/city_docs/sql/onbase'):
+    for root, dirs, files in os.walk('./poseidon/dags/city_docs/sql/onbase'):
         for name in files:
             logging.info('Querying for '+name)
             path = './sql/onbase/{}'.format(name)

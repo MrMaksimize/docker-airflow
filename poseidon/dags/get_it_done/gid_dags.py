@@ -25,10 +25,28 @@ dag = DAG(dag_id='get_it_done', default_args=args, schedule_interval=schedule)
 
 gid_latest_only = LatestOnlyOperator(task_id='gid_latest_only', dag=dag)
 
-#: Get GID requests from Salesforce, process, output prod file
+#: Get GID requests from Salesforce
 get_gid_requests = PythonOperator(
     task_id='get_gid_requests',
-    python_callable=get_sf_gid_requests,
+    python_callable=get_gid_requests,
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
+
+#: Create mapped case record type and service name cols
+update_service_name = PythonOperator(
+    task_id='update_service_name',
+    python_callable=update_service_name,
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
+
+#: Fix close dates per SAP issue
+update_close_dates = PythonOperator(
+    task_id='update_close_dates',
+    python_callable=update_close_dates,
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
@@ -38,6 +56,24 @@ get_gid_requests = PythonOperator(
 join_council_districts = PythonOperator(
     task_id='join_council_districts',
     python_callable=join_council_districts,
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
+
+#: Add comm plan district attribute to GID data through spatial join
+join_community_plan = PythonOperator(
+    task_id='join_community_plan',
+    python_callable=join_community_plan,
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
+
+#: Add parks attribute to GID data through spatial join
+join_parks = PythonOperator(
+    task_id='join_parks',
+    python_callable=join_parks,
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
@@ -139,12 +175,20 @@ for index, file_ in enumerate(files):
         md_update_task = get_seaboard_update_dag('get-it-done-311.md', dag)
         #: update md task must run after the upload task
         md_update_task.set_upstream(upload_task)
-
+        
 #: Execution rules
 #: gid_latest_only must run before get_gid_requests
 get_gid_requests.set_upstream(gid_latest_only)
+#: gid_latest_only must run before get_gid_requests
+update_service_name.set_upstream(get_gid_requests)
+#: gid_latest_only must run before get_gid_requests
+update_close_dates.set_upstream(update_service_name)
 #: get_gid_requests must run before join_council_district
-join_council_districts.set_upstream(get_gid_requests)
-#: join_council_districts must run before creating prod files
-create_prod_files.set_upstream(join_council_districts)
+join_council_districts.set_upstream(update_close_dates)
+#: get_gid_requests must run before join_council_district
+join_community_plan.set_upstream(join_council_districts)
+#: get_gid_requests must run before join_council_district
+join_parks.set_upstream(join_community_plan)
+#: join_community_plan must run before creating prod files
+create_prod_files.set_upstream(join_parks)
 

@@ -40,6 +40,23 @@ clean_data = PythonOperator(
     on_success_callback=notify,
     dag=dag)
 
+#: Join BIDs to permits
+join_bids = PythonOperator(
+    task_id='join_bids',
+    python_callable=join_bids,
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
+
+#: Subset solar permits
+subset_solar = PythonOperator(
+    task_id='subset_solar',
+    python_callable=subset_solar,
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
 
 #: Upload data to S3
 upload_dsd_permits = S3FileTransferOperator(
@@ -86,10 +103,16 @@ get_permits_files.set_upstream(dsd_permits_latest_only)
 clean_data.set_upstream(get_permits_files)
 
 #: upload_dsd tasks are executed after clean_data tasks
-upload_dsd_permits.set_upstream(clean_data)
+join_bids.set_upstream(clean_data)
+
+#: subset_solar tasks are executed after clean_data tasks
+subset_solar.set_upstream(join_bids)
+
+#: upload_dsd tasks are executed after subset_solar tasks
+upload_dsd_permits.set_upstream(subset_solar)
 
 #: upload_dsd tasks are executed after clean_data tasks
-upload_solar_permits.set_upstream(clean_data)
+upload_solar_permits.set_upstream(subset_solar)
 
 #: github updates are executed after S3 upload tasks
 update_permits_md.set_upstream(upload_dsd_permits)

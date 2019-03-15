@@ -268,16 +268,37 @@ def spatial_join_pt(pt_file, poly_file, lat='lat', lon='lon'):
 
     This function returns a DataFrame, not a Geodataframe.
     """
-    logging.info('Loading both layers.')
+    logging.info('Loading point file')
     df = pd.read_csv(pt_file,low_memory=False)
+
+    logging.info('Starting with {} rows in point file'.format(df.shape[0]))
+
+    df = df.reset_index(drop=True)
+    df_cols = df.columns.values.tolist()
+    
+    logging.info('Converting point file to geodf')
     pt = df_to_geodf_pt(df, lat, lon)
+    logging.info('Loading poly file as geodf')
     poly = geojson_to_geodf(poly_file)
     pt.crs = poly.crs
+    
     logging.info('Operating spatial join.')
     pt_join = sjoin(pt, poly, how='left')
     pt_join = pt_join.drop(['geometry', 'index_right'], axis=1)
+    
     logging.info('Successfully spatially joined data.')
-    return pt_join
+    join_cols = pt_join.columns.values.tolist()
+    new_cols = [x for x in join_cols if x not in df_cols]
+
+    # We will not keep the results for points 
+    # that join to multiple polygons
+    pt_join = pt_join.reset_index().drop_duplicates(subset="index",keep=False).set_index("index")
+    
+    # We must join the result back to original dataframe to keep all rows
+    final = pd.merge(df,pt_join[new_cols],left_index=True,right_index=True,how="left")
+    
+    logging.info('Finished with {} rows'.format(final.shape[0]))
+    return final
 
 
 def extract_sde_data(table, where=''):
