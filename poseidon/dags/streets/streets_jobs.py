@@ -94,7 +94,8 @@ def get_streets_paving_data(mode='sdif', **kwargs):
     #pv <- pv[(as.Date(pv$job_end_dt) > (today() - years(5))) | is.na(pv$job_end_dt),]
 
     # Create ref dates
-    today = kwargs['execution_date']
+    #today = kwargs['execution_date']
+    today = general.today()
     five_yrs_ago = today.replace(year=(today.year - 5))
     three_yrs_ago = today.replace(year=(today.year - 3))
 
