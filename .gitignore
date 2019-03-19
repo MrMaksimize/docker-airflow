@@ -49,3 +49,5 @@ data/**/*.*
 
 # Secrets
 secrets.json
+
+venv/*
