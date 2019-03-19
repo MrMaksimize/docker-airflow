@@ -16,9 +16,10 @@ from dags.tsw_integration.tsw_integration_jobs import *
 args = general.args
 conf = general.config
 schedule = general.schedule['tsw_integration']
+start_date = general.start_date['tsw_integration']
 
 #: Dag spec
-dag = DAG(dag_id='tsw_integration', default_args=args, schedule_interval=schedule)
+dag = DAG(dag_id='tsw_integration', default_args=args, start_date=start_date, schedule_interval=schedule)
 
 violations_latest_only = LatestOnlyOperator(task_id='violations_latest_only', dag=dag)
 

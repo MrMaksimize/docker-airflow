@@ -11,13 +11,20 @@ from trident.util.geospatial import spatial_join_pt
 conf = general.config
 
 temp_file_gid = conf['temp_data_dir'] + '/gid_temp.csv'
+mapped_file_gid = conf['temp_data_dir'] + '/gid_mapped.csv'
 clean_file_gid = conf['temp_data_dir'] + '/gid_clean.csv'
 cd_file_gid = conf['temp_data_dir'] + '/gid_cd.csv'
+cp_file_gid = conf['temp_data_dir'] + '/gid_cp.csv'
+parks_file_gid = conf['temp_data_dir'] + '/gid_parks.csv'
+
 services_file = conf['temp_data_dir'] + '/gid_final.csv'
+
 prod_file_base = conf['prod_data_dir'] + '/get_it_done_'
 prod_file_end = 'requests_datasd.csv'
 prod_file_gid = prod_file_base + prod_file_end
-cw_gid = conf['temp_data_dir'] + '/gid_crosswalk.csv'
+
+
+cw_gid = 'https://datasd-reference.s3.amazonaws.com/gid/gid_crosswalk.csv'
 
 def sap_case_type(row):
     if row['sap_subject_category'] != '':
@@ -40,16 +47,13 @@ def sap_case_sub_type(row):
         return None
 
 
-def get_sf_gid_requests():
+def get_gid_requests():
     """Get requests from sf, creates prod file."""
     username = conf['mrm_sf_user']
     password = conf['mrm_sf_pass']
     security_token = conf['mrm_sf_token']
 
     report_id = "00Ot0000000TUnb"
-    #report_id="00Ot0000000GsV4"
-
-    logging.info("Pulling requests to {}".format(temp_file_gid))
 
     # Init salesforce client
     sf = Salesforce(username, password, security_token)
@@ -61,20 +65,27 @@ def get_sf_gid_requests():
 
     logging.info('Process report {} data.'.format(report_id))
 
+    return "Successfully pulled Salesforce report"
+
+def update_service_name():
+    """ Take various columns and merge for consistent case types"""
     df = pd.read_csv(temp_file_gid,
                      encoding='ISO-8859-1',
                      low_memory=False,
-                     error_bad_lines=False)
+                     error_bad_lines=False,
+                     )
 
-    df.columns = [x.lower().replace(' ','_').replace('/','_')
+    logging.info("Read {} records from Salesforce report".format(df.shape[0]))
+
+    df.columns = [x.lower().replace(' ','_').replace('/','_') 
         for x in df.columns]
 
     df = df.fillna('')
 
-    logging.info('Fixing case record types')
+    logging.info('Prepped dataframe, fixing simple case record types')
 
     df.loc[(df['problem_category'] == 'Abandoned Vehicle'),'case_record_type'] = '72 Hour Report'
-
+    
     df.loc[(df['case_record_type'] == 'Street Division Closed Case') |
        (df['case_record_type'] == 'Street Division') |
        (df['case_record_type'] == 'Storm Water') |
@@ -84,8 +95,8 @@ def get_sf_gid_requests():
     df.loc[df['case_record_type'] == 'Traffic Engineering Closed Case'
         , 'case_record_type'] = 'Traffic Engineering'
 
-    logging.info('Subsetting records to be able to fix case types')
-
+    logging.info('Subsetting records to be able to fix more case types')
+    
     case_types_correct = df.loc[(df['case_record_type'] == 'ESD Complaint/Report') |
         (df['case_record_type'] == 'Storm Water Code Enforcement') |
         (df['case_record_type'] == 'TSW ROW')
@@ -128,7 +139,7 @@ def get_sf_gid_requests():
                                                case_sub_type_new=get_sap_sub_types)
 
     logging.info('Concatting all subsets with corrected types')
-
+    
     df_mapped = pd.concat([correct_types,
                        sap_types,
                        dsd_types,
@@ -137,7 +148,7 @@ def get_sf_gid_requests():
 
     logging.info('Updating illegal dumping case record type')
 
-    df_mapped.loc[df_mapped['problem_category'] == 'Illegal Dumping',
+    df_mapped.loc[df_mapped['problem_category'] == 'Illegal Dumping', 
         'case_record_type'] = "ESD Complaint/Report"
 
     df_mapped.loc[df_mapped['hide_from_web'] == 1,
@@ -157,10 +168,6 @@ def get_sf_gid_requests():
                                   'hide_from_web'
                                  ],axis=1)
 
-    logging.info('Converting datetime columns')
-
-    df_clean['date_time_opened'] = pd.to_datetime(df_clean['date_time_opened'],errors='coerce')
-    df_clean['date_time_closed'] = pd.to_datetime(df_clean['date_time_closed'],errors='coerce')
     df_clean = df_clean.rename(columns={'geolocation_(latitude)':'lat',
         'geolocation_(longitude)':'long',
         'case_type_new':'case_type',
@@ -174,11 +181,201 @@ def get_sf_gid_requests():
     logging.info('Writing clean gid file')
 
     general.pos_write_csv(
-        df_clean,
-        clean_file_gid,
+        df_clean, 
+        mapped_file_gid, 
         date_format='%Y-%m-%dT%H:%M:%S%z')
 
-    return "Successfully wrote records for gid clean file"
+    return "Successfully mapped case record types and service names"
+
+def update_close_dates():
+    """ Fix closed date for consistency with SAP """
+    df = pd.read_csv(mapped_file_gid,
+                     low_memory=False,
+                     parse_dates=['date_time_opened','date_time_closed']
+                     )
+
+    df['sap_notification_number'] = pd.to_numeric(df['sap_notification_number'],errors='coerce')
+    
+    orig_cols = df.columns.values.tolist()
+
+    # These are the exports we got from SAP
+    date_files = ['cases_02_08_2019.xlsx',
+    'cases_with_no_children_02_07_19.xlsx',
+    'cases_with_children_02_07_19.xlsx',
+    'cases_2_22_19_and_3_1_19.xlsx',
+    'cases_3_8_19.xlsx',
+    'cases_3_15_19.xlsx'
+    ]
+
+    # We loop through these files and join back to the df
+    # to add a new date column
+    # We will later merge all date columns into one
+
+    logging.info("Start looping through fix files")
+
+    for index, file in enumerate(date_files):
+        path = 'https://datasd-reference.s3.amazonaws.com/gid/{}'.format(file)
+        df_date = pd.read_excel(path)
+        
+        df_date.columns = [x.lower().replace(' ','_').replace('/','_').replace('"','') 
+        for x in df_date.columns]
+
+        # Exact column names are unpredictable
+        # We need either SAP notification number or case number
+        # Plus the field containing new dates
+
+        closed_cols = [col for col in df_date.columns if 'closed' in col]
+
+        if len(closed_cols) > 0:
+            df_date[closed_cols[0]] = pd.to_datetime(df_date[closed_cols[0]],errors='coerce')
+            new_dates = df_date[closed_cols[0]]
+            df_date.insert(0,'new_date_{}'.format(index),new_dates)
+            logging.info("Found column referencing closed date")
+        else:
+            logging.info("Can't locate date column in spreadsheet")
+
+        notification_cols = [col for col in df_date.columns if 'notification' in col]
+        case_cols = [col for col in df_date.columns if 'case' in col]
+
+        if len(notification_cols) > 0:
+
+
+            logging.info("Joining on SAP notification number")
+            df_date[notification_cols[0]] = pd.to_numeric(df_date[notification_cols[0]],
+                errors='coerce')
+            df = pd.merge(df,
+                df_date,
+                left_on=['sap_notification_number'],
+                right_on=[notification_cols[0]],
+                how="left"
+                )
+
+        elif len(case_cols) > 0:
+            
+            if len(case_cols) == 1:
+                case_to_merge = case_cols[0]
+            else:
+                for case in case_cols:
+                    if "child" in case:
+                        case_to_merge = case
+                    else:
+                        case_to_merge = case_cols[0]
+                        
+            logging.info("Joining on Salesforce case number with {}".format(case_to_merge))
+            df = pd.merge(df,
+                df_date,
+                left_on=['case_number'],
+                right_on=[case_to_merge],
+                how="left"
+                )
+
+        else:
+            logging.info("Can't determine unique identifier to join on")
+
+    # Convert date columns to datetime, then use the earliest date as final correct date
+    logging.info("Getting minimum date for all date columns")
+    new_date_cols = [col for col in df.columns if 'new_date' in col]
+    df.loc[:,new_date_cols] = df.loc[:,new_date_cols].apply(pd.to_datetime, errors='coerce')
+    df['min_new_date'] = df[new_date_cols].min(axis=1)
+    
+    # Discard additional cols from joins
+    logging.info("Adding new date to original column list and subsetting data")
+    orig_cols.append('min_new_date')
+    df_updated = df[orig_cols]
+    
+    # Split records into those that need to be updated
+    # And those that don't
+    bad_records = df_updated[df_updated['min_new_date'].notnull()]
+    logging.info("Processed {} records with known date error".format(bad_records.shape[0]))
+    good_records = df_updated[df_updated['min_new_date'].isnull()]
+    logging.info("{} records remain to be searched".format(good_records.shape[0]))
+
+    # Now check for any children that weren't flagged to be updated
+    # By looking for case numbers in parent case number column
+    
+    logging.info("Searching parent case number col for case numbers with known error")
+
+    child_merge = pd.merge(good_records,
+        bad_records[['case_number','min_new_date']],
+        left_on=['parent_case_number'],
+        right_on=['case_number'],
+        how="left"
+        )
+
+    good_records_new = child_merge.drop(['min_new_date_x','case_number_y'],axis=1)
+    good_records_new = good_records_new.rename(columns={'min_new_date_y':'min_new_date',
+        'case_number_x':'case_number'})
+
+    child_search_result = good_records_new[good_records_new['min_new_date'].notnull()].shape[0]
+    logging.info("Found {} children cases where parent case has known error".format(child_search_result))
+    
+    # Export missing children to update in Salesforce
+    logging.info("Exporting child cases for gid team")
+    general.pos_write_csv(
+        good_records_new.loc[good_records_new['min_new_date'].notnull(),
+            ['case_number',
+            'parent_case_number',
+            'min_new_date',
+            'date_time_closed']],
+        conf['temp_data_dir'] + '/gid_children_found.csv'
+        )
+
+    logging.info("Recombining records, updating date time closed and status")
+    
+    all_records = pd.concat([bad_records,good_records_new])
+
+    all_records = all_records.reset_index(drop=True)
+
+    logging.info("Updating closed date with new date where new date is after date time opened")
+
+    all_records.loc[
+        all_records['min_new_date'].notnull() &
+        (all_records['min_new_date'] > all_records['date_time_opened'])
+        ,'date_time_closed'] = all_records.loc[
+        all_records['min_new_date'].notnull() &
+        (all_records['min_new_date'] > all_records['date_time_opened'])
+        ,'min_new_date']
+
+    logging.info("Update closed date with opened date where new date is before date time opened")
+
+    all_records.loc[
+        all_records['min_new_date'].notnull() & 
+        (all_records['min_new_date'] <= all_records['date_time_opened'])
+        ,'date_time_closed'] = all_records.loc[
+        all_records['min_new_date'].notnull() &
+        (all_records['min_new_date'] <= all_records['date_time_opened'])
+        ,'date_time_opened']
+
+    logging.info("Recalculating case age days")
+
+    all_records.loc[
+        all_records['min_new_date'].notnull(),
+        'case_age_days'] = all_records.loc[
+        all_records['min_new_date'].notnull(),
+        ['date_time_closed',
+        'date_time_opened']].apply(
+            lambda x: (x['date_time_closed'] - x['date_time_opened']).days, 
+            axis=1)
+
+    all_records.loc[all_records['min_new_date'].notnull(),
+                          'mobile_web_status'] = 'Closed'
+
+    all_records = all_records.drop(['min_new_date'],axis=1)
+
+    all_records.loc[
+        :,'date_time_closed'] = all_records.loc[
+        :,'date_time_closed'].apply(
+            lambda x: x.date())
+
+    logging.info("Export file with fixed close dates")
+
+    general.pos_write_csv(
+        all_records, 
+        clean_file_gid, 
+        date_format='%Y-%m-%dT%H:%M:%S%z')
+
+
+    return "Successfully updated closed datetime from SAP errors"
 
 def join_council_districts():
     """Spatially joins council districts data to GID data."""
@@ -187,14 +384,22 @@ def join_council_districts():
                              cd_geojson,
                              lat='lat',
                              lon='long')
-    gid_cd = gid_cd.drop([
+    
+    cols = gid_cd.columns.values.tolist()
+    drop_cols = [
         'objectid',
         'area',
         'perimeter',
         'name',
         'phone',
         'website'
-    ], 1)
+        ]
+
+    if "level_0" in cols:
+        drop_cols.append('level_0')
+
+
+    gid_cd = gid_cd.drop(drop_cols, axis=1)
 
     gid_cd['district'] = gid_cd['district'].fillna('0')
     gid_cd['district'] = gid_cd['district'].astype(int)
@@ -208,13 +413,82 @@ def join_council_districts():
 
     return "Successfully joined council districts to GID data"
 
+def join_community_plan():
+    """Spatially joins community plan districts data to GID data."""
+    cp_geojson = conf['prod_data_dir'] + '/cmty_plan_datasd.geojson'
+    gid_cp = spatial_join_pt(cd_file_gid,
+                             cp_geojson,
+                             lat='lat',
+                             lon='long')
+
+    cols = gid_cp.columns.values.tolist()
+    drop_cols = [
+        'objectid',
+        'acreage',
+        ]
+
+    if "level_0" in cols:
+        drop_cols.append('level_0')
+
+    gid_cp = gid_cp.drop(drop_cols, axis=1)
+
+    general.pos_write_csv(
+        gid_cp,
+        cp_file_gid,
+        date_format='%Y-%m-%dT%H:%M:%S%z')
+
+    return "Successfully joined community plan districts to GID data"
+
+def join_parks():
+    """Spatially joins community plan districts data to GID data."""
+    parks_geojson = conf['prod_data_dir'] + '/parks_datasd.geojson'
+    gid_parks = spatial_join_pt(cp_file_gid,
+                             parks_geojson,
+                             lat='lat',
+                             lon='long')
+
+    cols = gid_parks.columns.values.tolist()
+    drop_cols = [
+        'objectid',
+        'gis_acres',
+        'location'
+    ]
+
+    if "level_0" in cols:
+        drop_cols.append('level_0')
+
+    gid_parks = gid_parks.drop(drop_cols, axis=1)
+
+    gid_parks = gid_parks.rename(columns={'name':'park_name'})
+
+    general.pos_write_csv(
+        gid_parks,
+        parks_file_gid,
+        date_format='%Y-%m-%dT%H:%M:%S%z')
+
+    return "Successfully joined parks to GID data"
+
 def create_prod_files():
     """ Map category columns and divide by year """
 
-    df = pd.read_csv(cd_file_gid,
+    df = pd.read_csv(parks_file_gid, 
         low_memory=False,
         parse_dates=['date_time_opened',
-        'date_time_closed'])
+        'date_time_closed']
+        )
+
+    logging.info("Changing float dtypes to int")
+    
+    df.loc[:,['sap_notification_number',
+        'case_age_days',
+        'district',
+        'cpcode']] = df.loc[:,['sap_notification_number',
+        'case_age_days',
+        'district',
+        'cpcode']].fillna(-999999.0).astype(int)
+
+    df = df.replace(-999999.0,np.nan)
+    df['parent_case_number'] = df['parent_case_number'].replace(0,np.nan)
 
     logging.info('Loaded {} total prod records'.format(df.shape[0]))
 
@@ -235,14 +509,14 @@ def create_prod_files():
     final_reports['case_category'] = final_reports['case_category'].fillna('')
 
     logging.info('Making category equal to case type for non matches')
-
+    
     case_cat_fillin = final_reports.loc[(
-        (final_reports['case_category'] == '') &
+        (final_reports['case_category'] == '') & 
         (final_reports['case_type'] != '')),
         'case_type']
 
     final_reports.loc[(
-        (final_reports['case_category'] == '') &
+        (final_reports['case_category'] == '') & 
         (final_reports['case_type'] != '')),
         'case_category'] = case_cat_fillin
 
@@ -250,14 +524,21 @@ def create_prod_files():
 
     final_reports = final_reports.rename(columns={
         'case_number':'service_request_id',
+        'parent_case_number':'service_request_parent_id',
         'case_category':'service_name',
         'date_time_opened':'requested_datetime',
-        'date_time_closed':'updated_datetime'
+        'date_time_closed':'updated_datetime',
+        'district':'council_district',
+        'cpcode':'comm_plan_code',
+        'cpname':'comm_plan_name',
+        'name':'park_name'
 
         })
 
     final_reports = final_reports[[
     'service_request_id',
+    'service_request_parent_id',
+    'sap_notification_number',
     'requested_datetime',
     'case_age_days',
     'service_name',
@@ -266,7 +547,10 @@ def create_prod_files():
     'status',
     'lat',
     'long',
-    'district',
+    'council_district',
+    'comm_plan_code',
+    'comm_plan_name',
+    'park_name',
     'case_origin',
     'specify_the_issue',
     'referred_department',

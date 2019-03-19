@@ -14,8 +14,9 @@ conf = general.config
 args = general.args
 
 schedule = general.schedule['inventory']
+start_date = general.start_date['inventory']
 
-dag = DAG(dag_id='inventory', default_args=args, schedule_interval=schedule)
+dag = DAG(dag_id='inventory', default_args=args, start_date=start_date, schedule_interval=schedule)
 
 
 inv_latest_only = LatestOnlyOperator(task_id='inventory_latest_only', dag=dag)

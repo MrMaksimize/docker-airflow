@@ -18,9 +18,10 @@ from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_upd
 args = general.args
 conf = general.config
 schedule = general.schedule['streets_sdif']
+start_date = general.start_date['streets_sdif']
 
 #: Dag spec
-dag = DAG(dag_id='sidewalk', default_args=args, schedule_interval=schedule)
+dag = DAG(dag_id='sidewalk', default_args=args, start_date=start_date, schedule_interval=schedule)
 
 #: Latest Only Operator for sdif
 sidewalk_latest_only = LatestOnlyOperator(task_id='sidewalk_latest_only', dag=dag)

@@ -14,8 +14,10 @@ conf = general.config
 args = general.args
 
 schedule = general.schedule['buffer_post_promo']
+start_date = general.start_date['buffer_post_promo']
 
-dag = DAG(dag_id='buffer_post_promo', default_args=args, schedule_interval=schedule)
+
+dag = DAG(dag_id='buffer_post_promo', default_args=args, start_date=start_date, schedule_interval=schedule)
 
 
 buffer_post_latest_only = LatestOnlyOperator(task_id='buffer_post_latest_only', dag=dag)

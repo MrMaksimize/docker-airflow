@@ -12,9 +12,10 @@ from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_upd
 args = general.args
 conf = general.config
 schedule = general.schedule
+start_date = general.start_date['pd_col']
 
 dag = DAG(
-    dag_id='pd_col', default_args=args, schedule_interval=schedule['pd_col'])
+    dag_id='pd_col', default_args=args, start_date=start_date, schedule_interval=schedule['pd_col'])
 
 
 #: Latest Only Operator for pd_col

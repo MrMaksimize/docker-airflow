@@ -13,8 +13,10 @@ conf = general.config
 args = general.args
 
 schedule = general.schedule['waze']
+start_date = general.start_date['waze']
 
-dag = DAG(dag_id='waze', default_args=args, schedule_interval=schedule)
+
+dag = DAG(dag_id='waze', default_args=args, start_date=start_date, schedule_interval=schedule)
 
 #: Latest Only Operator for jams
 jams_latest_only = LatestOnlyOperator(task_id='waze_jams_latest_only', dag=dag)

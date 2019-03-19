@@ -16,12 +16,13 @@ from dags.city_docs.city_docs_jobs import *
 args = general.args
 conf = general.config
 schedule = general.schedule['documentum_24']
+start_date = general.start_date['documentum_24']
 prod_data = conf['prod_data_dir']
 schedule_mode = 'schedule_24'
 
 
 #: Dag spec
-dag = DAG(dag_id='documentum_24_docs', default_args=args, schedule_interval=schedule)
+dag = DAG(dag_id='documentum_24_docs', default_args=args, start_date=start_date, schedule_interval=schedule)
 
 documentum_docs_latest_only = LatestOnlyOperator(task_id='documentum_24_docs_latest_only', dag=dag)
 

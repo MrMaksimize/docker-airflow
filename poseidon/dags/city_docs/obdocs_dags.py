@@ -15,10 +15,10 @@ from datetime import datetime
 args = general.args
 conf = general.config
 schedule = general.schedule['onbase']
-args['start_date'] = datetime.strptime('2018-11-12','%Y-%m-%d')
+start_date = general.start_date['onbase']
 
 #: Dag spec
-dag = DAG(dag_id='obdocs', default_args=args, schedule_interval=schedule)
+dag = DAG(dag_id='obdocs', default_args=args, start_date=start_date, schedule_interval=schedule)
 
 onbase_docs_latest_only = LatestOnlyOperator(task_id='onbase_docs_latest_only', dag=dag)
 

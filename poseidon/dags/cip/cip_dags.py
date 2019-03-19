@@ -13,11 +13,12 @@ from dags.cip.cip_jobs import *
 args = general.args
 conf = general.config
 schedule = general.schedule['cip']
+start_date = general.start_date['cip']
 fiscal_yr = general.get_FY_year()
 
 
 #: Dag spec
-dag = DAG(dag_id='cip', default_args=args, schedule_interval=schedule)
+dag = DAG(dag_id='cip', default_args=args, start_date=start_date, schedule_interval=schedule)
 
 #: Latest Only Operator for CIP
 cip_latest_only = LatestOnlyOperator(task_id='cip_latest_only', dag=dag)

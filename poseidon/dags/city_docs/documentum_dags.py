@@ -16,10 +16,10 @@ from datetime import datetime
 args = general.args
 conf = general.config
 schedule = general.schedule['documentum_others']
-args['start_date'] = datetime.strptime('2018-11-12','%Y-%m-%d')
+start_date = general.start_date['documentum_others']
 
 #: Dag spec
-dag = DAG(dag_id='docmntm_others', default_args=args, schedule_interval=schedule)
+dag = DAG(dag_id='docmntm_others', default_args=args, start_date=start_date, schedule_interval=schedule)
 prod_data = conf['prod_data_dir']
 schedule_mode = 'schedule_others'
 

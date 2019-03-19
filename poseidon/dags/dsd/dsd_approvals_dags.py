@@ -13,6 +13,7 @@ from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_upd
 conf = general.config
 args = general.args
 schedule = general.schedule['dsd_approvals']
+start_date = general.start_date['dsd_approvals']
 dsd_temp_dir = general.create_path_if_not_exists(conf['temp_data_dir'] + '/')
 
 fnames = [
@@ -23,6 +24,7 @@ fnames = [
 #: Dag spec for dsd approvals
 dag = DAG(dag_id='dsd_approvals',
           default_args=args,
+          start_date=start_date,
           schedule_interval=schedule)
 
 #: Latest Only Operator for dsd approvals.

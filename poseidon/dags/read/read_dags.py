@@ -12,8 +12,9 @@ from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_upd
 args = general.args
 conf = general.config
 schedule = general.schedule
+start_date = general.start_date['read']
 
-dag = DAG(dag_id='read', default_args=args, schedule_interval=schedule['read'])
+dag = DAG(dag_id='read', default_args=args, start_date=start_date, schedule_interval=schedule['read'])
 
 
 #: Latest Only Operator for read
