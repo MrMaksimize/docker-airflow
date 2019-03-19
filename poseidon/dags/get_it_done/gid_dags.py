@@ -22,7 +22,11 @@ schedule = general.schedule['get_it_done']
 start_date = general.start_date['get_it_done']
 
 #: Dag spec
-dag = DAG(dag_id='get_it_done', default_args=args, start_date=start_date, schedule_interval=schedule)
+#dag = DAG(dag_id='get_it_done', default_args=args, start_date=start_date, schedule_interval=schedule)
+dag = DAG(dag_id='get_it_done',
+        default_args=args,
+        schedule_interval=schedule,
+        start_date=start_date)
 
 gid_latest_only = LatestOnlyOperator(task_id='gid_latest_only', dag=dag)
 
@@ -176,7 +180,7 @@ for index, file_ in enumerate(files):
         md_update_task = get_seaboard_update_dag('get-it-done-311.md', dag)
         #: update md task must run after the upload task
         md_update_task.set_upstream(upload_task)
-        
+
 #: Execution rules
 #: gid_latest_only must run before get_gid_requests
 get_gid_requests.set_upstream(gid_latest_only)
