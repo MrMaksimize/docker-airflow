@@ -1,21 +1,25 @@
 version: '2.1'
 services:
     redis:
+        restart: always
         image: 'redis:3.2.7'
         # command: redis-server --requirepass redispass
 
     postgres:
-        image: postgres:9.6
+        image: 'postgres:9.6'
+        restart: always
+        ports:
+          - "5432:5432"
         environment:
             - POSTGRES_USER=${POSTGRES_USER}
             - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-            - POSTGRES_DB=${POSTGRES_DB}
-            - PGDATA=/var/lib/postgresql/data/pgdata
-         volumes:
+            - POSTGRES_DB=postgres
+            - PGDATA="/var/lib/postgresql/data/pgdata"
+        volumes:
             - ./pgdata:/var/lib/postgresql/data/pgdata
 
     webserver:
-        image: puckel/docker-airflow:1.10.2
+        image: mrmaksimize/docker-airflow:1.10.2
         restart: always
         depends_on:
             - postgres
@@ -26,7 +30,7 @@ services:
             - EXECUTOR=Celery
             - POSTGRES_USER=${POSTGRES_USER}
             - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-            - POSTGRES_DB=${POSTGRES_DB}
+            - POSTGRES_DB=postgres
             - REDIS_PASSWORD=${REDIS_PASSWORD}
               # From environment specific .env
             - SD_ENV=${SD_ENV}
@@ -51,7 +55,7 @@ services:
             retries: 3
 
     flower:
-        image: puckel/docker-airflow:1.10.2
+        image: mrmaksimize/docker-airflow:1.10.2
         restart: always
         depends_on:
             - redis
@@ -63,7 +67,7 @@ services:
         command: flower
 
     scheduler:
-        image: puckel/docker-airflow:1.10.2
+        image: mrmaksimize/docker-airflow:1.10.2
         restart: always
         depends_on:
             - webserver
@@ -76,7 +80,7 @@ services:
             - EXECUTOR=Celery
             - POSTGRES_USER=${POSTGRES_USER}
             - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-            - POSTGRES_DB=${POSTGRES_DB}
+            - POSTGRES_DB=postgres
             - REDIS_PASSWORD=${REDIS_PASSWORD}
               # From environment specific .env
             - SD_ENV=${SD_ENV}
@@ -91,7 +95,7 @@ services:
         command: scheduler
 
     worker:
-        image: puckel/docker-airflow:1.10.2
+        image: mrmaksimize/docker-airflow:1.10.2
         restart: always
         depends_on:
             - scheduler
@@ -104,7 +108,7 @@ services:
             - EXECUTOR=Celery
             - POSTGRES_USER=${POSTGRES_USER}
             - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-            - POSTGRES_DB=${POSTGRES_DB}
+            - POSTGRES_DB=postgres
             - REDIS_PASSWORD=${REDIS_PASSWORD}
               # From environment specific .env
             - SD_ENV=${SD_ENV}
