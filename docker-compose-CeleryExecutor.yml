@@ -1,173 +1,119 @@
-version: '2'
+version: '2.1'
 services:
-    rabbitmq:
-        image: rabbitmq:3.6-management
+    redis:
         restart: always
-        ports:
-            - "15672:15672"
-            - "5672:5672"
-        environment:
-            - RABBITMQ_DEFAULT_USER=${AIRFLOW_RMQ_USER}
-            - RABBITMQ_DEFAULT_PASS=${AIRFLOW_RMQ_PASS}
-            - RABBITMQ_DEFAULT_VHOST=airflow
+        image: 'redis:3.2.7'
+        # command: redis-server --requirepass redispass
 
     postgres:
-        image: postgres:9.6
-        environment:
-            - POSTGRES_USER=${AIRFLOW_DB_USER}
-            - POSTGRES_PASSWORD=${AIRFLOW_DB_PASS}
-            - POSTGRES_DB=airflow
-        ports:
-            - "5432:5432"
-        volumes:
-            - ${PATH_PREFIX}/poseidon/db/data:/var/lib/postgresql/data
-
-
-    mysql:
-        image: mysql
-        command: --default-authentication-plugin=mysql_native_password
+        image: 'postgres:9.6'
         restart: always
         ports:
-            - "3306:3306"
+          - "5432:5432"
         environment:
-            - MYSQL_ROOT_PASSWORD=${AIRFLOW_DB_PASS}
-            - MYSQL_DATABASE=vpm_temp
-
+            - POSTGRES_USER=${POSTGRES_USER}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+            - POSTGRES_DB=postgres
+            - PGDATA="/var/lib/postgresql/data/pgdata"
+        volumes:
+            - ./pgdata:/var/lib/postgresql/data/pgdata
 
     webserver:
-        image: mrmaksimize/airflow:latest
+        image: mrmaksimize/docker-airflow:1.10.2
         restart: always
-        volumes:
-            - ${PATH_PREFIX}/poseidon:/usr/local/airflow/poseidon
-            - ${PATH_PREFIX}/poseidon/data:/data
-            #- ${PATH_PREFIX}/poseidon/logs:/usr/local/airflow/logs
         depends_on:
             - postgres
-            - rabbitmq
-            - mysql
+            - redis
         environment:
-            - LOAD_EX=n
-            - FERNET_KEY=9IoTgQ_EJ0hCsamBU3Mctc7F9OkODnndOKCwkwXCAA
-            - EXECUTOR=Celery
             - AIRFLOW_HOME=/usr/local/airflow
-            - AIRFLOW_DB_USER=${AIRFLOW_DB_USER}
-            - AIRFLOW_DB_PASS=${AIRFLOW_DB_PASS}
-            - AIRFLOW_RMQ_USER=${AIRFLOW_RMQ_USER}
-            - AIRFLOW_RMQ_PASS=${AIRFLOW_RMQ_PASS}
-            - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASS}@postgres/airflow
-            - AIRFLOW__CELERY__BROKER_URL=amqp://${AIRFLOW_RMQ_USER}:${AIRFLOW_RMQ_PASS}@rabbitmq:5672/airflow
-            - AIRFLOW__CELERY__CELERY_RESULT_BACKEND=amqp://${AIRFLOW_RMQ_USER}:${AIRFLOW_RMQ_PASS}@rabbitmq:5672/airflow
-            - AIRFLOW_CONN_AIRFLOW_DB=postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASS}@postgres/airflow
-            - AIRFLOW_CONN_VPM_TEMP=mysql+mysqldb://root:${AIRFLOW_DB_PASS}@mysql:3306/vpm_temp
-        env_file:
-            - ${PATH_PREFIX}/poseidon/${ENV_FILE}
+            - LOAD_EX=n
+            - EXECUTOR=Celery
+            - POSTGRES_USER=${POSTGRES_USER}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+            - POSTGRES_DB=postgres
+            - REDIS_PASSWORD=${REDIS_PASSWORD}
+              # From environment specific .env
+            - SD_ENV=${SD_ENV}
+            - SECRETLY_NAMESPACE=${SD_ENV}
+            - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+            - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+            - AWS_REGION=${AWS_REGION}
+            - AIRFLOW_CONN_S3DATA="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@S3"
+            - AIRFLOW_CONN_S3LOG="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@poseidon-logs-${SD_ENV}"
+
+        volumes:
+            - ./poseidon:/usr/local/airflow/poseidon
+            - ./data:/data
         ports:
-            - "8080:8080"
-        links:
-            - postgres:postgres
-            - mysql:mysql
-            - fmeengine:fmeengine
-        entrypoint: /usr/local/airflow/poseidon/custom_entrypoint.sh
+            - "1187:1187"
         command: webserver
+        healthcheck:
+            test: ["CMD-SHELL", "[ -f /usr/local/airflow/airflow-webserver.pid ]"]
+            interval: 30s
+            timeout: 30s
+            retries: 3
 
     flower:
-        image: mrmaksimize/airflow:latest
+        image: mrmaksimize/docker-airflow:1.10.2
         restart: always
         depends_on:
-            - rabbitmq
-        volumes:
-            - ${PATH_PREFIX}/poseidon:/usr/local/airflow/poseidon
-            - ${PATH_PREFIX}/poseidon/data:/data
-            #- ${PATH_PREFIX}/poseidon/logs:/usr/local/airflow/logs
+            - redis
         environment:
             - EXECUTOR=Celery
-            - AIRFLOW_HOME=/usr/local/airflow
-            - AIRFLOW_DB_USER=${AIRFLOW_DB_USER}
-            - AIRFLOW_DB_PASS=${AIRFLOW_DB_PASS}
-            - AIRFLOW_RMQ_USER=${AIRFLOW_RMQ_USER}
-            - AIRFLOW_RMQ_PASS=${AIRFLOW_RMQ_PASS}
-            - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASS}@postgres/airflow
-            - AIRFLOW__CELERY__BROKER_URL=amqp://${AIRFLOW_RMQ_USER}:${AIRFLOW_RMQ_PASS}@rabbitmq:5672/airflow
-            - AIRFLOW__CELERY__CELERY_RESULT_BACKEND=amqp://${AIRFLOW_RMQ_USER}:${AIRFLOW_RMQ_PASS}@rabbitmq:5672/airflow
-            - AIRFLOW_CONN_AIRFLOW_DB=postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASS}@postgres/airflow
-            - AIRFLOW_CONN_VPM_TEMP=mysql+mysqldb://root:${AIRFLOW_DB_PASS}@mysql:3306/vpm_temp
-        env_file:
-            - ${PATH_PREFIX}/poseidon/${ENV_FILE}
+            - REDIS_PASSWORD=${REDIS_PASSWORD}
         ports:
             - "5555:5555"
-        links:
-            - rabbitmq:rabbitmq
-        entrypoint: /usr/local/airflow/poseidon/custom_entrypoint.sh
         command: flower
 
     scheduler:
-        image: mrmaksimize/airflow:latest
+        image: mrmaksimize/docker-airflow:1.10.2
         restart: always
         depends_on:
             - webserver
         volumes:
-            - ${PATH_PREFIX}/poseidon:/usr/local/airflow/poseidon
-            - ${PATH_PREFIX}/poseidon/data:/data
-            #- ${PATH_PREFIX}/poseidon/logs:/usr/local/airflow/logs
+            - ./poseidon:/usr/local/airflow/poseidon
+            - ./data:/data
         environment:
-            - LOAD_EX=n
-            - FERNET_KEY=9IoTgQ_EJ0hCsamBU3Mctc7F9OkODnndOKCwkwXCAA
-            - EXECUTOR=Celery
             - AIRFLOW_HOME=/usr/local/airflow
-            - AIRFLOW_DB_USER=${AIRFLOW_DB_USER}
-            - AIRFLOW_DB_PASS=${AIRFLOW_DB_PASS}
-            - AIRFLOW_RMQ_USER=${AIRFLOW_RMQ_USER}
-            - AIRFLOW_RMQ_PASS=${AIRFLOW_RMQ_PASS}
-            - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASS}@postgres/airflow
-            - AIRFLOW__CELERY__BROKER_URL=amqp://${AIRFLOW_RMQ_USER}:${AIRFLOW_RMQ_PASS}@rabbitmq:5672/airflow
-            - AIRFLOW__CELERY__CELERY_RESULT_BACKEND=amqp://${AIRFLOW_RMQ_USER}:${AIRFLOW_RMQ_PASS}@rabbitmq:5672/airflow
-            - AIRFLOW_CONN_AIRFLOW_DB=postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASS}@postgres/airflow
-            - AIRFLOW_CONN_VPM_TEMP=mysql+mysqldb://root:${AIRFLOW_DB_PASS}@mysql:3306/vpm_temp
-        env_file:
-            - ${PATH_PREFIX}/poseidon/${ENV_FILE}
-        links:
-            - mysql:mysql
-            - fmeengine:fmeengine
-        entrypoint: /usr/local/airflow/poseidon/custom_entrypoint.sh
-        command: scheduler -n 1
+            - LOAD_EX=n
+            - EXECUTOR=Celery
+            - POSTGRES_USER=${POSTGRES_USER}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+            - POSTGRES_DB=postgres
+            - REDIS_PASSWORD=${REDIS_PASSWORD}
+              # From environment specific .env
+            - SD_ENV=${SD_ENV}
+            - SECRETLY_NAMESPACE=${SD_ENV}
+            - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+            - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+            - AWS_REGION=${AWS_REGION}
+            - AIRFLOW_CONN_S3DATA="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@S3"
+            - AIRFLOW_CONN_S3LOG="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@poseidon-logs-${SD_ENV}"
+
+        command: scheduler
 
     worker:
-        image: mrmaksimize/airflow:latest
+        image: mrmaksimize/docker-airflow:1.10.2
         restart: always
         depends_on:
             - scheduler
         volumes:
-            - ${PATH_PREFIX}/poseidon:/usr/local/airflow/poseidon
-            - ${PATH_PREFIX}/poseidon/data:/data
-            #- ${PATH_PREFIX}/poseidon/logs:/usr/local/airflow/logs
+            - ./poseidon:/usr/local/airflow/poseidon
+            - ./data:/data
         environment:
-            - LOAD_EX=n
-            - FERNET_KEY=9IoTgQ_EJ0hCsamBU3Mctc7F9OkODnndOKCwkwXCAA
-            - EXECUTOR=Celery
             - AIRFLOW_HOME=/usr/local/airflow
-            - AIRFLOW_DB_USER=${AIRFLOW_DB_USER}
-            - AIRFLOW_DB_PASS=${AIRFLOW_DB_PASS}
-            - AIRFLOW_RMQ_USER=${AIRFLOW_RMQ_USER}
-            - AIRFLOW_RMQ_PASS=${AIRFLOW_RMQ_PASS}
-            - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASS}@postgres/airflow
-            - AIRFLOW__CELERY__BROKER_URL=amqp://${AIRFLOW_RMQ_USER}:${AIRFLOW_RMQ_PASS}@rabbitmq:5672/airflow
-            - AIRFLOW__CELERY__CELERY_RESULT_BACKEND=amqp://${AIRFLOW_RMQ_USER}:${AIRFLOW_RMQ_PASS}@rabbitmq:5672/airflow
-            - AIRFLOW_CONN_AIRFLOW_DB=postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASS}@postgres/airflow
-            - AIRFLOW_CONN_VPM_TEMP=mysql+mysqldb://root:${AIRFLOW_DB_PASS}@mysql:3306/vpm_temp
-        env_file:
-            - ${PATH_PREFIX}/poseidon/${ENV_FILE}
-        links:
-            - mysql:mysql
-            - fmeengine:fmeengine
-        entrypoint: /usr/local/airflow/poseidon/custom_entrypoint.sh
+            - LOAD_EX=n
+            - EXECUTOR=Celery
+            - POSTGRES_USER=${POSTGRES_USER}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+            - POSTGRES_DB=postgres
+            - REDIS_PASSWORD=${REDIS_PASSWORD}
+              # From environment specific .env
+            - SD_ENV=${SD_ENV}
+            - SECRETLY_NAMESPACE=${SD_ENV}
+            - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+            - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+            - AWS_REGION=${AWS_REGION}
+            - AIRFLOW_CONN_S3DATA="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@S3"
+            - AIRFLOW_CONN_S3LOG="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@poseidon-logs-${SD_ENV}"
         command: worker
-
-    fmeengine:
-        image: safesoftware/fme-engine-2017:latest
-        restart: always
-        volumes:
-            - ${PATH_PREFIX}/poseidon:/poseidon
-            - ${PATH_PREFIX}/poseidon/data:/data
-            - ${PATH_PREFIX}/poseidon/logs:/fmeengine/logs
-        ports:
-            - "7777:7777"
