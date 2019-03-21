@@ -1,0 +1,119 @@
+version: '2.1'
+services:
+    redis:
+        restart: always
+        image: 'redis:3.2.7'
+        # command: redis-server --requirepass redispass
+
+    postgres:
+        image: 'postgres:9.6'
+        restart: always
+        ports:
+          - "5432:5432"
+        environment:
+            - POSTGRES_USER=${POSTGRES_USER}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+            - POSTGRES_DB=postgres
+            - PGDATA="/var/lib/postgresql/data/pgdata"
+        volumes:
+            - ./pgdata:/var/lib/postgresql/data/pgdata
+
+    webserver:
+        image: mrmaksimize/docker-airflow:1.10.2
+        restart: always
+        depends_on:
+            - postgres
+            - redis
+        environment:
+            - AIRFLOW_HOME=/usr/local/airflow
+            - LOAD_EX=n
+            - EXECUTOR=Celery
+            - POSTGRES_USER=${POSTGRES_USER}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+            - POSTGRES_DB=postgres
+            - REDIS_PASSWORD=${REDIS_PASSWORD}
+              # From environment specific .env
+            - SD_ENV=${SD_ENV}
+            - SECRETLY_NAMESPACE=${SD_ENV}
+            - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+            - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+            - AWS_REGION=${AWS_REGION}
+            - AIRFLOW_CONN_S3DATA="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@S3"
+            - AIRFLOW_CONN_S3LOG="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@poseidon-logs-${SD_ENV}"
+
+        volumes:
+            - ./poseidon:/usr/local/airflow/poseidon
+            - ./data:/data
+        ports:
+            - "1187:1187"
+        command: webserver
+        healthcheck:
+            test: ["CMD-SHELL", "[ -f /usr/local/airflow/airflow-webserver.pid ]"]
+            interval: 30s
+            timeout: 30s
+            retries: 3
+
+    flower:
+        image: mrmaksimize/docker-airflow:1.10.2
+        restart: always
+        depends_on:
+            - redis
+        environment:
+            - EXECUTOR=Celery
+            - REDIS_PASSWORD=${REDIS_PASSWORD}
+        ports:
+            - "5555:5555"
+        command: flower
+
+    scheduler:
+        image: mrmaksimize/docker-airflow:1.10.2
+        restart: always
+        depends_on:
+            - webserver
+        volumes:
+            - ./poseidon:/usr/local/airflow/poseidon
+            - ./data:/data
+        environment:
+            - AIRFLOW_HOME=/usr/local/airflow
+            - LOAD_EX=n
+            - EXECUTOR=Celery
+            - POSTGRES_USER=${POSTGRES_USER}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+            - POSTGRES_DB=postgres
+            - REDIS_PASSWORD=${REDIS_PASSWORD}
+              # From environment specific .env
+            - SD_ENV=${SD_ENV}
+            - SECRETLY_NAMESPACE=${SD_ENV}
+            - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+            - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+            - AWS_REGION=${AWS_REGION}
+            - AIRFLOW_CONN_S3DATA="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@S3"
+            - AIRFLOW_CONN_S3LOG="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@poseidon-logs-${SD_ENV}"
+
+        command: scheduler
+
+    worker:
+        image: mrmaksimize/docker-airflow:1.10.2
+        restart: always
+        depends_on:
+            - scheduler
+        volumes:
+            - ./poseidon:/usr/local/airflow/poseidon
+            - ./data:/data
+        environment:
+            - AIRFLOW_HOME=/usr/local/airflow
+            - LOAD_EX=n
+            - EXECUTOR=Celery
+            - POSTGRES_USER=${POSTGRES_USER}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+            - POSTGRES_DB=postgres
+            - REDIS_PASSWORD=${REDIS_PASSWORD}
+              # From environment specific .env
+            - SD_ENV=${SD_ENV}
+            - SECRETLY_NAMESPACE=${SD_ENV}
+            - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+            - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+            - AWS_REGION=${AWS_REGION}
+            - AIRFLOW_CONN_S3DATA="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@S3"
+            - AIRFLOW_CONN_S3LOG="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@poseidon-logs-${SD_ENV}"
+        command: worker
