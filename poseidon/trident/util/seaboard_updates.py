@@ -35,9 +35,12 @@ def update_seaboard_date(ds_fname, **kwargs):
     # Get file contents
     ds_file = repo.get_file_contents(fpath_pre + ds_fname, commit_branch)
     ds_file_content = base64.b64decode(ds_file.content)
+    ds_file_decoded = ds_file_content.decode('utf-8')
+    
+    #df_file_content = ds_file.content
 
     #: Search for mod date in file
-    match = re.search(date_search_re, ds_file_content)
+    match = re.search(date_search_re, ds_file_decoded)
 
     #: If no match, throw error
     if match is None:
@@ -49,7 +52,7 @@ def update_seaboard_date(ds_fname, **kwargs):
                                                               exec_date)
     else:
         updated_ds_file_content = re.sub(date_search_re, exec_date,
-                                         ds_file_content, 1)
+                                         ds_file_decoded, 1)
         commit_msg = "Poseidon: {} last updated {}, != {}.".format(
             ds_file.name, exec_date, match.group())
 
@@ -58,7 +61,8 @@ def update_seaboard_date(ds_fname, **kwargs):
 
         # if test_mode is not True:
         repo.update_file(
-            path='/' + ds_file.path,
+            #path='/' + ds_file.path,
+            path=ds_file.path,
             message=commit_msg,
             content=updated_ds_file_content,
             sha=ds_file.sha,
