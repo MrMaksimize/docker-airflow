@@ -487,8 +487,21 @@ def create_prod_files():
         'district',
         'cpcode']].fillna(-999999.0).astype(int)
 
-    df = df.replace(-999999.0,np.nan)
-    df['parent_case_number'] = df['parent_case_number'].replace(0,np.nan)
+    df = df.replace(-999999,'')
+    
+    df['parent_case_number'] = df['parent_case_number'].replace(0,'')
+
+    df['referred_department'] = df['referred_department'].replace('?','-')
+
+    df.loc[:,['parent_case_number',
+        'sap_notification_number',
+        'case_age_days',
+        'district',
+        'cpcode']] = df.loc[:,['parent_case_number',
+        'sap_notification_number',
+        'case_age_days',
+        'district',
+        'cpcode']].astype(str)
 
     logging.info('Loaded {} total prod records'.format(df.shape[0]))
 
