@@ -79,30 +79,6 @@ RUN apt-get update -yqq \
         unzip \
         vim \
         wget
-    #&& additions=' \
-    #    #libblas-dev \
-    #    #liblapack-dev \
-    #    #libkrb5-dev \
-    #    #libsasl2-dev \
-    #    #libssl-dev \
-    #    #libffi-dev \
-    #    #libgdal-dev \
-    #    #libfreetype6-dev \
-    #    #libxslt-dev \
-    #    #libsqlite3-dev \
-    #    #zlib1g \
-    #    #zlib1g-dev \
-    #    #python-pip \
-    #    #netcat \
-    #    #cython \
-    #    #python-numpy \
-    #    #python-gdal \
-    #    #freetds-dev \
-    #    #gdal-bin \
-    #    #osm2pgsql \
-    #    default-libmysqlclient-dev \
-    #    #python-requests \
-    #'
 
 # Update Locales, add Airflow User
 RUN sed -i 's/^# en_US.UTF-8 UTF-8$/en_US.UTF-8 UTF-8/g' /etc/locale.gen \
@@ -136,34 +112,11 @@ RUN pip install -U pip setuptools wheel \
     && pip install PyGithub \
     && pip install pyOpenSSL \
     && pip install pytz \
-    && pip install 'redis>=2.10.5,<3' \
+    && pip install 'redis~=3.2' \
     && pip install requests \
     && pip install rtree \
     && pip install shapely \
     && pip install xlrd \
-    ## Additions
-    #&& pip install Cython \
-    #&& pip install packaging \
-    #&& pip install appdirs \
-    ##&& pip install pytz==2015.7 \
-    #&& pip install mysql-python \
-    #&& pip install logging \
-    #&& pip install boto \
-    #&& pip install httplib2 \
-    #&& pip install autodoc==0.3 \
-    #&& pip install Sphinx==1.5.1 \
-    #&& pip install celery==4.0.2 \
-    #&& pip install beautifulsoup4==4.5.3 \
-    #&& pip install ipython==5.3.0 \
-    #&& pip install jupyter \
-    #&& pip install password \
-    #&& pip install Flask-Bcrypt \
-    #&& pip install geopy==1.11 \
-    #&& pip install descartes \
-    #&& pip install pyproj \
-    #&& pip install requests==2.13.0 \
-    #&& apt-get purge --auto-remove -yqq $buildDeps \
-    #&& apt-get purge --auto-remove -yqq $additions \
     && apt-get autoremove -yqq --purge \
     && apt-get clean \
     && rm -rf \
