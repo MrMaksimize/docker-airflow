@@ -33,7 +33,6 @@ ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
 ENV C_INCLUDE_PATH=/usr/include/gdal
 
 
-
 # Oracle Essentials
 ENV ORACLE_HOME /opt/oracle
 ENV ARCH x86_64
@@ -93,7 +92,7 @@ RUN curl -sL https://deb.nodesource.com/setup_10.x | bash - \
     && npm install -g geobuf
 
 RUN pip install -U pip setuptools wheel \
-    && pip install apache-airflow[crypto,celery,postgres,slack,s3,jdbc,mysql,mssql,ssh,password,rabbitmq,samba,redis]==${AIRFLOW_VERSION} \
+    && pip install apache-airflow[crypto,celery,postgres,slack,s3,jdbc,mysql,mssql,ssh,password,rabbitmq,samba]==${AIRFLOW_VERSION} \
     && pip install boto3 \
     && pip install bs4 \
     && pip install fiona \
@@ -112,10 +111,11 @@ RUN pip install -U pip setuptools wheel \
     && pip install PyGithub \
     && pip install pyOpenSSL \
     && pip install pytz \
-    && pip install 'redis~=3.2' \
+    && pip install "redis~=3.2" \
     && pip install requests \
     && pip install rtree \
     && pip install shapely \
+    && pip install "tornado>=4.2.0,<6.0.0" \
     && pip install xlrd \
     && apt-get autoremove -yqq --purge \
     && apt-get clean \
@@ -145,9 +145,7 @@ RUN unzip ${AIRFLOW_HOME}/oracle.zip -d /opt \
 RUN chown -R airflow: ${AIRFLOW_HOME} \
     && chmod +x ${AIRFLOW_HOME}/entrypoint.sh \
     && chown -R airflow /usr/lib/python* /usr/local/lib/python* \
-    #&& chown -R airflow /usr/lib/python2.7/* /usr/local/lib/python2.7/* \
     && chown -R airflow /usr/local/bin* /usr/local/bin/*
-    #&& sed -i "s|flask.ext.cache|flask_cache|g" /usr/local/lib/python2.7/dist-packages/flask_cache/jinja2ext.py
 
 EXPOSE 8080 5555 8793
 
