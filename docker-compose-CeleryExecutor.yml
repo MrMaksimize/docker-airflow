@@ -3,7 +3,7 @@ services:
     redis:
         restart: always
         image: 'redis:3.2.7'
-        # command: redis-server --requirepass redispass
+        command: redis-server --requirepass ${REDIS_PASSWORD}
 
     postgres:
         image: 'postgres:9.6'
