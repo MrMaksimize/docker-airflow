@@ -266,6 +266,25 @@ def pos_write_csv(df, fname, **kwargs):
 
     df.to_csv(fname, **csv_args)
 
+def pos_write_json(df, fname, **kwargs):
+    """ Write json file, creating paths as needed, with default confs."""
+    default = {
+        'orient': 'records',
+        'double_precision': 0
+    }
+
+
+    json_args = default.copy()
+    json_args.update(kwargs)
+    try:
+        os.makedirs(os.path.dirname(fname))
+    except OSError as exc:  # Guard against race condition
+        if exc.errno != errno.EEXIST:
+            raise
+
+    df.to_json(fname, **json_args)
+
+
 
 def file_to_string(rel_file_path, caller=None):
     """Read a file into a string variable.  Caller is __file___."""

@@ -8,6 +8,7 @@ from trident.util import general
 from trident.util.sf_client import Salesforce
 from trident.util.geospatial import spatial_join_pt
 
+
 conf = general.config
 
 temp_file_gid = conf['temp_data_dir'] + '/gid_temp.csv'
@@ -17,7 +18,8 @@ cd_file_gid = conf['temp_data_dir'] + '/gid_cd.csv'
 cp_file_gid = conf['temp_data_dir'] + '/gid_cp.csv'
 parks_file_gid = conf['temp_data_dir'] + '/gid_parks.csv'
 
-services_file = conf['temp_data_dir'] + '/gid_final.csv'
+services_file = conf['prod_data_dir'] + '/get_it_done_full_requests_datasd.csv'
+services_file_json = conf['prod_data_dir'] + '/get_it_done_full_requests_datasd.json'
 
 prod_file_base = conf['prod_data_dir'] + '/get_it_done_'
 prod_file_end = 'requests_datasd.csv'
@@ -77,7 +79,7 @@ def update_service_name():
 
     logging.info("Read {} records from Salesforce report".format(df.shape[0]))
 
-    df.columns = [x.lower().replace(' ','_').replace('/','_') 
+    df.columns = [x.lower().replace(' ','_').replace('/','_')
         for x in df.columns]
 
     df = df.fillna('')
@@ -85,7 +87,7 @@ def update_service_name():
     logging.info('Prepped dataframe, fixing simple case record types')
 
     df.loc[(df['problem_category'] == 'Abandoned Vehicle'),'case_record_type'] = '72 Hour Report'
-    
+
     df.loc[(df['case_record_type'] == 'Street Division Closed Case') |
        (df['case_record_type'] == 'Street Division') |
        (df['case_record_type'] == 'Storm Water') |
@@ -96,7 +98,7 @@ def update_service_name():
         , 'case_record_type'] = 'Traffic Engineering'
 
     logging.info('Subsetting records to be able to fix more case types')
-    
+
     case_types_correct = df.loc[(df['case_record_type'] == 'ESD Complaint/Report') |
         (df['case_record_type'] == 'Storm Water Code Enforcement') |
         (df['case_record_type'] == 'TSW ROW')
@@ -139,7 +141,7 @@ def update_service_name():
                                                case_sub_type_new=get_sap_sub_types)
 
     logging.info('Concatting all subsets with corrected types')
-    
+
     df_mapped = pd.concat([correct_types,
                        sap_types,
                        dsd_types,
@@ -148,7 +150,7 @@ def update_service_name():
 
     logging.info('Updating illegal dumping case record type')
 
-    df_mapped.loc[df_mapped['problem_category'] == 'Illegal Dumping', 
+    df_mapped.loc[df_mapped['problem_category'] == 'Illegal Dumping',
         'case_record_type'] = "ESD Complaint/Report"
 
     df_mapped.loc[df_mapped['hide_from_web'] == 1,
@@ -181,8 +183,8 @@ def update_service_name():
     logging.info('Writing clean gid file')
 
     general.pos_write_csv(
-        df_clean, 
-        mapped_file_gid, 
+        df_clean,
+        mapped_file_gid,
         date_format='%Y-%m-%dT%H:%M:%S%z')
 
     return "Successfully mapped case record types and service names"
@@ -195,7 +197,7 @@ def update_close_dates():
                      )
 
     df['sap_notification_number'] = pd.to_numeric(df['sap_notification_number'],errors='coerce')
-    
+
     orig_cols = df.columns.values.tolist()
 
     # These are the exports we got from SAP
@@ -216,8 +218,8 @@ def update_close_dates():
     for index, file in enumerate(date_files):
         path = 'https://datasd-reference.s3.amazonaws.com/gid/{}'.format(file)
         df_date = pd.read_excel(path)
-        
-        df_date.columns = [x.lower().replace(' ','_').replace('/','_').replace('"','') 
+
+        df_date.columns = [x.lower().replace(' ','_').replace('/','_').replace('"','')
         for x in df_date.columns]
 
         # Exact column names are unpredictable
@@ -251,7 +253,7 @@ def update_close_dates():
                 )
 
         elif len(case_cols) > 0:
-            
+
             if len(case_cols) == 1:
                 case_to_merge = case_cols[0]
             else:
@@ -260,7 +262,7 @@ def update_close_dates():
                         case_to_merge = case
                     else:
                         case_to_merge = case_cols[0]
-                        
+
             logging.info("Joining on Salesforce case number with {}".format(case_to_merge))
             df = pd.merge(df,
                 df_date,
@@ -277,12 +279,12 @@ def update_close_dates():
     new_date_cols = [col for col in df.columns if 'new_date' in col]
     df.loc[:,new_date_cols] = df.loc[:,new_date_cols].apply(pd.to_datetime, errors='coerce')
     df['min_new_date'] = df[new_date_cols].min(axis=1)
-    
+
     # Discard additional cols from joins
     logging.info("Adding new date to original column list and subsetting data")
     orig_cols.append('min_new_date')
     df_updated = df[orig_cols]
-    
+
     # Split records into those that need to be updated
     # And those that don't
     bad_records = df_updated[df_updated['min_new_date'].notnull()]
@@ -292,7 +294,7 @@ def update_close_dates():
 
     # Now check for any children that weren't flagged to be updated
     # By looking for case numbers in parent case number column
-    
+
     logging.info("Searching parent case number col for case numbers with known error")
 
     child_merge = pd.merge(good_records,
@@ -308,7 +310,7 @@ def update_close_dates():
 
     child_search_result = good_records_new[good_records_new['min_new_date'].notnull()].shape[0]
     logging.info("Found {} children cases where parent case has known error".format(child_search_result))
-    
+
     # Export missing children to update in Salesforce
     logging.info("Exporting child cases for gid team")
     general.pos_write_csv(
@@ -321,7 +323,7 @@ def update_close_dates():
         )
 
     logging.info("Recombining records, updating date time closed and status")
-    
+
     all_records = pd.concat([bad_records,good_records_new])
 
     all_records = all_records.reset_index(drop=True)
@@ -339,7 +341,7 @@ def update_close_dates():
     logging.info("Update closed date with opened date where new date is before date time opened")
 
     all_records.loc[
-        all_records['min_new_date'].notnull() & 
+        all_records['min_new_date'].notnull() &
         (all_records['min_new_date'] <= all_records['date_time_opened'])
         ,'date_time_closed'] = all_records.loc[
         all_records['min_new_date'].notnull() &
@@ -354,7 +356,7 @@ def update_close_dates():
         all_records['min_new_date'].notnull(),
         ['date_time_closed',
         'date_time_opened']].apply(
-            lambda x: (x['date_time_closed'] - x['date_time_opened']).days, 
+            lambda x: (x['date_time_closed'] - x['date_time_opened']).days,
             axis=1)
 
     all_records.loc[all_records['min_new_date'].notnull(),
@@ -370,8 +372,8 @@ def update_close_dates():
     logging.info("Export file with fixed close dates")
 
     general.pos_write_csv(
-        all_records, 
-        clean_file_gid, 
+        all_records,
+        clean_file_gid,
         date_format='%Y-%m-%dT%H:%M:%S%z')
 
 
@@ -384,7 +386,7 @@ def join_council_districts():
                              cd_geojson,
                              lat='lat',
                              lon='long')
-    
+
     cols = gid_cd.columns.values.tolist()
     drop_cols = [
         'objectid',
@@ -471,14 +473,14 @@ def join_parks():
 def create_prod_files():
     """ Map category columns and divide by year """
 
-    df = pd.read_csv(parks_file_gid, 
+    df = pd.read_csv(parks_file_gid,
         low_memory=False,
         parse_dates=['date_time_opened',
         'date_time_closed']
         )
 
     logging.info("Changing float dtypes to int")
-    
+
     df.loc[:,['sap_notification_number',
         'case_age_days',
         'district',
@@ -488,7 +490,7 @@ def create_prod_files():
         'cpcode']].fillna(-999999.0).astype(int)
 
     df = df.replace(-999999,'')
-    
+
     df['parent_case_number'] = df['parent_case_number'].replace(0,'')
 
     df['referred_department'] = df['referred_department'].replace('?','-')
@@ -522,14 +524,14 @@ def create_prod_files():
     final_reports['case_category'] = final_reports['case_category'].fillna('')
 
     logging.info('Making category equal to case type for non matches')
-    
+
     case_cat_fillin = final_reports.loc[(
-        (final_reports['case_category'] == '') & 
+        (final_reports['case_category'] == '') &
         (final_reports['case_type'] != '')),
         'case_type']
 
     final_reports.loc[(
-        (final_reports['case_category'] == '') & 
+        (final_reports['case_category'] == '') &
         (final_reports['case_type'] != '')),
         'case_category'] = case_cat_fillin
 
@@ -572,11 +574,6 @@ def create_prod_files():
 
     final_reports = final_reports.sort_values(by=['service_request_id','requested_datetime','updated_datetime'])
 
-    general.pos_write_csv(
-        final_reports,
-        services_file,
-        date_format='%Y-%m-%dT%H:%M:%S%z')
-
     min_report = final_reports['requested_datetime'].min().year
     max_report = final_reports['requested_datetime'].max().year
 
@@ -596,6 +593,20 @@ def create_prod_files():
             file_subset,
             file_path,
             date_format='%Y-%m-%dT%H:%M:%S%z')
+
+    # Write srvc file
+    general.pos_write_csv(
+        final_reports,
+        services_file,
+        date_format='%Y-%m-%dT%H:%M:%S%z')
+
+    # Write full json file
+    general.pos_write_json(
+        final_reports,
+        services_file_json)
+
+
+
 
     return "Successfully created prod files"
 

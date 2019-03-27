@@ -107,7 +107,7 @@ create_potholes_sonar = PoseidonSonarCreator(
 
 services = [
     'graffiti_removal', 'illegal_dumping', 'pothole',
-    '72_hour_violation'
+    '72_hour_violation', 'full'
 ]
 
 service_tasks = []
