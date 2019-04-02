@@ -71,6 +71,7 @@ RUN apt-get update -yqq \
         python3-software-properties \
         python3-dev \
         python3-numpy \
+        r-cran-littler \
         rsync \
         software-properties-common \
         smbclient \
