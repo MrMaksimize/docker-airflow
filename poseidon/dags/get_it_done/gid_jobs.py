@@ -595,7 +595,6 @@ def create_prod_files():
     'case_origin',
     'specify_the_issue',
     'referred',
-    'action_taken',
     'public_description'
     ]]
 
