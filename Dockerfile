@@ -39,6 +39,9 @@ ENV ARCH x86_64
 ENV DYLD_LIBRARY_PATH /opt/oracle
 ENV LD_LIBRARY_PATH /opt/oracle
 
+#R
+ENV R_BASE_VERSION 3.5.3
+
 
 
 # Update apt and install
@@ -67,11 +70,16 @@ RUN apt-get update -yqq \
         libspatialindex-dev \
         libspatialite-dev \
         libxml2-dev \
+#        littler \
         netcat \
+        pandoc \
         python3-software-properties \
         python3-dev \
         python3-numpy \
         r-cran-littler \
+#        r-base=${R_BASE_VERSION}-* \
+#        r-base-dev=${R_BASE_VERSION}-* \
+#        r-recommended=${R_BASE_VERSION}-* \
         rsync \
         software-properties-common \
         smbclient \
@@ -85,6 +93,28 @@ RUN sed -i 's/^# en_US.UTF-8 UTF-8$/en_US.UTF-8 UTF-8/g' /etc/locale.gen \
     && locale-gen \
     && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
     && useradd -ms /bin/bash -d ${AIRFLOW_HOME} airflow
+
+# R Installs
+RUN ln -s /usr/lib/R/site-library/littler/examples/install.r /usr/local/bin/install.r \
+    && ln -s /usr/lib/R/site-library/littler/examples/install2.r /usr/local/bin/install2.r \
+    && ln -s /usr/lib/R/site-library/littler/examples/installGithub.r /usr/local/bin/installGithub.r \
+    && ln -s /usr/lib/R/site-library/littler/examples/testInstalled.r /usr/local/bin/testInstalled.r \
+    && echo "options(repos = c(CRAN = 'https://cran.rstudio.com/'), download.file.method = 'libcurl')" >> /usr/lib/R/etc/Rprofile.site \
+    && install.r docopt \
+    && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
+
+RUN chown -R airflow /usr/local/lib/R/site-library* /usr/local/lib/R/site-library/*
+
+RUN install.r dplyr \
+    data.table \
+    DT \
+    dygraphs \
+    flexdashboard \
+    leaflet \
+    plotly \
+    rmarkdown \
+    rsconnect
+
 
 # NodeJS packages
 RUN curl -sL https://deb.nodesource.com/setup_10.x | bash - \
@@ -127,6 +157,8 @@ RUN pip install -U pip setuptools wheel \
         /usr/share/man \
         /usr/share/doc \
         /usr/share/doc-base
+
+
 
 # Get Oracle Client
 # TODO -- ADD
