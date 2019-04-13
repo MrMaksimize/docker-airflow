@@ -125,12 +125,13 @@ def buildConfig(env):
         'keen_ti_collection': os.environ.get('KEEN_TI_COLLECTION'),
         'mrm_buffer_access_token': os.environ.get('MRM_BUFFER_ACCESS_TOKEN'),
         'executable_path': '/usr/local/airflow/poseidon/bin',
-        'client':
-        "python /usr/local/airflow/poseidon/poseidon/util/FMEEngineClient.py fmeengine 7777",
         'google_token': os.environ.get("GOOGLE_TOKEN"),
         'sde_user': os.environ.get("SDE_USER"),
         'sde_pw': os.environ.get("SDE_PW"),
         'sde_server': os.environ.get("SDE_SERVER"),
+        'shiny_acct_name': os.environ.get("SHINY_ACCT_NAME"),
+        'shiny_token': os.environ.get("SHINY_TOKEN"),
+        'shiny_secret': os.environ.get("SHINY_SECRET")
     }
     return config
 

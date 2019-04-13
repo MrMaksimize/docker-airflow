@@ -1,0 +1,147 @@
+---
+title: "Claims Stats Monitor"
+output:
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    social: menu
+    #source_code: https://git.io/vaZdx
+runtime: shiny
+---
+
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(data.table)
+library(dygraphs)
+library(DT)
+library(dplyr)
+library(leaflet)
+library(plotly)
+library(rsconnect)
+
+setwd(".")
+claims <- read.csv("http://seshat.datasd.org/tsw/risk_tsw_claims_datasd.csv", header=T, na.strings=c(""," ","NA"))
+claims <-data.table(claims)
+
+##potentially for map tab
+streets<- read.csv("http://seshat.datasd.org/tsw/risk_tsw_geocoded_claims_datasd.csv",header=T, na.strings=c("","NA"))
+
+
+```
+
+
+Department Loss Experience
+=======================================================================
+
+Row
+-----------------------------------------------------------------------
+
+### Total Losses (1997-2019) {.value-box}
+
+```{r}
+total_amount<- sum(claims$PAID_TOTAL, na.rm=TRUE)
+
+renderValueBox({
+  valueBox((prettyNum(total_amount, big.mark= ",")), icon = "fa-dollar", color="green")
+})
+```
+
+### Number of claims {.value-box}
+
+```{r}
+total_claims<-length(unique(claims$CLAIM_NUMBER))
+# total_claims <- sum(claims$count, na.rm=TRUE)
+
+# Emit the user count
+renderValueBox({
+  valueBox((prettyNum(total_claims, big.mark= ",")), icon = "fa-bars")
+})
+
+#had I defined usrCount as a function, then the syntax would change to:
+#renderValueBox({
+#  valueBox(value = usrCount(), icon = "fa-users")
+#})
+```
+
+### Loss Trend {.value-box}
+
+```{r}
+
+something <- 0.07
+
+renderValueBox({
+  valueBox(something, icon = "fa-chart-line", color="orange")
+})
+```
+
+Row
+-----------------------------------------------------------------------
+
+
+### Total and Percent Loss Amounts by Loss Code (top 10) {data-width=250}
+
+```{r}
+
+options(scipen = 999)
+claims$count<-1
+test<-setDT(claims)[, .(total= sum(PAID_BI, na.rm = TRUE), count=sum(count)), by = .(CLAIMANT_REFERENCE2_Desc)]
+test$percentage<-(test$total/sum(claims$PAID_BI, na.rm=TRUE))*100
+test<-test[order(-percentage)]
+test$total<-prettyNum(test$total, big.mark= ",")
+
+renderTable({
+  test %>%
+    select("Loss Code" = CLAIMANT_REFERENCE2_Desc, "Total Amount (USD)"= total, "Percent of Total Losses" = percentage) %>%
+    as.data.frame() %>%
+    head(10)
+}, digits = 0)
+```
+
+
+### Total Claims by Loss Code (top 10) {data-width=500}
+
+```{r}
+
+options(scipen = 999)
+test2<-setDT(claims)[, .(count=n_distinct(CLAIM_NUMBER)), by = .(CLAIMANT_REFERENCE2_Desc)]
+test2<-test2[order(-count)]
+#select top 10 only
+test2<- head(test2,10)
+test2<-droplevels(test2)
+
+test2 <- data.frame(test2, stringsAsFactors = FALSE)
+test2$CLAIMANT_REFERENCE2_Desc <- factor(test2$CLAIMANT_REFERENCE2_Desc, levels = unique(test2$CLAIMANT_REFERENCE2_Desc)[order(test2$count, decreasing = TRUE)])
+
+renderPlotly({
+  plot_ly(test2, x = ~CLAIMANT_REFERENCE2_Desc, y = ~count, type = 'bar', name = 'Total Claims') %>%
+   layout(yaxis = list(title = 'Number of Claims'), xaxis = list(title = 'Loss Code', tickangle = 290),barmode = 'group')})
+
+```
+
+
+Map
+=======================================================================
+### TSW claims by location {data-width=350}
+
+```{r}
+renderLeaflet({
+leaflet(streets) %>% addTiles() %>% addMarkers(
+  clusterOptions = markerClusterOptions()
+)
+
+})
+```
+
+
+
+Loss Code Detail
+=======================================================================
+### Total and Relative Losses by Loss Code {data-width=350}
+
+```{r}
+claims$INCIDENT_DATE<-as.Date(claims$INCIDENT_DATE)
+claims_sub<- claims[, c("CLAIM_NUMBER","ORGANIZATION_DESC","INCIDENT_DATE","CLAIMANT_STATUS_DESC","PAID_TOTAL", "CLAIMANT_REFERENCE2_Desc")]
+datatable(claims_sub, rownames = FALSE, filter = 'top')
+```
+
+
