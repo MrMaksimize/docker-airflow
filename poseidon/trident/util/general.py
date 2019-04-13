@@ -141,6 +141,7 @@ config = buildConfig(os.environ.get('SD_ENV'))
 # https://crontab.guru/
 schedule = {
     'fd_incidents' : "@daily",
+    'claims_stat': "@daily",
     'pd_cfs': "@daily",
     'pd_col': "@daily",
     'ttcs': "@daily",
@@ -179,6 +180,7 @@ start_date = {
     'fd_incidents' : default_date,
     'pd_cfs': default_date,
     'pd_col': default_date,
+    'claims_stat': default_date,
     'ttcs': default_date,
     'indicator_bacteria_tests': default_date,
     'parking_meters': default_date,
