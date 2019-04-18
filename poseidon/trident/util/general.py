@@ -173,7 +173,7 @@ schedule = {
     'crb': '@daily'
 }
 
-default_date = datetime(2019, 3, 19)
+default_date = datetime(2019, 4, 2)
 
 start_date = {
     'fd_incidents' : default_date,

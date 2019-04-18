@@ -1,5 +1,6 @@
 """_jobs file for Get It Done."""
 import os
+import boto3
 import pandas as pd
 import logging
 import datetime as dt
@@ -11,8 +12,9 @@ from trident.util.geospatial import spatial_join_pt
 conf = general.config
 
 temp_file_gid = conf['temp_data_dir'] + '/gid_temp.csv'
-mapped_file_gid = conf['temp_data_dir'] + '/gid_mapped.csv'
-clean_file_gid = conf['temp_data_dir'] + '/gid_clean.csv'
+sname_file_gid = conf['temp_data_dir'] + '/gid_sname.csv'
+dates_file_gid = conf['temp_data_dir'] + '/gid_dates.csv'
+ref_file_gid = conf['temp_data_dir'] + '/gid_ref.csv'
 cd_file_gid = conf['temp_data_dir'] + '/gid_cd.csv'
 cp_file_gid = conf['temp_data_dir'] + '/gid_cp.csv'
 parks_file_gid = conf['temp_data_dir'] + '/gid_parks.csv'
@@ -45,7 +47,6 @@ def sap_case_sub_type(row):
         return row['problem_category_detail']
     else:
         return None
-
 
 def get_gid_requests():
     """Get requests from sf, creates prod file."""
@@ -182,14 +183,14 @@ def update_service_name():
 
     general.pos_write_csv(
         df_clean, 
-        mapped_file_gid, 
+        sname_file_gid, 
         date_format='%Y-%m-%dT%H:%M:%S%z')
 
     return "Successfully mapped case record types and service names"
 
 def update_close_dates():
     """ Fix closed date for consistency with SAP """
-    df = pd.read_csv(mapped_file_gid,
+    df = pd.read_csv(sname_file_gid,
                      low_memory=False,
                      parse_dates=['date_time_opened','date_time_closed']
                      )
@@ -198,14 +199,14 @@ def update_close_dates():
     
     orig_cols = df.columns.values.tolist()
 
-    # These are the exports we got from SAP
-    date_files = ['cases_02_08_2019.xlsx',
-    'cases_with_no_children_02_07_19.xlsx',
-    'cases_with_children_02_07_19.xlsx',
-    'cases_2_22_19_and_3_1_19.xlsx',
-    'cases_3_8_19.xlsx',
-    'cases_3_15_19.xlsx'
-    ]
+    # These will be the exports we got from SAP
+    date_files = []
+    
+    s3 = boto3.resource('s3')
+    s3_ref = s3.Bucket('datasd-reference')
+    for obj in s3_ref.objects.all():
+        if obj.key.startswith('gid/cases_'):
+            date_files.append(obj.key)
 
     # We loop through these files and join back to the df
     # to add a new date column
@@ -214,7 +215,8 @@ def update_close_dates():
     logging.info("Start looping through fix files")
 
     for index, file in enumerate(date_files):
-        path = 'https://datasd-reference.s3.amazonaws.com/gid/{}'.format(file)
+        logging.info('Processing {}'.format(file))
+        path = 'https://datasd-reference.s3.amazonaws.com/{}'.format(file)
         df_date = pd.read_excel(path)
         
         df_date.columns = [x.lower().replace(' ','_').replace('/','_').replace('"','') 
@@ -371,16 +373,44 @@ def update_close_dates():
 
     general.pos_write_csv(
         all_records, 
-        clean_file_gid, 
+        dates_file_gid, 
         date_format='%Y-%m-%dT%H:%M:%S%z')
 
 
     return "Successfully updated closed datetime from SAP errors"
 
+def update_referral_col():
+    """ Fill in missing referral values """
+    df = pd.read_csv(dates_file_gid,
+                     low_memory=False,
+                     parse_dates=['date_time_opened','date_time_closed']
+                     )
+
+    df['referred'] = ''
+
+    df.loc[df['referral_email_list'].notnull(),
+        'referred'] = df.loc[df['referral_email_list'].notnull(),
+        'referral_email_list']
+
+    df.loc[df['referred_department'].notnull(),
+        'referred'] = df.loc[df['referred_department'].notnull(),
+        'referred_department']
+
+    df.loc[df['display_referral_information'].notnull(),
+        'referred'] = df.loc[df['display_referral_information'].notnull(),
+        'display_referral_information']
+
+    general.pos_write_csv(
+        df,
+        ref_file_gid, 
+        date_format='%Y-%m-%dT%H:%M:%S%z')
+
+    return "Successfully updated referral col" 
+
 def join_council_districts():
     """Spatially joins council districts data to GID data."""
     cd_geojson = conf['prod_data_dir'] + '/council_districts_datasd.geojson'
-    gid_cd = spatial_join_pt(clean_file_gid,
+    gid_cd = spatial_join_pt(ref_file_gid,
                              cd_geojson,
                              lat='lat',
                              lon='long')
@@ -491,8 +521,6 @@ def create_prod_files():
     
     df['parent_case_number'] = df['parent_case_number'].replace(0,'')
 
-    df['referred_department'] = df['referred_department'].replace('?','-')
-
     df.loc[:,['parent_case_number',
         'sap_notification_number',
         'case_age_days',
@@ -566,7 +594,7 @@ def create_prod_files():
     'park_name',
     'case_origin',
     'specify_the_issue',
-    'referred_department',
+    'referred',
     'public_description'
     ]]
 

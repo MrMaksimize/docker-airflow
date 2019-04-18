@@ -57,6 +57,15 @@ update_close_dates = PythonOperator(
     on_success_callback=notify,
     dag=dag)
 
+#: Fix referral column
+update_referral_col = PythonOperator(
+    task_id='update_referral_col',
+    python_callable=update_referral_col,
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
+
 #: Add council district attribute to GID data through spatial join
 join_council_districts = PythonOperator(
     task_id='join_council_districts',
@@ -189,7 +198,9 @@ update_service_name.set_upstream(get_gid_requests)
 #: gid_latest_only must run before get_gid_requests
 update_close_dates.set_upstream(update_service_name)
 #: get_gid_requests must run before join_council_district
-join_council_districts.set_upstream(update_close_dates)
+update_referral_col.set_upstream(update_close_dates)
+#: get_gid_requests must run before join_council_district
+join_council_districts.set_upstream(update_referral_col)
 #: get_gid_requests must run before join_council_district
 join_community_plan.set_upstream(join_council_districts)
 #: get_gid_requests must run before join_council_district
