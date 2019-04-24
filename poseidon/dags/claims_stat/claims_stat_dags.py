@@ -22,6 +22,11 @@ start_date = general.start_date['claims_stat']
 dag = DAG(dag_id='claims_stat', default_args=args, start_date=start_date, schedule_interval=schedule['claims_stat'])
 
 
+#: Latest Only Operator for claims
+ttcs_latest_only = LatestOnlyOperator(
+    task_id='claims_stat_latest_only', dag=dag)
+
+#: Deploy Dashboard
 deploy_dashboard = RShinyDeployOperator(
     task_id='deploy_dashboard',
     shiny_appname="claims_{}".format(conf['env']),
@@ -34,3 +39,5 @@ deploy_dashboard = RShinyDeployOperator(
     on_retry_callback=notify,
     on_success_callback=notify,
     dag=dag)
+
+

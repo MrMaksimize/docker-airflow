@@ -5,6 +5,6 @@ account: mrmaksimize
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 861720
-bundleId: 2007397
+bundleId: 2014005
 url: https://mrmaksimize.shinyapps.io/claims_LOCAL/
-when: 1555113763.1032
+when: 1555369952.93053
