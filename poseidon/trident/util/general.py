@@ -215,7 +215,8 @@ start_date = {
 source = {'ttcs': os.environ.get('CONN_ORACLETTCS'),
 'cef':os.environ.get('CONN_ORACLE_CEF'),
 'dsd_permits' : os.environ.get('CONN_ORACLE_PERMITS'),
-'cip': os.environ.get('CONN_ORACLECIP')
+'cip': os.environ.get('CONN_ORACLECIP'),
+'risk': os.environ.get('CONN_ORACLE_RISK')
 }
 
 args = {
