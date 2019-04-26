@@ -23,13 +23,13 @@ dag = DAG(dag_id='claims_stat', default_args=args, start_date=start_date, schedu
 
 
 #: Latest Only Operator for claims
-ttcs_latest_only = LatestOnlyOperator(
+claims_stat_latest_only = LatestOnlyOperator(
     task_id='claims_stat_latest_only', dag=dag)
 
 #: Deploy Dashboard
 deploy_dashboard = RShinyDeployOperator(
-    task_id='deploy_dashboard',
-    shiny_appname="claims_{}".format(conf['env']),
+    task_id='claims_stat_deploy_dashboard',
+    shiny_appname="claims_{}".format(lower(conf['env'])),
     shiny_path="{}/claims_stat/claims.Rmd".format(conf['dags_dir']),
     shiny_acct_name=conf['shiny_acct_name'],
     shiny_token=conf['shiny_token'],
@@ -41,3 +41,4 @@ deploy_dashboard = RShinyDeployOperator(
     dag=dag)
 
 
+deploy_dashboard.set_upstream(claims_stat_latest_only)
