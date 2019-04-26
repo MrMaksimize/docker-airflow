@@ -119,7 +119,7 @@ def split_reso_ords():
             record_count += sub_div.shape[0]
 
     df_current = df.loc[df['DOC_DATE'] >= f"01/01/{div_years[-1]}"]
-    general.pos_write_csv(sub_div, f"{save_path}_{div_years[-1]}_current.csv")
+    general.pos_write_csv(df_current, f"{save_path}_{div_years[-1]}_current.csv")
     logging.info(f"Wrote {year}_current")
     record_count += df_current.shape[0]
 
