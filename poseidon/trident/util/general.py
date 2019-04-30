@@ -164,10 +164,10 @@ schedule = {
     'budget': "@weekly",
     'campaign_fin': "@daily",
     'public_art': '@daily',
-    'sire': "@daily",
+    'sire': "0 7 * * *",
     'onbase': "*/5 * * * *",
-    'documentum_24' : "@daily",
-    'documentum_others' : "0 * * * *",
+    'documentum_24' : "0 7 * * *",
+    'documentum_others' : "30 * * * *",
     'tsw_integration': '0 6 * * *',  # daily at 6am UTC / 10pm PST
     'cip': '@daily'
 }
