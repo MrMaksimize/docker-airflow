@@ -5,28 +5,35 @@ import string
 import logging
 import pandas as pd
 from datetime import datetime
-from poseidon.util import general
+from trident.util import general
+from subprocess import Popen, PIPE
 
 
 conf = general.config
 
 
 #: Download Access file for city occupied facilities via CURL
-def get_fac_data(infile, outfile):
+def get_fac_data():
     """Access DB From SFTP"""
-    curl_str = "curl -o $out_file " \
+    command = "curl -o $out_file " \
             + "sftp://webftp.alphafacilities.com/"\
             + "$fpath " \
             + "-u $user:$passwd -k"
 
-    tmpl = string.Template(curl_str)
-    command = tmpl.substitute(
-        out_file=outfile,
-        fpath=infile,
+    command = command.format(out_file='GF\ Facilities\ FCA\ Alpha/GF\ City\ Occupied\ Facilities\ FY\ 14\ to\ 16.accdb',
+        fpath=conf['temp_data_dir'] + '/city_occupied_gf.accdb',
         user=conf['ftp_alpha_user'],
         passwd=conf['ftp_alpha_pass'])
 
-    return command
+    logging.info(command)
+
+    p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
+    output, error = p.communicate()
+    
+    if p.returncode != 0:
+        raise Exception(output)
+    else:
+        return 'Successfully retrieved Access database.'
 
 
 #: Combine two Access tables - attributes and forecasts.

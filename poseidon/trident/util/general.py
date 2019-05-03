@@ -19,7 +19,6 @@ def seven_days_ago():
     return datetime.combine(datetime.today() - timedelta(7),
                             datetime.min.time())
 
-
 def today():
     """Return today's date."""
     return datetime.combine(datetime.today(), datetime.min.time())
@@ -95,6 +94,8 @@ def buildConfig(env):
         'dags_dir': "{}/poseidon/dags".format(os.environ.get("AIRFLOW_HOME", "")),
         'dest_s3_bucket': os.environ.get('S3_DATA_BUCKET', 'datasd-dev'),
         'oracle_wpl': os.environ.get('CONN_ORACLEWPL'),
+        'ftp_alpha_user': os.environ.get("FTP_ALPHA_USER"),
+        'ftp_alpha_pass': os.environ.get("FTP_ALPHA_PASS"),
         'ftp_sannet_user': os.environ.get("FTP_SANNET_USER", "anonymous"),
         'ftp_sannet_pass': os.environ.get("FTP_SANNET_PASS", "anonymous"),
         'ftp_datasd_user': os.environ.get("FTP_DATASD_USER"),
@@ -171,7 +172,8 @@ schedule = {
     'documentum_24' : "@daily",
     'documentum_others' : "0 * * * *",
     'tsw_integration': '0 6 * * *',  # daily at 6am UTC / 10pm PST
-    'cip': '@daily'
+    'cip': '@daily',
+    'pw_fac': "@daily"
 }
 
 default_date = datetime(2019, 4, 2)
@@ -208,7 +210,8 @@ start_date = {
     'documentum_24' : default_date,
     'documentum_others' : default_date,
     'tsw_integration': default_date,
-    'cip': default_date
+    'cip': default_date,
+    'pw_fac': datetime(2019, 5, 3)
 }
 
 

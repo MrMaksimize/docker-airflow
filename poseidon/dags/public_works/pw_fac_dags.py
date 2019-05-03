@@ -1,35 +1,33 @@
 """PW Facilities_dags file."""
-from airflow.operators.python_operator import PythonOperator
+from __future__ import print_function
 from airflow.operators.bash_operator import BashOperator
-from poseidon.operators.s3_file_transfer_operator import S3FileTransferOperator
-from poseidon.operators.latest_only_operator import LatestOnlyOperator
+from airflow.operators.python_operator import PythonOperator
+from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
+from airflow.operators.latest_only_operator import LatestOnlyOperator
 from airflow.models import DAG
+
 from datetime import datetime, timedelta
-from poseidon.dags.public_works.pw_fac_jobs import *
-from poseidon.util import general
-from poseidon.util.access_helpers import *
-from poseidon.util.notifications import notify
-from poseidon.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag
+from dags.public_works.pw_fac_jobs import *
+from trident.util import general
+from trident.util.notifications import notify
+from trident.util.access_helpers import *
+from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag
 
 args = general.args
 conf = general.config
-schedule = general.schedule
+schedule = general.schedule['pw_fac']
+start_date = general.start_date['pw_fac']
 
-dag = DAG(dag_id='pw_fac',
-          default_args=args,
-          schedule_interval=schedule['pw_fac'])
-
+dag = DAG(dag_id='pw_fac', default_args=args, start_date=start_date, schedule_interval=schedule)
 
 #: Latest Only Operator for pw_fac
 pw_fac_latest_only = LatestOnlyOperator(
     task_id='pw_fac_latest_only', dag=dag)
 
 #: Get facilities data from FTP and save to temp folder
-get_occupied_fac_data = BashOperator(
+get_occupied_fac_data = PythonOperator(
     task_id='get_occupied_fac_data',
-    bash_command=get_fac_data(
-        'GF\ Facilities\ FCA\ Alpha/GF\ City\ Occupied\ Facilities\ FY\ 14\ to\ 16.accdb',
-        conf['temp_data_dir'] + '/city_occupied_gf.accdb'),
+    python_callable=get_fac_data,
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
