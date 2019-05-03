@@ -94,13 +94,13 @@ def process_billing():
 
     df = df.rename(columns={
         'LesseeName': 'lessee_name',
-        'RecordDate': 'billing_record_date',
+        'RecordDate': 'date_billing_record',
         'RecordType': 'line_type_calc',
         'InvoiceNumber': 'invoice_number',
         'PeriodCovered': 'period_covered',
         'Amount': 'AR_line_amt_display',
         'Status': 'line_status_calc',
-        'InvoiceDue': 'invoice_due_date'
+        'InvoiceDue': 'date_invoice_due'
     })
 
     general.pos_write_csv(
@@ -124,14 +124,14 @@ def process_leases():
         'LesseeName': 'lessee_name',
         'LesseeCompany': 'lessee_company',
         'LesseeDBA': 'lessee_DBA',
-        'LesseeZip': 'lessee_ZIP',
+        'LesseeZip': 'address_zip',
         'LeaseType': 'lease_record_type',
         'Description': 'lease_description',
         'Status': 'lease_status',
         'Location': 'lease_location_name',
         'Nonprofit': 'nonprofit_lessee',
-        'EffectiveDate': 'effective_date',
-        'SchedTermination': 'sched_termination_date',
+        'EffectiveDate': 'date_effective',
+        'SchedTermination': 'date_sched_termination',
         'BillingRentCode': 'rent_code',
         'RentAmount': 'cost_line_amt_USD'
     })
@@ -193,7 +193,7 @@ def process_properties_details():
         'WaterUse': 'water_use',
         'UseRestrictions': 'use_restrictions',
         'ResOrOrd': 'desig_reso_ord',
-        'ResOrOrdDate': 'reso_ord_date'
+        'ResOrOrdDate': 'date_reso_ord'
     })
 
     general.pos_write_csv(
