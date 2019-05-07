@@ -37,9 +37,10 @@ def process_collisions_data():
                      error_bad_lines=False)
 
     df.columns = [
-        'report_id', 'date_time', 'police_beat', 'street_no', 'street_dir',
-        'street_name', 'street_type', 'cross_st_dir', 'cross_st_name',
-        'cross_st_type', 'violation_section', 'violation_type',
+        'report_id', 'date_time', 'police_beat', 'address_number_primary', 
+        'address_pd_primary', 'address_road_primary',
+        'address_sfx_primary', 'address_pd_intersecting', 'address_name_intersecting',
+        'address_sfx_intersecting', 'violation_section', 'violation_type',
         'charge_desc', 'injured', 'killed', 'hit_run_lvl'
     ]
 
