@@ -62,6 +62,16 @@ def process_cfs_data():
     prod_frame = prod_frame.sort_values(by='date_time', ascending=True)
 
     logging.info('Exporting updated CFS production data to csv.')
+    
+    prod_frame = prod_frame.rename(columns={'stno':'address_number_primary',
+        'stdir1':'address_pd_primary',
+        'street':'address_road_primary',
+        'streettype':'address_sfx_primary',
+        'stdir2':'address_pd_intersecting',
+        'stname2':'address_road_intersecting',
+        'sttype2':'address_sfx_intersecting'
+        })
+
     prod_file = conf['prod_data_dir'] \
         + '/pd_calls_for_service_' \
         + curr_year \

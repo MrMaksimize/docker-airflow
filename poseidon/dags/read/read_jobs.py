@@ -1,6 +1,7 @@
 """READ _jobs file."""
 import os
 import ftplib
+import string
 import pandas as pd
 import numpy as np
 from trident.util import general
@@ -8,8 +9,8 @@ from trident.util import general
 conf = general.config
 
 ftp_files = [
-    'City Property Billing.csv', 'City Property Leases.csv',
-    'City Property Parcels.csv', 'City Property Details.csv'
+    'City\ Property\ Billing.csv', 'City\ Property\ Leases.csv',
+    'City\ Property\ Parcels.csv', 'City\ Property\ Details.csv'
 ]
 
 datasd = [
@@ -20,67 +21,67 @@ datasd = [
 
 def get_billing():
     """Get READ billing data from FTP."""
-    filename = conf['temp_data_dir'] + '/' + datasd[0]
-    if os.path.isfile(filename):
-        os.remove(filename)
+    curl_str = "curl -o $out_file " \
+            + "sftp://sftp.wizardsoftware.net/"\
+            + "$fpath " \
+            + "-u $user:$passwd -k"
 
-    file = open(filename, 'wb')
-    ftp = ftplib.FTP('sdftp.fwsftp.com')
-    ftp.login(user=conf['ftp_read_user'], passwd=conf['ftp_read_pass'])
-    name = ftp_files[0]
-    ftp.retrbinary('RETR %s' % name, file.write)
-    ftp.close
+    tmpl = string.Template(curl_str)
+    command = tmpl.substitute(
+        out_file=conf['temp_data_dir'] + '/' + datasd[0],
+        fpath='ToSanDiego'+ '/' +ftp_files[0],
+        user=conf['ftp_read_user'],
+        passwd=conf['ftp_read_pass'])
 
-    return "Successfully retrieved billing data."
-
+    return command
 
 def get_leases():
     """Get READ leases data from FTP."""
-    filename = conf['temp_data_dir'] + '/' + datasd[1]
-    if os.path.isfile(filename):
-        os.remove(filename)
+    curl_str = "curl -o $out_file " \
+            + "sftp://sftp.wizardsoftware.net/"\
+            + "$fpath " \
+            + "-u $user:$passwd -k"
 
-    file = open(filename, 'wb')
-    ftp = ftplib.FTP('sdftp.fwsftp.com')
-    ftp.login(user=conf['ftp_read_user'], passwd=conf['ftp_read_pass'])
-    name = ftp_files[1]
-    ftp.retrbinary('RETR %s' % name, file.write)
-    ftp.close
+    tmpl = string.Template(curl_str)
+    command = tmpl.substitute(
+        out_file=conf['temp_data_dir'] + '/' + datasd[1],
+        fpath='ToSanDiego'+ '/' +ftp_files[1],
+        user=conf['ftp_read_user'],
+        passwd=conf['ftp_read_pass'])
 
-    return "Successfully retrieved leases data."
-
+    return command
 
 def get_parcels():
     """Get READ parcels data from FTP."""
-    filename = conf['temp_data_dir'] + '/' + datasd[2]
-    if os.path.isfile(filename):
-        os.remove(filename)
+    curl_str = "curl -o $out_file " \
+            + "sftp://sftp.wizardsoftware.net/"\
+            + "$fpath " \
+            + "-u $user:$passwd -k"
 
-    file = open(filename, 'wb')
-    ftp = ftplib.FTP('sdftp.fwsftp.com')
-    ftp.login(user=conf['ftp_read_user'], passwd=conf['ftp_read_pass'])
-    name = ftp_files[2]
-    ftp.retrbinary('RETR %s' % name, file.write)
-    ftp.close
+    tmpl = string.Template(curl_str)
+    command = tmpl.substitute(
+        out_file=conf['temp_data_dir'] + '/' + datasd[2],
+        fpath='ToSanDiego'+ '/' +ftp_files[2],
+        user=conf['ftp_read_user'],
+        passwd=conf['ftp_read_pass'])
 
-    return "Successfully retrieved parcels data."
-
+    return command
 
 def get_properties_details():
-    """Get READ properties details data from FTP."""
-    filename = conf['temp_data_dir'] + '/' + datasd[3]
-    if os.path.isfile(filename):
-        os.remove(filename)
+    """Get READ parcels data from FTP."""
+    curl_str = "curl -o $out_file " \
+            + "sftp://sftp.wizardsoftware.net/"\
+            + "$fpath " \
+            + "-u $user:$passwd -k"
 
-    file = open(filename, 'wb')
-    ftp = ftplib.FTP('sdftp.fwsftp.com')
-    ftp.login(user=conf['ftp_read_user'], passwd=conf['ftp_read_pass'])
-    name = ftp_files[3]
-    ftp.retrbinary('RETR %s' % name, file.write)
-    ftp.close
+    tmpl = string.Template(curl_str)
+    command = tmpl.substitute(
+        out_file=conf['temp_data_dir'] + '/' + datasd[3],
+        fpath='ToSanDiego'+ '/' +ftp_files[3],
+        user=conf['ftp_read_user'],
+        passwd=conf['ftp_read_pass'])
 
-    return "Successfully retrieved properties details data."
-
+    return command
 
 def process_billing():
     """Process billing data."""
