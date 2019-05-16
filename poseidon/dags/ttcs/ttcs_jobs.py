@@ -205,9 +205,10 @@ def geocode_data():
                 'zip_short'])
                         
             logging.info('Need to geocode {}'.format(geocode_dedupe.shape[0]))
+            geocode_test = geocode_dedupe.iloc[0:2]
 
-            geocoder_results = geocode_dedupe.apply(geospatial.census_address_geocoder,axis=1)
-            
+            geocoder_results = geocode_test.apply(lambda x: geospatial.census_address_geocoder(address_line=x['address_full'],locality=x['city'],state=x['state'],zip=x['zip_short']), axis=1)
+
             logging.info('Adding new coords to the df')
             coords = geocoder_results.apply(pd.Series)
             fresh_geocodes = geocode_dedupe.assign(latitude=coords[0],longitude=coords[1])
@@ -240,7 +241,7 @@ def geocode_data():
                 )
 
             logging.info("Concat addresses matched with address book and addresses geocoded")
-            geocoded_all = pd.concat([add_matched,geocoded_unmatched],ignore_index=True)
+            geocoded_all = pd.concat([add_matched,geocoded_unmatched],ignore_index=True,sort=True)
             geocoded_all = geocoded_all.drop(['_merge'],axis=1)
             
             adds_for_book = geocoded_unmatched.loc[
@@ -305,7 +306,7 @@ def prod_files_prep(subset):
 
     df = subset.drop(['create_yr'],axis=1)
     df = df.sort_values(by=['account_key',
-        'account_creation_dt'],
+        'date_account_creation'],
         ascending=[True,
         False])
     return df
@@ -324,11 +325,25 @@ def make_prod_files():
 
     logging.info('Renaming columns')
     df = df.rename(columns={'address_dt':'address_active_dt',
-            'cert_exp_dt':'cert_expiration_dt',
-            'creation_dt':'account_creation_dt',
+            'cert_exp_dt':'date_cert_expiration',
+            'creation_dt':'date_account_creation',
             'dba_name_dt':'dba_name_active_dt',
-            'name':'BID',
-            'apt_suite':'suite'
+            'name':'bid',
+            'apt_suite':'suite',
+            'bus_start_dt': 'date_business_start',
+            'latitude':'lat',
+            'longitude':'lng',
+            'street_no':'address_number',
+            'street_pre_direction':'address_pd',
+            'street_name':'address_road',
+            'street_suffix':'address_sfx',
+            'street_fraction':'address_number_fraction',
+            'city':'address_city',
+            'state':'address_state',
+            'zip':'address_zip',
+            'suite':'address_suite',
+            'pmb_box':'address_pmb_box',
+            'po_box':'address_po_box',
             })
 
     df.loc[((df['account_status'] == 'A') | 
@@ -340,29 +355,29 @@ def make_prod_files():
 
     df_prod = df[['account_key',
         'account_status',
-        'account_creation_dt',
-        'cert_expiration_dt',
+        'date_account_creation',
+        'date_cert_expiration',
         'business_owner_name',
         'ownership_type',
-        'bus_start_dt',
+        'date_business_start',
         'dba_name',
         'naics_sector',
         'naics_code',
         'naics_description',
-        'latitude',
-        'longitude',
-        'street_no',
-        'street_pre_direction',
-        'street_name',
-        'street_suffix',
-        'street_fraction',
-        'city',
-        'state',
-        'zip',
+        'lat',
+        'lng',
+        'address_number',
+        'address_pd',
+        'address_road',
+        'address_sfx',
+        'address_number_fraction',
+        'address_city',
+        'address_state',
+        'address_zip',
         'suite',
-        'pmb_box',
-        'po_box',
-        'BID',
+        'address_pmb_box',
+        'address_po_box',
+        'bid',
         'create_yr'
         ]]
 
@@ -395,7 +410,7 @@ def make_prod_files():
 
     logging.info('Found {} inactive businesses'.format(inactive_rows))
 
-    subset_no = np.ceil((curr_yr - 1990)/3.0)
+    subset_no = np.ceil((curr_yr - 1990)/10.0)
 
     logging.info('Creating '+str(subset_no)+' subsets of inactive')
 
@@ -404,9 +419,9 @@ def make_prod_files():
     for i in range(subset_no.astype(int)):
         subset = df_inactive[
         (df_inactive['create_yr'] >= sub_yr_start) & 
-        (df_inactive['create_yr'] <= sub_yr_start+2)]
+        (df_inactive['create_yr'] <= sub_yr_start+9)]
 
-        filename = str(sub_yr_start)+"to"+str(sub_yr_start+2)
+        filename = str(sub_yr_start)+"to"+str(sub_yr_start+9)
 
         subset_prod = prod_files_prep(subset)
 
@@ -416,6 +431,6 @@ def make_prod_files():
             conf['prod_data_dir']+'/sd_businesses_{}_datasd.csv'.format(filename),
             date_format=conf['date_format_ymd'])
 
-        sub_yr_start += 3
+        sub_yr_start += 10
 
     return "Successfully generated production files."

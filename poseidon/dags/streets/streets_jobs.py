@@ -169,33 +169,64 @@ def get_streets_paving_data(mode='sdif', **kwargs):
     # This is wrong.
     df = df.drop_duplicates('seg_id', keep='first')
 
-    # Rename columns we're keeping
-    df = df.rename(columns={
-        'pve_id': 'PVE_ID',
-        'seg_id': 'SEG_ID',
-        'wo_id': 'PROJECTID',
-        'wo_name': 'TITLE',
-        'wo_pm': 'PM',
-        'wo_pm_phone': 'PM_PHONE',
-        'wo_design_start_dt': 'START',
-        'wo_design_end_dt': 'END',
-        'wo_resident_engineer': 'RESIDENT_ENGINEER',
-        'job_end_dt': 'MORATORIUM',
-        'wo_status': 'STATUS',
-        'wo_proj_type': 'TYPE',
-        'seg_length_ft': 'LENGTH',
-        'seg_width_ft': 'WIDTH',
-    })
-
-    # Regex for the keeps:
-    df = df.filter(regex="^[A-Z0-9]")
+    df = df.loc[:,['pve_id',
+    'seg_id',
+    'wo_id',
+    'wo_name',
+    'wo_pm',
+    'wo_pm_phone',
+    'wo_design_start_dt',
+    'wo_design_end_dt',
+    'wo_resident_engineer',
+    'job_end_dt',
+    'wo_status',
+    'wo_proj_type',
+    'seg_length_ft',
+    'seg_width_ft'
+    ]]
 
     # Remove START and END for projects in moratorium:
-    df.loc[df.STATUS == moratorium_string, ['START', 'END']] = None
+    df.loc[df.wo_status == moratorium_string, ['wo_design_start_dt', 
+        'wo_design_end_dt']] = None
 
     # For IMCAT uppercase status
     if mode == 'imcat':
+        df.columns = ['PVE_ID',
+        'SEG_ID',
+        'PROJECTID',
+        'TITLE',
+        'PM',
+        'PM_PHONE',
+        'START',
+        'END',
+        'RESIDENT_ENGINEER',
+        'MORATORIUM',
+        'STATUS',
+        'TYPE',
+        'LENGTH',
+        'WIDTH']
+
         df['STATUS'] = df['STATUS'].str.upper()
+    else:
+        df.columns = ['pve_id',
+        'seg_id',
+        'project_id',
+        'title',
+        'project_manager',
+        'project_manager_phone',
+        'date_project_start',
+        'date_project_end',
+        'resident_engineer',
+        'moratorium',
+        'status',
+        'type',
+        'length',
+        'width']
+
+    
+    logging.info(mode)
+    logging.info(df.columns)
+    
 
     # Write csv
     logging.info('Writing ' + str(df.shape[0]) + ' rows in mode ' + mode)

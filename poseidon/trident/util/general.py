@@ -124,7 +124,7 @@ def buildConfig(env):
         'keen_read_key': os.environ.get('KEEN_READ_KEY'),
         'keen_ti_collection': os.environ.get('KEEN_TI_COLLECTION'),
         'mrm_buffer_access_token': os.environ.get('MRM_BUFFER_ACCESS_TOKEN'),
-        'executable_path': '/usr/local/airflow/poseidon/bin',
+        'executable_path': '/usr/local/poseidon/bin',
         'google_token': os.environ.get("GOOGLE_TOKEN"),
         'sde_user': os.environ.get("SDE_USER"),
         'sde_pw': os.environ.get("SDE_PW"),

@@ -45,20 +45,19 @@ def clean_traffic_counts(src_fname='traffic_counts_file',
 
     names = ['street_name',
              'limits',
-             'all_count',
              'northbound_count',
              'southbound_count',
              'eastbound_count',
              'westbound_count',
              'total_count',
              'file_no',
-             'count_date']
+             'date_count']
 
     worksheet = pd.read_excel(xlsx_file,
                               sheet_name='TRAFFIC',
                               header=None,
                               skiprows=[0, 1, 2, 3],
-                              usecols=[8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+                              usecols=[8, 9, 10, 11, 12, 13, 14, 15, 16],
                               names=names)
 
     # Write temp csv
@@ -86,7 +85,7 @@ def build_traffic_counts(src_fname='traffic_counts_raw_clean',
     counts = counts[counts['street_name'] != ' ']
 
     # date type
-    counts['count_date'] = pd.to_datetime(counts['count_date'])
+    counts['date_count'] = pd.to_datetime(counts['date_count'],errors='coerce')
 
     # create id field based on file id and street
     counts['id'] = counts.street_name.str.cat(counts.file_no, sep="")\
