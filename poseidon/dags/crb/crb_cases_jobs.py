@@ -95,9 +95,6 @@ def create_crb_cases_prod():
 
     df = pd.concat(data,ignore_index=True)
 
-    # Cannot publish officer name and complainant name
-    df = df.drop(["complainant's_name","officer's_name","incident_address"],axis=1)
-
     logging.info("Renaming columns")
 
     df = df.rename(columns={'#':'id',
@@ -110,17 +107,27 @@ def create_crb_cases_prod():
     '90days_or_less':'days_90_or_less',
     '120days_or_less':'days_120_or_less',
     'body_camera?':'body_camera',
+    "complainant's_name":'complainant_name',
     'race_0':'complainant_race',
     'gender_0':'complainant_gender',
+    "officer's_name":'officer_name',
     'race':'officer_race',
     'gender':'officer_gender',
     'years_of_service':'officer_yrs_of_svce'})
 
+    # Cannot publish officer name, complainant name,
+    # officer race, gender, or yrs of service
+    df = df.drop(['complainant_name',
+        'officer_name',
+        'officer_race',
+        'officer_gender',
+        'incident_address',
+        'officer_yrs_of_svce'
+        ],axis=1)
+
     logging.info("Filling in missing values for rows belonging to same case")
 
     df = df.fillna(method='ffill')
-
-    logging.info(df.dtypes)
 
     prod_file_name = 'crb_cases_datasd'
 
