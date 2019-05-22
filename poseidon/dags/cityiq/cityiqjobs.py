@@ -1,5 +1,7 @@
 import requests
 import json
+from datetime import *
+
 
 token = ''
 
@@ -70,5 +72,55 @@ def get_asset_details():
 	#data[0]
 	#print([d.get('assetUid') for d in data])
 
-#get_assets()
+def get_pkout_bbox():
+	token = get_token_response()
+	url = "https://sandiego.cityiq.io/api/v2/event/locations/events"
+	querystring = {"bbox":"33.077762:-117.663817,32.559574:-116.584410","locationType":"PARKING_ZONE","eventType":"PKOUT","startTime":"1558049253306","endTime":"1558567653306","pageSize":"100"}
+	headers = {
+		'Authorization': "Bearer {}".format(token),
+		'predix-zone-id': "SD-IE-PARKING",
+		'cache-control': "no-cache",
+		'postman-token': "e8199816-04a2-29e4-ec0d-1a68a94fe771"
+	}
+	response = requests.request("GET", url, headers=headers, params=querystring)
+	assets = response.json()
+	path = '/usr/local/airflow/poseidon/data/cityiq/pkout/'
+	file_name = datetime.now().strftime('%Y_%m_%d_pkout.json')
+	path += file_name
+	with open(path, 'w') as f:
+		json.dump(assets, f)
 
+def get_pkin_bbox():
+	token = get_token_response()
+	url = "https://sandiego.cityiq.io/api/v2/event/locations/events"
+	querystring = {"bbox":"33.077762:-117.663817,32.559574:-116.584410","locationType":"PARKING_ZONE","eventType":"PKIN","startTime":"1558049253306","endTime":"1558567653306","pageSize":"100"}
+	headers = {
+		'Authorization': "Bearer {}".format(token),
+		'predix-zone-id': "SD-IE-PARKING",
+		'cache-control': "no-cache",
+		'postman-token': "63188df1-b0db-c553-aecd-4882b65e5dcc"
+	}
+	response = requests.request("GET", url, headers=headers, params=querystring)
+	assets = response.json()
+	path = '/usr/local/airflow/poseidon/data/cityiq/pkin/'
+	file_name = datetime.now().strftime('%Y_%m_%d_pkin.json')
+	path += file_name
+	with open(path, 'w') as f:
+		json.dump(assets, f)
+
+def get_parking(assetID):
+	token = get_token_response()
+	url = "https://sandiego.cityiq.io/api/v2/event/assets/{}/events".format(assetID)
+	#look into increasing pageSize
+	querystring = {"eventType":"PKIN","startTime":"1558049253306","endTime":"1558567653306","pageSize":"100"}
+	headers = {
+		'Authorization': "Bearer {}".format(token),
+		'predix-zone-id': "SD-IE-PARKING",
+		'cache-control': "no-cache",
+		'postman-token': "abbbec83-ff55-1748-f703-b617bd17b794"
+		}
+	response = requests.request("GET", url, headers=headers, params=querystring)
+	print(response.text)
+#get_parking("09741091-c77e-4d61-9a14-d489bd061975")
+#get_pkout_bbox()
+#print(get_token_response())
