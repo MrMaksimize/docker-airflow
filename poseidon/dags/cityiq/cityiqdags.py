@@ -53,35 +53,33 @@ get_pkin_bbox = PythonOperator(
     on_retry_callback=notify,
     on_success_callback=notify,
     dag=dag)
+
+get_pkin_bbox = PythonOperator(
+    task_id='get_pedvt_bbox',
+    python_callable=get_pkin_bbox,
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
 #'/usr/local/airflow/poseidon/dags/cityiq/assets.json'
 #conf['temp_data_dir']
 
+#set upstream 
+
 prefixes = ['pkin', 'pkout']
 for prefix in prefixes:
-    '''upload = S3FileTransferOperator(
-            task_id='upload_bbox',
-            source_base_path='/usr/local/airflow/poseidon/dags/cityiq/',
-            source_key='assets.json',
-            dest_s3_conn_id=conf['default_s3_conn_id'],
-            dest_s3_bucket=conf['dest_s3_bucket'],
-            dest_s3_key='cityiq/assets.json',
-            on_failure_callback=notify,
-            on_retry_callback=notify,
-            on_success_callback=notify,
-            replace=True,
-            dag=dag)'''
-
     file_time = datetime.now().strftime('%Y_%m_%d_')
     file_name = file_time + prefix + '.json'
     upload = S3FileTransferOperator(
             task_id='upload_bbox',
-            source_base_path='/usr/local/airflow/poseidon/data/cityiq/' + prefix,
+            source_base_path='/data/temp/' + prefix,
             source_key=file_name,
             dest_s3_conn_id=conf['default_s3_conn_id'],
             dest_s3_bucket=conf['dest_s3_bucket'],
-            dest_s3_key='cityiq/' + file_name,
+            dest_s3_key='cityiq/' + prefix + '/' + file_name,
             on_failure_callback=notify,
             on_retry_callback=notify,
             on_success_callback=notify,
             replace=True,
             dag=dag)
+    # set upstream or try storing in a list
