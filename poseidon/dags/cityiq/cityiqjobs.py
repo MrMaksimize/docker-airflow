@@ -75,7 +75,9 @@ def get_asset_details():
 def get_pkout_bbox():
 	token = get_token_response()
 	url = "https://sandiego.cityiq.io/api/v2/event/locations/events"
-	querystring = {"bbox":"33.077762:-117.663817,32.559574:-116.584410","locationType":"PARKING_ZONE","eventType":"PKOUT","startTime":"1558049253306","endTime":"1558567653306","pageSize":"100"}
+	end = datetime.now()
+	start = end - timedelta(days=1)
+	querystring = {"bbox":"33.077762:-117.663817,32.559574:-116.584410","locationType":"PARKING_ZONE","eventType":"PKOUT","startTime":str(int(start.timestamp() * 1000)),"endTime":str(int(end.timestamp() * 1000)),"pageSize":"100"}
 	headers = {
 		'Authorization': "Bearer {}".format(token),
 		'predix-zone-id': "SD-IE-PARKING",
@@ -97,7 +99,6 @@ def get_pkin_bbox():
 	start = end - timedelta(days=1)
 
 	querystring = {"bbox":"33.077762:-117.663817,32.559574:-116.584410","locationType":"PARKING_ZONE","eventType":"PKIN","startTime":str(int(start.timestamp() * 1000)),"endTime":str(int(end.timestamp() * 1000)),"pageSize":"100"}
-	#querystring = {"bbox":"33.077762:-117.663817,32.559574:-116.584410","locationType":"PARKING_ZONE","eventType":"PKIN","startTime":"1558049253306","endTime":"1558567653306","pageSize":"100"}
 	headers = {
 		'Authorization': "Bearer {}".format(token),
 		'predix-zone-id': "SD-IE-PARKING",
@@ -107,13 +108,12 @@ def get_pkin_bbox():
 	response = requests.request("GET", url, headers=headers, params=querystring)
 	assets = response.json()
 
-	
 	path = '/data/temp/'
 	file_name = datetime.now().strftime('%Y_%m_%d_pkin.json')
 	path += file_name
 	with open(path, 'w') as f:
 		json.dump(assets, f)
-	#print(response.text)
+	
 
 def get_parking(assetID):
 	token = get_token_response()
@@ -128,6 +128,3 @@ def get_parking(assetID):
 		}
 	response = requests.request("GET", url, headers=headers, params=querystring)
 	print(response.text)
-#get_parking("09741091-c77e-4d61-9a14-d489bd061975")
-get_pkin_bbox()
-#print(get_token_response())
