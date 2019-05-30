@@ -1,4 +1,4 @@
-"""This module contains dags and tasks for extracting data out of TTCS."""
+"""This module contains dags and tasks for extracting data out of Claims Stat."""
 from airflow.operators.bash_operator import BashOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
 from airflow.operators.latest_only_operator import LatestOnlyOperator
