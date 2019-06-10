@@ -117,8 +117,8 @@ def scrape_dsd(key):
         rows,
         columns=[
             'approval_id', 'approval_type', 'approval_type_id',
-            'date_application', 'issue_date', 'first_inspection_date',
-            'complete_cancel_date', 'latitude', 'longitude', 'issued_by',
+            'date_application', 'date_issued', 'date_first_inspected',
+            'date_complete_cancel', 'lat', 'lng', 'issued_by',
             'permit_holder', 'scope', 'project_id', 'job_id', 'status',
             'depiction', 'square_footage', 'valuation'
         ])
@@ -126,24 +126,24 @@ def scrape_dsd(key):
     df['date_application'] = pd.to_datetime(
         df['date_application'], errors='coerce')
 
-    df['issue_date'] = pd.to_datetime(df['issue_date'], errors='coerce')
+    df['date_issued'] = pd.to_datetime(df['issue_date'], errors='coerce')
 
-    df['first_inspection_date'] = pd.to_datetime(
-        df['first_inspection_date'], errors='coerce')
+    df['date_first_inspected'] = pd.to_datetime(
+        df['date_first_inspected'], errors='coerce')
 
-    df['complete_cancel_date'] = pd.to_datetime(
-        df['complete_cancel_date'], errors='coerce')
+    df['date_complete_cancel'] = pd.to_datetime(
+        df['date_complete_cancel'], errors='coerce')
 
     if key == 'issued':
         df = df.drop(
-            ['first_inspection_date', 'complete_cancel_date'], axis=1)
-        df = df.sort_values(by='issue_date')
+            ['date_first_inspected', 'date_complete_cancel'], axis=1)
+        df = df.sort_values(by='date_issued')
 
     elif key == 'applied':
         df = df.drop(
             [
-                'issue_date', 'first_inspection_date',
-                'complete_cancel_date', 'issued_by', 'permit_holder',
+                'date_issued', 'date_first_inspected',
+                'date_complete_cancel', 'issued_by', 'permit_holder',
                 'scope', 'job_id', 'status', 'depiction',
                 'square_footage', 'valuation'
             ],
@@ -151,7 +151,7 @@ def scrape_dsd(key):
         df = df.sort_values(by='date_application')
 
     elif key == 'completed':
-        df = df.sort_values(by='complete_cancel_date')
+        df = df.sort_values(by='date_complete_cancel')
 
     general.pos_write_csv(
         df,
@@ -173,9 +173,9 @@ def update_dsd(key):
     if key == 'applied':
         prod = prod.sort_values(by='date_application')
     elif key == 'issued':
-        prod = prod.sort_values(by='issue_date')
+        prod = prod.sort_values(by='date_issued')
     elif key == 'completed':
-        prod = prod.sort_values(by='complete_cancel_date')
+        prod = prod.sort_values(by='date_complete_cancel')
 
     general.pos_write_csv(prod, y_src, date_format=conf['date_format_ymd_hms'])
 
@@ -194,9 +194,9 @@ def extract_solar(key):
     if key == 'applied':
         solar = solar.sort_values(by='date_application')
     elif key == 'issued':
-        solar = solar.sort_values(by='issue_date')
+        solar = solar.sort_values(by='date_issued')
     elif key == 'completed':
-        solar = solar.sort_values(by='complete_cancel_date')
+        solar = solar.sort_values(by='date_complete_cancel')
 
     general.pos_write_csv(solar, solar_pmts, date_format=conf['date_format_ymd_hms'])
 
