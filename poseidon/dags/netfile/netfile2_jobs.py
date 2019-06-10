@@ -40,7 +40,7 @@ prod_columns = ['form',
                 'filing_id',
                 'year_report']
 cur_yr = general.get_year()
-prod_file = conf['prod_data_dir'] + '/financial_support_'+str(cur_yr)+'_datasd.csv'
+prod_file = conf['prod_data_dir'] + '/financial_support_'+str(cur_yr)+'_datasd_v1.csv'
 
 def get_transactions_a():
     """ Requesting transactions for schedule 460A """
@@ -748,7 +748,7 @@ def find_new_committees():
   """ Find new committees """
   recipients = pd.read_csv('http://seshat.datasd.org/' + \
     'campaign_fin/' + \
-    'financial_support_recipients_datasd.csv')
+    'financial_support_recipients_datasd_v1.csv')
   outputDF = pd.read_csv(prod_file)
 
   recipients_committees = recipients[recipients["committee_id"].notnull()]

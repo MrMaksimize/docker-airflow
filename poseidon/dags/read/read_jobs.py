@@ -14,8 +14,8 @@ ftp_files = [
 ]
 
 datasd = [
-    'city_property_billing_datasd.csv', 'city_property_leases_datasd.csv',
-    'city_property_parcels_datasd.csv', 'city_property_details_datasd.csv'
+    'city_property_billing_datasd_v1.csv', 'city_property_leases_datasd_v1.csv',
+    'city_property_parcels_datasd_v1.csv', 'city_property_details_datasd_v1.csv'
 ]
 
 
@@ -136,6 +136,8 @@ def process_leases():
         'BillingRentCode': 'rent_code',
         'RentAmount': 'cost_line_amt_USD'
     })
+
+    df['nonprofit_lessee'] = df['nonprofit_lessee'].fillna(0)
 
     general.pos_write_csv(
         df,

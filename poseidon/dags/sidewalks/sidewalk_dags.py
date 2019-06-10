@@ -93,18 +93,15 @@ shape_zip = PythonOperator(
 upload_oci_file = S3FileTransferOperator(
     task_id='upload_oci',
     source_base_path=conf['prod_data_dir'],
-    source_key='sidewalk_cond_datasd.csv',
+    source_key='sidewalk_cond_datasd_v1.csv',
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_bucket=conf['dest_s3_bucket'],
-    dest_s3_key='tsw/sidewalk_cond_datasd.csv',
+    dest_s3_key='tsw/sidewalk_cond_datasd_v1.csv',
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
     replace=True,
     dag=dag)
-
-#: Update portal modified date
-update_oci_md = get_seaboard_update_dag('sidewalk-oci.md', dag)
 
 #: Upload shp GIS file to S3
 upload_shp_file = S3FileTransferOperator(
@@ -170,8 +167,11 @@ update_gis_md = get_seaboard_update_dag('sidewalk-gis.md', dag)
 #: Latest only operator must run before getting sidewalk data
 get_sidewalk_data.set_upstream(sidewalk_latest_only)
 
+#: Getting sidewalk data must run before uploading
+upload_oci_file.set_upstream(get_sidewalk_data)
+
 #: get_sidewalk_data must run before get shapefiles so they can be joined
-get_sw_shapefiles.set_upstream(get_sidewalk_data)
+get_sw_shapefiles.set_upstream(sidewalk_latest_only)
 
 #: get_sw_shapefiles must run before converting to geojson
 sidewalks_to_geojson.set_upstream(get_sw_shapefiles)
@@ -188,9 +188,6 @@ geobuf_zip.set_upstream(sidewalks_to_geobuf)
 #: get_sw_shapefile must run before zipping shapefile
 shape_zip.set_upstream(get_sw_shapefiles)
 
-#: get_sidewalk_data must run before uploading
-upload_oci_file.set_upstream(get_sidewalk_data)
-
 #: zipping shapefile must run before uploading
 upload_shp_file.set_upstream(shape_zip)
 
@@ -205,6 +202,3 @@ upload_pbf_file.set_upstream(geobuf_zip)
 
 #: upload pbf must run before updating dataset on github
 update_gis_md.set_upstream(upload_pbf_file)
-
-#: upload oci must run before updating dataset on github
-update_oci_md.set_upstream(upload_oci_file)

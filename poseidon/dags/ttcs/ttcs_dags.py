@@ -53,6 +53,19 @@ geocode_data = PythonOperator(
     on_success_callback=notify,
     dag=dag)
 
+addresses_to_S3 = S3FileTransferOperator(
+    task_id='upload_address_book',
+    source_base_path=conf['prod_data_dir'],
+    source_key='ttcs_address_book.csv',
+    dest_s3_conn_id=conf['default_s3_conn_id'],
+    dest_s3_bucket=conf['ref_s3_bucket'],
+    dest_s3_key='ttcs_address_book.csv',
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    replace=True,
+    dag=dag)
+
 #: Spatially join BIDs data
 join_bids = PythonOperator(
     task_id='join_bids',
@@ -82,9 +95,11 @@ get_active_businesses.set_upstream(ttcs_latest_only)
 clean_data.set_upstream(get_active_businesses)
 #: Data cleaning occurs after BIDs data retrieval.
 geocode_data.set_upstream(clean_data)
-#: spatial join occurs after geocoding.
+#: Address book is uploaded after geocoding occurs
+addresses_to_S3.set_upstream(geocode_data)
+#: Spatial join occurs after geocoding.
 join_bids.set_upstream(geocode_data)
-#: last 3mo subsetting occurs after spatial join
+#: Subsetting occurs after spatial join
 create_subsets.set_upstream(join_bids)
 
 subset_names = [os.path.basename(x) for x in glob.glob(conf['prod_data_dir']+'/sd_businesses_*.csv')]
@@ -97,10 +112,10 @@ for index, subset in enumerate(subset_names):
     active_to_S3 = S3FileTransferOperator(
         task_id='upload_'+fname,
         source_base_path=conf['prod_data_dir'],
-        source_key='sd_businesses_'+fname+'_datasd.csv',
+        source_key='sd_businesses_'+fname+'_datasd_v1.csv',
         dest_s3_conn_id=conf['default_s3_conn_id'],
         dest_s3_bucket=conf['dest_s3_bucket'],
-        dest_s3_key='ttcs/sd_businesses_'+fname+'_datasd.csv',
+        dest_s3_key='ttcs/sd_businesses_'+fname+'_datasd_v1.csv',
         on_failure_callback=notify,
         on_retry_callback=notify,
         on_success_callback=notify,

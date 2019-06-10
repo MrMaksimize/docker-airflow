@@ -47,7 +47,7 @@ def process_cfs_data():
     logging.info('Adding recent data to CFS production file.')
     curr_frame = pd.read_csv(
         conf['prod_data_dir'] +
-        '/pd_calls_for_service_' + curr_year + '_datasd.csv')
+        '/pd_calls_for_service_' + curr_year + '_datasd_v1.csv')
 
     columns_names = curr_frame.columns.values
     temp_frame.columns = columns_names
@@ -75,7 +75,7 @@ def process_cfs_data():
     prod_file = conf['prod_data_dir'] \
         + '/pd_calls_for_service_' \
         + curr_year \
-        + '_datasd.csv'
+        + '_datasd_v1.csv'
 
     general.pos_write_csv(
         prod_frame,

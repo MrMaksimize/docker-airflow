@@ -22,7 +22,7 @@ parks_file_gid = conf['temp_data_dir'] + '/gid_parks.csv'
 services_file = conf['temp_data_dir'] + '/gid_final.csv'
 
 prod_file_base = conf['prod_data_dir'] + '/get_it_done_'
-prod_file_end = 'requests_datasd.csv'
+prod_file_end = 'requests_datasd_v1.csv'
 prod_file_gid = prod_file_base + prod_file_end
 
 

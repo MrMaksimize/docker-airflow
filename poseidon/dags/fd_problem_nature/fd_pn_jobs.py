@@ -8,7 +8,7 @@ from trident.util import general
 
 conf = general.config
 
-prod_file = conf['prod_data_dir'] + '/fd_problem_nature_agg_datasd.csv'
+prod_file = conf['prod_data_dir'] + '/fd_problem_nature_agg_datasd_v1.csv'
 
 def get_fd_data(**kwargs):
 	"""Get fire department data from Data Base."""

@@ -11,7 +11,9 @@ conf = general.config
 
 
 temp_file = conf['temp_data_dir'] + '/special_events.csv'
+prod_v1_file = conf['prod_data_dir'] + '/special_events_list_datasd_v1.csv'
 prod_file = conf['prod_data_dir'] + '/special_events_list_datasd.csv'
+geocoded_addresses = 'https://datasd-reference.s3.amazonaws.com/events_address_book.csv'
 
 def spell_number(s):
     """ Function to convert number to word """ 
@@ -57,9 +59,9 @@ def add_missing_suffix(addr_list):
     two_streets = re.search(streets_regex,addr_list[1])
     if two_streets:
         addr_list[0] = f"{addr_list[0]} St"
-        return " & ".join(addr_list.strip())
+        return " & ".join(x.strip() for x in addr_list)
     else:
-        return " & ".join(addr_list.strip())
+        return " & ".join(x.strip() for x in addr_list)
 
 def normalize_address(address_string):
     """ Function to normalize known address errors to improve geocoding """
@@ -104,7 +106,7 @@ def process_special_events():
         })
 
     logging.info("Reading in address book")
-    add_book = pd.read_csv(f"{conf['prod_data_dir']}/events_address_book.csv",low_memory=False)
+    add_book = pd.read_csv(geocoded_addresses,low_memory=False)
     add_book_join = pd.merge(temp_df,
         add_book,
         how='left',
@@ -157,6 +159,11 @@ def process_special_events():
     general.pos_write_csv(
         updated_df,
         prod_file,
+        date_format=conf['date_format_ymd_hms'])
+
+    general.pos_write_csv(
+        updated_df,
+        prod_v1_file,
         date_format=conf['date_format_ymd_hms'])
 
     return "Successfully generated special events prod file"

@@ -18,13 +18,11 @@ def get_traffic_counts(out_fname='traffic_counts_file'):
         + "Traffic Data/{fy}/RECORD FINDER\";" \
         + " ls; get Machine_Count_Index.xlsx {temp_dir}/{out_f}.xlsx;'"
 
-    command = command.format(adname=conf['mrm_sannet_user'],
-                             adpass=conf['mrm_sannet_pass'],
+    command = command.format(adname=conf['alb_sannet_user'],
+                             adpass=conf['alb_sannet_pass'],
                              fy=fy,
                              temp_dir=conf['temp_data_dir'],
                              out_f=out_fname)
-
-    logging.info(command)
 
     p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
     output, error = p.communicate()
@@ -70,7 +68,7 @@ def clean_traffic_counts(src_fname='traffic_counts_file',
 
 
 def build_traffic_counts(src_fname='traffic_counts_raw_clean',
-                         out_fname='traffic_counts_datasd'):
+                         out_fname='traffic_counts_datasd_v1'):
     """Build traffic counts production data."""
     src_file = "{0}/{1}.csv"\
         .format(conf['temp_data_dir'], src_fname)

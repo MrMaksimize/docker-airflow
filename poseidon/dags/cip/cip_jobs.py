@@ -11,7 +11,7 @@ fiscal_yr =  general.get_FY_year()
 credentials = general.source['cip']
 
 
-prod_file = conf['prod_data_dir'] + '/cip_{0}_datasd.csv'.format(fiscal_yr)
+prod_file = conf['prod_data_dir'] + '/cip_{0}_datasd_v1.csv'.format(fiscal_yr)
             
 
 def get_cip_data(**kwargs):

@@ -31,7 +31,7 @@ def get_collisions_data():
 
 def process_collisions_data():
     """Process collision data."""
-    prod_file = conf['prod_data_dir']+'/pd_collisions_datasd.csv'
+    prod_file = conf['prod_data_dir']+'/pd_collisions_datasd_v1.csv'
     df = pd.read_csv(conf['temp_data_dir']+'/temp_collisions.csv',
                      header=None,
                      error_bad_lines=False)

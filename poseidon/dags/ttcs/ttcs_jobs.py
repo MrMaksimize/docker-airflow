@@ -18,6 +18,7 @@ temp_all = conf['temp_data_dir'] + '/ttcs_all.csv'
 clean_all = conf['temp_data_dir'] + '/ttcs_all_clean.csv'
 geocoded_active = conf['temp_data_dir'] + '/ttcs_all_geocoded.csv'
 bids_all = conf['temp_data_dir'] + '/ttcs_all_bids.csv'
+geocoded_addresses = 'https://datasd-reference.s3.amazonaws.com/ttcs_address_book.csv'
 
 curr_yr = dt.datetime.today().year
 
@@ -108,8 +109,7 @@ def geocode_data():
                      )
 
     logging.info('Get address book')
-    add_book_path = conf['prod_data_dir'] + '/ttcs_address_book.csv'
-    add_book = pd.read_csv(add_book_path,
+    add_book = pd.read_csv(geocoded_addresses,
         low_memory=False,
         dtype=address_dtype
         )
@@ -395,14 +395,14 @@ def make_prod_files():
 
     general.pos_write_csv(
         active_pre07,
-        conf['prod_data_dir']+'/sd_businesses_active_pre08_datasd.csv',
+        conf['prod_data_dir']+'/sd_businesses_active_pre08_datasd_v1.csv',
         date_format=conf['date_format_ymd'])
 
     active_pos07 = prod_files_prep(df_active[df_active['create_yr'] > 2007])
 
     general.pos_write_csv(
         active_pos07,
-        conf['prod_data_dir']+'/sd_businesses_active_since08_datasd.csv',
+        conf['prod_data_dir']+'/sd_businesses_active_since08_datasd_v1.csv',
         date_format=conf['date_format_ymd'])
 
     df_inactive = df_prod[df_prod['account_status'] == "Inactive"].reset_index()
@@ -428,7 +428,7 @@ def make_prod_files():
         logging.info('Writing file '+filename)
         general.pos_write_csv(
             subset_prod,
-            conf['prod_data_dir']+'/sd_businesses_{}_datasd.csv'.format(filename),
+            conf['prod_data_dir']+'/sd_businesses_{}_datasd_v1.csv'.format(filename),
             date_format=conf['date_format_ymd'])
 
         sub_yr_start += 10

@@ -9,8 +9,8 @@ from trident.util import general
 conf = general.config
 
 prod_file = {
-    'sdif': conf['prod_data_dir'] + '/sd_paving_datasd.csv',
-    'imcat': conf['prod_data_dir'] + '/sd_paving_imcat_datasd.csv'
+    'sdif': conf['prod_data_dir'] + '/sd_paving_datasd_v1.csv',
+    'imcat': conf['prod_data_dir'] + '/sd_paving_imcat_datasd_v1.csv'
 }
 
 
