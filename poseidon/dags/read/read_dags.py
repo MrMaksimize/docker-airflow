@@ -1,5 +1,6 @@
 """READ _dags file."""
 from airflow.operators.python_operator import PythonOperator
+from airflow.operators.bash_operator import BashOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
 from airflow.operators.latest_only_operator import LatestOnlyOperator
 from airflow.models import DAG
@@ -22,9 +23,9 @@ read_latest_only = LatestOnlyOperator(task_id='read_latest_only', dag=dag)
 
 
 #: Retrieve READ billing data from FTP
-get_billing = PythonOperator(
+get_billing = BashOperator(
     task_id='get_billing',
-    python_callable=get_billing,
+    bash_command=get_billing(),
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
@@ -53,9 +54,9 @@ billing_to_S3 = S3FileTransferOperator(
     dag=dag)
 
 #: Retrieve READ leases data from FTP
-get_leases = PythonOperator(
+get_leases = BashOperator(
     task_id='get_leases',
-    python_callable=get_leases,
+    bash_command=get_leases(),
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
@@ -84,9 +85,9 @@ leases_to_S3 = S3FileTransferOperator(
     dag=dag)
 
 #: Retrieve READ leases data from FTP
-get_parcels = PythonOperator(
+get_parcels = BashOperator(
     task_id='get_parcels',
-    python_callable=get_parcels,
+    bash_command=get_parcels(),
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
@@ -115,9 +116,9 @@ parcels_to_S3 = S3FileTransferOperator(
     dag=dag)
 
 #: Retrieve READ leases data from FTP
-get_properties_details = PythonOperator(
+get_properties_details = BashOperator(
     task_id='get_properties_details',
-    python_callable=get_properties_details,
+    bash_command=get_properties_details(),
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,

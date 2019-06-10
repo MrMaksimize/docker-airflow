@@ -18,9 +18,9 @@ cur_yr = general.get_year()
 # This might need some refactoring (filenameing dates)
 
 flist = {
-    'full': 'treas_parking_payments_{}_datasd.csv'.format(cur_yr),
-    'by_month': 'treas_meters_{}_pole_by_month_datasd.csv'.format(cur_yr),
-    'by_day': 'treas_meters_{}_pole_by_mo_day_datasd.csv'.format(cur_yr)
+    'full': 'treas_parking_payments_{}_datasd_v1.csv'.format(cur_yr),
+    'by_month': 'treas_meters_{}_pole_by_month_datasd_v1.csv'.format(cur_yr),
+    'by_day': 'treas_meters_{}_pole_by_mo_day_datasd_v1.csv'.format(cur_yr)
 }
 
 dag = DAG(
