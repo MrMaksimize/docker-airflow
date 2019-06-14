@@ -86,10 +86,12 @@ def get_indicator_bacteria_tests(date_start='01-JAN-2014', date_end='15-JUN-2017
     del df['V5_PH_PART1']
     del df['V5_TEMP_PART1']
 
-    df = df.rename(columns=lambda x: re.sub('V5\_','',x))
+    df.columns = [re.sub('V5\_','',x) for x in df.columns]
+    df.columns = [x.lower() for x in df.columns]
+    df = df.rename(columns={'sample_date':'date_sampled'})
     df.index.rename(name='FR_NUM', inplace=True)
 
-    new_file_path = conf['prod_data_dir'] + '/indicator_bacteria_tests_datasd.csv'
+    new_file_path = conf['prod_data_dir'] + '/indicator_bacteria_tests_datasd_v1.csv'
     logging.info("Writing to " + new_file_path)
     df.to_csv(new_file_path,
         index=True, 
@@ -101,13 +103,13 @@ def get_indicator_bacteria_tests(date_start='01-JAN-2014', date_end='15-JUN-2017
 
 
 def get_latest_bac_tests():
-    full_bacs_path = conf['prod_data_dir'] + "/indicator_bacteria_tests_datasd.csv"
+    full_bacs_path = conf['prod_data_dir'] + "/indicator_bacteria_tests_datasd_v1.csv"
     bac_tests = pd.read_csv(full_bacs_path)
-    bac_tests.SAMPLE_DATE = pd.to_datetime(bac_tests.SAMPLE_DATE, infer_datetime_format=True)
+    bac_tests.date_sampled = pd.to_datetime(bac_tests.date_sampled, infer_datetime_format=True)
 
-    df = bac_tests[bac_tests.SAMPLE_DATE == max(bac_tests.SAMPLE_DATE)]
+    df = bac_tests[bac_tests.date_sampled == max(bac_tests.date_sampled)]
 
-    new_file_path = conf['prod_data_dir'] + '/latest_indicator_bac_tests_datasd.csv'
+    new_file_path = conf['prod_data_dir'] + '/latest_indicator_bac_tests_datasd_v1.csv'
 
     df.to_csv(new_file_path,
         index=False, 

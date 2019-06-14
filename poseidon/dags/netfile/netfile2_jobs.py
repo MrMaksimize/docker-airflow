@@ -15,32 +15,32 @@ prod_columns = ['form',
                 'schedule_description',
                 'recipient_id',
                 'recipient_name',
-                'report_period_from',
-                'report_period_to',
+                'date_report_period_from',
+                'date_report_period_to',
                 'contributor_code',
                 'contributor_last',
                 'contributor_first',
-                'contributor_city',
-                'contributor_state',
-                'contributor_zip',
+                'address_city_contributor',
+                'address_state_contributor',
+                'address_zip_contributor',
                 'contributor_emp',
                 'contributor_occ',
-                'contribution_date',
+                'date_contribution',
                 'contribution_amount',
                 'contribution_annual',
                 'contribution_desc',
                 'contributor_id',
                 'intermediary_last',
                 'intermediary_first',
-                'intermediary_city',
-                'intermediary_state',
-                'intermediary_zip',
+                'address_city_intermediary',
+                'address_state_intermediary',
+                'address_zip_intermediary',
                 'intermediary_emp',
                 'intermediary_occ',
                 'filing_id',
-                'report_year']
+                'year_report']
 cur_yr = general.get_year()
-prod_file = conf['prod_data_dir'] + '/financial_support_'+str(cur_yr)+'_datasd.csv'
+prod_file = conf['prod_data_dir'] + '/financial_support_'+str(cur_yr)+'_datasd_v1.csv'
 
 def get_transactions_a():
     """ Requesting transactions for schedule 460A """
@@ -104,26 +104,26 @@ def get_transactions_a():
                                        'Monetary contributions', #schedule_description
                                        t['filerStateId'], #recipient_id
                                        t['filerName'], #recipient_name
-                                       t['filingStartDate'], #'report_period_from'
-                                       t['filingEndDate'], #'report_period_to'
+                                       t['filingStartDate'], #'date_report_period_from'
+                                       t['filingEndDate'], #'date_report_period_to'
                                        t['entity_Cd'], #'contributor_code'
                                        t['tran_NamL'], #'contributor_last'
                                        t['tran_NamF'], #'contributor_first'
-                                       t['tran_City'], #'contributor_city'
-                                       t['tran_ST'], #'contributor_state'
-                                       t['tran_Zip4'], #'contributor_zip'
+                                       t['tran_City'], #'address_city_contributor'
+                                       t['tran_ST'], #'address_state_contributor'
+                                       t['tran_Zip4'], #'address_zip_contributor'
                                        t['tran_Emp'], #'contributor_emp'
                                        t['tran_Occ'], #'contributor_occ'
-                                       t['tran_Date'], #'contribution_date'
+                                       t['tran_Date'], #'date_contribution'
                                        t['tran_Amt1'], #'contribution_amount'
                                        t['tran_Amt2'], #'contribution_annual'
                                        t['tran_Dscr'], #'contribution_desc'
                                        t['cmte_Id'], #'contributor_id'
                                        t['intr_NamL'], #'intermediary_last'
                                        t['intr_NamF'], #'intermediary_first'
-                                       t['intr_City'], #'intermediary_city'
-                                       t['intr_ST'], #'intermediary_state'
-                                       t['intr_Zip4'], #'intermediary_zip'
+                                       t['intr_City'], #'address_city_intermediary'
+                                       t['intr_ST'], #'address_state_intermediary'
+                                       t['intr_Zip4'], #'address_zip_intermediary'
                                        t['intr_Emp'], #'intermediary_emp'
                                        t['intr_Occ'], #'intermediary_occ'
                                        t['filingId'],
@@ -138,9 +138,10 @@ def get_transactions_a():
 
         # Process max dates for later use
         logging.info("Calculate max filing dates")
-        date_checks = campaignTransactions[['recipient_id','report_period_to']]
+        date_checks = campaignTransactions[['recipient_id','date_report_period_to']]
         date_checks = date_checks.drop_duplicates()
-        date_checks_max = date_checks.groupby(['recipient_id'])['report_period_to'].max()
+        date_checks = date_checks.fillna('')
+        date_checks_max = date_checks.groupby(['recipient_id'])['date_report_period_to'].max()
         date_checks_max = date_checks_max.to_frame()
         date_checks_max.reset_index(inplace=True)
         
@@ -206,26 +207,26 @@ def get_transactions_b():
                                        'Loans', #schedule_description
                                        t['filerStateId'], #recipient_id
                                        t['filerName'], #recipient_name
-                                       t['filingStartDate'], #'report_period_from'
-                                       t['filingEndDate'], #'report_period_to'
+                                       t['filingStartDate'], #'date_report_period_from'
+                                       t['filingEndDate'], #'date_report_period_to'
                                        t['entity_Cd'], #'contributor_code'
                                        t['tran_NamL'], #'contributor_last'
                                        t['tran_NamF'], #'contributor_first'
-                                       t['tran_City'], #'contributor_city'
-                                       t['tran_ST'], #'contributor_state'
-                                       t['tran_Zip4'], #'contributor_zip'
+                                       t['tran_City'], #'address_city_contributor'
+                                       t['tran_ST'], #'address_state_contributor'
+                                       t['tran_Zip4'], #'address_zip_contributor'
                                        t['tran_Emp'], #'contributor_emp'
                                        t['tran_Occ'], #'contributor_occ'
-                                       t['loan_Date1'], #'contribution_date'-CHANGED
+                                       t['loan_Date1'], #'date_contribution'-CHANGED
                                        t['loan_Amt1'], #'contribution_amount'
                                        t['loan_Amt3'], #'contribution_annual'
                                        t['tran_Dscr'], #'contribution_desc'
                                        t['cmte_Id'], #'contributor_id'
                                        t['intr_NamL'], #'intermediary_last'
                                        t['intr_NamF'], #'intermediary_first'
-                                       t['intr_City'], #'intermediary_city'
-                                       t['intr_ST'], #'intermediary_state'
-                                       t['intr_Zip4'], #'intermediary_zip'
+                                       t['intr_City'], #'address_city_intermediary'
+                                       t['intr_ST'], #'address_state_intermediary'
+                                       t['intr_Zip4'], #'address_zip_intermediary'
                                        t['intr_Emp'], #'intermediary_emp'
                                        t['intr_Occ'], #'intermediary_occ'
                                        t['filingId'],
@@ -291,26 +292,26 @@ def get_transactions_c():
                                        'Non monetary contributions', #schedule_description
                                        t['filerStateId'], #recipient_id
                                        t['filerName'], #recipient_name
-                                       t['filingStartDate'], #'report_period_from'
-                                       t['filingEndDate'], #'report_period_to'
+                                       t['filingStartDate'], #'date_report_period_from'
+                                       t['filingEndDate'], #'date_report_period_to'
                                        t['entity_Cd'], #'contributor_code'
                                        t['tran_NamL'], #'contributor_last'
                                        t['tran_NamF'], #'contributor_first'
-                                       t['tran_City'], #'contributor_city'
-                                       t['tran_ST'], #'contributor_state'
-                                       t['tran_Zip4'], #'contributor_zip'
+                                       t['tran_City'], #'address_city_contributor'
+                                       t['tran_ST'], #'address_state_contributor'
+                                       t['tran_Zip4'], #'address_zip_contributor'
                                        t['tran_Emp'], #'contributor_emp'
                                        t['tran_Occ'], #'contributor_occ'
-                                       t['tran_Date'], #'contribution_date'
+                                       t['tran_Date'], #'date_contribution'
                                        t['tran_Amt1'], #'contribution_amount'
                                        t['tran_Amt2'], #'contribution_annual'
                                        t['tran_Dscr'], #'contribution_desc'
                                        t['cmte_Id'], #'contributor_id'
                                        t['intr_NamL'], #'intermediary_last'
                                        t['intr_NamF'], #'intermediary_first'
-                                       t['intr_City'], #'intermediary_city'
-                                       t['intr_ST'], #'intermediary_state'
-                                       t['intr_Zip4'], #'intermediary_zip'
+                                       t['intr_City'], #'address_city_intermediary'
+                                       t['intr_ST'], #'address_state_intermediary'
+                                       t['intr_Zip4'], #'address_zip_intermediary'
                                        t['intr_Emp'], #'intermediary_emp'
                                        t['intr_Occ'], #'intermediary_occ'
                                        t['filingId'],
@@ -387,26 +388,26 @@ def get_transactions_d():
                                        'Independent expenditures in support', #schedule_description
                                        t['cmte_Id'], #recipient_id
                                        fullName, #recipient_name
-                                       t['filingStartDate'], #'report_period_from'
-                                       t['filingEndDate'], #'report_period_to'
+                                       t['filingStartDate'], #'date_report_period_from'
+                                       t['filingEndDate'], #'date_report_period_to'
                                        ' ', #'contributor_code'
                                        t['filerName'], #'contributor_last'
                                        ' ', #'contributor_first'
-                                       ' ', #'contributor_city'
-                                       ' ', #'contributor_state'
-                                       ' ', #'contributor_zip'
+                                       ' ', #'address_city_contributor'
+                                       ' ', #'address_state_contributor'
+                                       ' ', #'address_zip_contributor'
                                        ' ', #'contributor_emp'
                                        ' ', #'contributor_occ'
-                                       t['tran_Date'], #'contribution_date'
+                                       t['tran_Date'], #'date_contribution'
                                        t['tran_Amt1'], #'contribution_amount'
                                        t['tran_Amt2'], #'contribution_annual'
                                        t['tran_Dscr'], #'contribution_desc'
                                        t['filerStateId'], #'contributor_id'
                                        t['intr_NamL'], #'intermediary_last'
                                        t['intr_NamF'], #'intermediary_first'
-                                       t['intr_City'], #'intermediary_city'
-                                       t['intr_ST'], #'intermediary_state'
-                                       t['intr_Zip4'], #'intermediary_zip'
+                                       t['intr_City'], #'address_city_intermediary'
+                                       t['intr_ST'], #'address_state_intermediary'
+                                       t['intr_Zip4'], #'address_zip_intermediary'
                                        t['intr_Emp'], #'intermediary_emp'
                                        t['intr_Occ'], #'intermediary_occ'
                                        t['filingId'],
@@ -481,26 +482,26 @@ def get_transactions_summary():
                                            description, #schedule_description
                                            t['filerStateId'], #recipient_id
                                            t['filerName'], #recipient_name
-                                           t['filingStartDate'], #'report_period_from'
-                                           t['filingEndDate'], #'report_period_to'
+                                           t['filingStartDate'], #'date_report_period_from'
+                                           t['filingEndDate'], #'date_report_period_to'
                                            ' ', #'contributor_code'
                                            ' ', #'contributor_last'
                                            ' ', #'contributor_first'
-                                           ' ', #'contributor_city'
-                                           ' ', #'contributor_state'
-                                           ' ', #'contributor_zip'
+                                           ' ', #'address_city_contributor'
+                                           ' ', #'address_state_contributor'
+                                           ' ', #'address_zip_contributor'
                                            ' ', #'contributor_emp'
                                            ' ', #'contributor_occ'
-                                           ' ', #'contribution_date'
+                                           ' ', #'date_contribution'
                                            t['amount_A'], #'contribution_amount'
                                            t['amount_B'], #'contribution_annual'
                                            ' ', #'contribution_desc'
                                            ' ', #'contributor_id'
                                            ' ', #'intermediary_last'
                                            ' ', #'intermediary_first'
-                                           ' ', #'intermediary_city'
-                                           ' ', #'intermediary_state'
-                                           ' ', #'intermediary_zip'
+                                           ' ', #'address_city_intermediary'
+                                           ' ', #'address_state_intermediary'
+                                           ' ', #'address_zip_intermediary'
                                            ' ', #'intermediary_emp'
                                            ' ', #'intermediary_occ'
                                            t['filingId'],
@@ -576,26 +577,26 @@ def get_transactions_497():
                                        '24-hr contribution report', #schedule_description
                                        t['filerStateId'], #recipient_id
                                        t['filerName'], #recipient_name
-                                       t['filingStartDate'], #'report_period_from'
-                                       t['filingEndDate'], #'report_period_to'
+                                       t['filingStartDate'], #'date_report_period_from'
+                                       t['filingEndDate'], #'date_report_period_to'
                                        t['entity_Cd'], #'contributor_code'
                                        t['tran_NamL'], #'contributor_last'
                                        t['tran_NamF'], #'contributor_first'
-                                       t['tran_City'], #'contributor_city'
-                                       t['tran_ST'], #'contributor_state'
-                                       t['tran_Zip4'], #'contributor_zip'
+                                       t['tran_City'], #'address_city_contributor'
+                                       t['tran_ST'], #'address_state_contributor'
+                                       t['tran_Zip4'], #'address_zip_contributor'
                                        t['tran_Emp'], #'contributor_emp'
                                        t['tran_Occ'], #'contributor_occ'
-                                       t['tran_Date'], #'contribution_date'
+                                       t['tran_Date'], #'date_contribution'
                                        t['tran_Amt1'], #'contribution_amount'
                                        t['tran_Amt2'], #'contribution_annual'
                                        t['tran_Dscr'], #'contribution_desc'
                                        t['cmte_Id'], #'contributor_id'
                                        t['intr_NamL'], #'intermediary_last'
                                        t['intr_NamF'], #'intermediary_first'
-                                       t['intr_City'], #'intermediary_city'
-                                       t['intr_ST'], #'intermediary_state'
-                                       t['intr_Zip4'], #'intermediary_zip'
+                                       t['intr_City'], #'address_city_intermediary'
+                                       t['intr_ST'], #'address_state_intermediary'
+                                       t['intr_Zip4'], #'address_zip_intermediary'
                                        t['intr_Emp'], #'intermediary_emp'
                                        t['intr_Occ'], #'intermediary_occ'
                                        t['filingId'],
@@ -682,26 +683,26 @@ def get_transactions_496():
                                        'Independent expenditures in support', #schedule_description
                                        t['cmte_Id'], #recipient_id
                                        fullName, #recipient_name
-                                       t['filingStartDate'], #'report_period_from'
-                                       t['filingEndDate'], #'report_period_to'
+                                       t['filingStartDate'], #'date_report_period_from'
+                                       t['filingEndDate'], #'date_report_period_to'
                                        ' ', #'contributor_code'
                                        t['filerName'], #'contributor_last'
                                        ' ', #'contributor_first'
-                                       ' ', #'contributor_city'
-                                       ' ', #'contributor_state'
-                                       ' ', #'contributor_zip'
+                                       ' ', #'address_city_contributor'
+                                       ' ', #'address_state_contributor'
+                                       ' ', #'address_zip_contributor'
                                        ' ', #'contributor_emp'
                                        ' ', #'contributor_occ'
-                                       t['tran_Date'], #'contribution_date'
+                                       t['tran_Date'], #'date_contribution'
                                        t['tran_Amt1'], #'contribution_amount'
                                        t['tran_Amt2'], #'contribution_annual'
                                        t['tran_Dscr'], #'contribution_desc'
                                        t['filerStateId'], #'contributor_id'
                                        t['intr_NamL'], #'intermediary_last'
                                        t['intr_NamF'], #'intermediary_first'
-                                       t['intr_City'], #'intermediary_city'
-                                       t['intr_ST'], #'intermediary_state'
-                                       t['intr_Zip4'], #'intermediary_zip'
+                                       t['intr_City'], #'address_city_intermediary'
+                                       t['intr_ST'], #'address_state_intermediary'
+                                       t['intr_Zip4'], #'address_zip_intermediary'
                                        t['intr_Emp'], #'intermediary_emp'
                                        t['intr_Occ'], #'intermediary_occ'
                                        t['filingId'],
@@ -747,7 +748,7 @@ def find_new_committees():
   """ Find new committees """
   recipients = pd.read_csv('http://seshat.datasd.org/' + \
     'campaign_fin/' + \
-    'financial_support_recipients_datasd.csv')
+    'financial_support_recipients_datasd_v1.csv')
   outputDF = pd.read_csv(prod_file)
 
   recipients_committees = recipients[recipients["committee_id"].notnull()]

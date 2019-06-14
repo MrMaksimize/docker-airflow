@@ -15,8 +15,8 @@ def get_bash_command(key):
 
     dsd_ce = conf['executable_path'] + '/' + 'dsd_ce'
     xml_path = "{}/{}.xml".format(conf['temp_data_dir'], src)
-    ce_out_path = "{}/{}_datasd.csv".format(conf['prod_data_dir'], key)
-    cmpl_out_path = "{}/{}_complaints_datasd.csv".format(conf['prod_data_dir'],
+    ce_out_path = "{}/{}_datasd_v1.csv".format(conf['prod_data_dir'], key)
+    cmpl_out_path = "{}/{}_complaints_datasd_v1.csv".format(conf['prod_data_dir'],
                                                          key)
 
     command = "{} -xmlPath={} -ceOutPath={} -cmplOutPath={}"\

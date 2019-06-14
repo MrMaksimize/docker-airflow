@@ -6,7 +6,8 @@ from trident.util import general
 import requests
 
 conf = general.config
-prod_file = conf['prod_data_dir'] + '/public_art_locations_datasd.csv'
+prod_file = conf['prod_data_dir'] + '/public_art_locations_datasd_v1.csv'
+temp_file = conf['temp_data_dir'] + '/public_art_assets.csv'
 
 
 def get_public_art():
@@ -81,41 +82,52 @@ def get_public_art():
 
         all_assets = pd.concat(assets_details,axis=1)
         all_assets = all_assets.transpose()
-        latitudes = pd.to_numeric(all_assets['Latitude'], errors='coerce')
-        longitudes = pd.to_numeric(all_assets['Longitude'], errors='coerce')
-        all_assets_coordinates = all_assets.assign(latitude_float=latitudes,longitude_float=longitudes)
-        all_assets_geo = all_assets_coordinates[all_assets_coordinates['latitude_float'].notnull()]
-
-        # Dept wanted to remove most columns
-        all_assets_cols = all_assets_geo[['Accession Number',
-        'Status',
-        'Artwork Title',
-        'Artist',
-        'Location',
-        'latitude_float',
-        'longitude_float']]
-        
-        all_assets_rename = all_assets_cols.rename(columns={
-            'Accession Number':'accession_number',
-            'Status':'status',
-            'Artwork Title':'artwork_title',
-            'Artist':'artist',
-            'Location':'location',
-            'latitude_float':'latitude',
-            'longitude_float':'longitude',
-        })
-        
-        all_assets_final = all_assets_rename.drop_duplicates('accession_number')
-
-        artists_nop = all_assets_final['artist'].str.replace('\n','')
-        artists_notab = artists_nop.str.replace('\t','')
-        all_assets_final['artist'] = artists_notab
 
         general.pos_write_csv(
-            all_assets_final, prod_file)
+            all_assets, temp_file)
 
     else:
 
         return "Categories request failed {}".format(str(r_categories.status_code))
 
     return "Successfully extracted public art"
+
+def process_public_art():
+    """ Getting API results and processing """
+
+    df = pd.read_csv(temp_file)
+
+    latitudes = pd.to_numeric(df['Latitude'], errors='coerce')
+    longitudes = pd.to_numeric(df['Longitude'], errors='coerce')
+    coordinates = df.assign(latitude_float=latitudes,longitude_float=longitudes)
+    df_geo = coordinates[coordinates['latitude_float'].notnull()]
+
+    # Dept wanted to remove most columns
+    final = df_geo[['Accession Number',
+    'Status',
+    'Artwork Title',
+    'Artist',
+    'Location',
+    'latitude_float',
+    'longitude_float']]
+    
+    final = final.rename(columns={
+        'Accession Number':'accession_number',
+        'Status':'status',
+        'Artwork Title':'artwork_title',
+        'Artist':'artist',
+        'Location':'location',
+        'latitude_float':'lat',
+        'longitude_float':'lng',
+    })
+    
+    final = final.drop_duplicates('accession_number')
+
+    artists_nop = final['artist'].str.replace('\n','')
+    artists_notab = artists_nop.str.replace('\t','')
+    final['artist'] = artists_notab
+
+    general.pos_write_csv(
+        final, prod_file)
+
+    return "Successfully processed public art"

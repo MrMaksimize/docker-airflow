@@ -28,7 +28,7 @@ def waze_jams_to_csv():
     datetime_pst = datetime_utc.astimezone(timezone('US/Pacific'))
     date_pst = datetime_pst.strftime('%Y-%m-%d')
     timestamp_pst = datetime_pst.strftime('%Y-%m-%d %H:%M:%S')
-    logfile = conf['prod_data_dir'] + '/{0}_waze_jams_datasd.csv'.format(date_pst)
+    logfile = conf['prod_data_dir'] + '/{0}_waze_jams_datasd_v1.csv'.format(date_pst)
     tempfile = conf['temp_data_dir'] + '/waze_temp.csv'
 
     rows_csv = []
