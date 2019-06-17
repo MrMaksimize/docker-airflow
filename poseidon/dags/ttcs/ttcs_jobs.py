@@ -275,8 +275,7 @@ def geocode_data():
 
             general.pos_write_csv(
                 add_book_new,
-                add_book_path,
-                date_format=conf['date_format_ymd'])
+                f"{conf['prod_data_dir']}/ttcs_address_book.csv")
 
             logging.info("Writing file with {} rows.".format(geocoded_all.shape[0]))
 
