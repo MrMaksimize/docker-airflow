@@ -18,8 +18,8 @@ def get_traffic_counts(out_fname='traffic_counts_file'):
         + "Traffic Data/{fy}/RECORD FINDER\";" \
         + " ls; get Machine_Count_Index.xlsx {temp_dir}/{out_f}.xlsx;'"
 
-    command = command.format(adname=conf['alb_sannet_user'],
-                             adpass=conf['alb_sannet_pass'],
+    command = command.format(adname=conf['mrm_sannet_user'],
+                             adpass=conf['mrm_sannet_pass'],
                              fy=fy,
                              temp_dir=conf['temp_data_dir'],
                              out_f=out_fname)
