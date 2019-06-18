@@ -152,43 +152,46 @@ files = [os.path.basename(x) for x in glob.glob(filename)]
 for index, file_ in enumerate(files):
     file_name = file_.split('.')[0]
     name_parts = file_name.split('_')
-    task_name = '_'.join(name_parts[3:-3])
-    md_name = '-'.join(name_parts[3:-3])
+    if 'v1' in name_parts:
+        name_parts.remove('datasd')
+        name_parts.remove('v1')
+        task_name = '_'.join(name_parts[3:])
+        md_name = '-'.join(name_parts[3:])
 
-    #: Upload prod gid file to S3
-    upload_task = S3FileTransferOperator(
-        task_id='upload_' + task_name,
-        source_base_path=conf['prod_data_dir'],
-        source_key='get_it_done_{}_requests_datasd_v1.csv'.format(
-            task_name),
-        dest_s3_conn_id=conf['default_s3_conn_id'],
-        dest_s3_bucket=conf['dest_s3_bucket'],
-        dest_s3_key='get_it_done_311/get_it_done_{}_requests_datasd_v1.csv'.
-        format(task_name),
-        on_failure_callback=notify,
-        on_retry_callback=notify,
-        on_success_callback=notify,
-        replace=True,
-        dag=dag)
+        #: Upload prod gid file to S3
+        upload_task = S3FileTransferOperator(
+            task_id='upload_' + task_name,
+            source_base_path=conf['prod_data_dir'],
+            source_key='get_it_done_{}_requests_datasd_v1.csv'.format(
+                task_name),
+            dest_s3_conn_id=conf['default_s3_conn_id'],
+            dest_s3_bucket=conf['dest_s3_bucket'],
+            dest_s3_key='get_it_done_311/get_it_done_{}_requests_datasd_v1.csv'.
+            format(task_name),
+            on_failure_callback=notify,
+            on_retry_callback=notify,
+            on_success_callback=notify,
+            replace=True,
+            dag=dag)
 
-    if task_name in services:
-        for service_index, service in enumerate(services):
-            if task_name == service:
-                #: Github .md update
-                service_update_task = get_seaboard_update_dag('gid-' + md_name + '.md', dag)
-                #: upload task must run after the get task
-                upload_task.set_upstream(service_tasks[service_index])
-                #: update md task must run after the upload task
-                service_update_task.set_upstream(upload_task)
-    else:
-        #: upload task must run after the get task
-        upload_task.set_upstream(create_prod_files)
+        if task_name in services:
+            for service_index, service in enumerate(services):
+                if task_name == service:
+                    #: Github .md update
+                    service_update_task = get_seaboard_update_dag('gid-' + md_name + '.md', dag)
+                    #: upload task must run after the get task
+                    upload_task.set_upstream(service_tasks[service_index])
+                    #: update md task must run after the upload task
+                    service_update_task.set_upstream(upload_task)
+        else:
+            #: upload task must run after the get task
+            upload_task.set_upstream(create_prod_files)
 
-    if index == len(files)-1:
-        #: Github .md update
-        md_update_task = get_seaboard_update_dag('get-it-done-311.md', dag)
-        #: update md task must run after the upload task
-        md_update_task.set_upstream(upload_task)
+        if index == len(files)-1:
+            #: Github .md update
+            md_update_task = get_seaboard_update_dag('get-it-done-311.md', dag)
+            #: update md task must run after the upload task
+            md_update_task.set_upstream(upload_task)
 
 #: Execution rules
 #: gid_latest_only must run before get_gid_requests
