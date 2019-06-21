@@ -25,11 +25,11 @@ def get_streets_paving_data(mode='sdif', **kwargs):
     TSW_PM = "JLahmann@sandiego.gov"
     UTLY_PM = "Engineering@sandiego.gov"
     ACT_OVERLAY_CONCRETE_PM = "CHudson@sandiego.gov"
-    ACT_SLURRY_SERIES_PM = "JJaro@sandiego.gov"
+    ACT_SLURRY_SERIES_PM = "AVance@sandiego.gov"
 
     # Different String for imcat mode.
-    if mode == 'imcat':
-        moratorium_string = "Post-Construction"
+    #if mode == 'imcat':
+        #moratorium_string = "Post-Construction"
 
     df = pv_conn.get_pandas_df(pv_query)
 
