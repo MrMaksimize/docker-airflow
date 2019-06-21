@@ -10,7 +10,7 @@ fy = general.get_FY_year()
 
 def get_traffic_counts(out_fname='traffic_counts_file'):
     """Get traffic counts file from shared drive."""
-    logging.info('Retrieving data for current FY.')
+    logging.info(f'Retrieving data for FY {fy}.')
     command = "smbclient //ad.sannet.gov/dfs " \
         + "--user={adname}%{adpass} -W ad -c " \
         + "'cd \"TSW-TEO-Shared/TEO/" \

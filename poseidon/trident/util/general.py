@@ -175,7 +175,7 @@ schedule = {
     'cip': '@daily'
 }
 
-default_date = datetime(2019, 4, 2)
+default_date = datetime(2019, 6, 21)
 
 start_date = {
     'fd_incidents' : default_date,

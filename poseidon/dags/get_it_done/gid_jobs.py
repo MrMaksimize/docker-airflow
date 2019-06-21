@@ -683,9 +683,16 @@ def build_gid_sonar_ph_closed(**kwargs):
     gid_ph_closed = gid[mask]
     gid_ph_closed = gid_ph_closed.copy()
 
+    range_start_year = range_start.year
+    range_start_month = range_start.month
+    range_start_day = range_start.day
+
+    range_start_naive = dt.datetime(range_start_year,range_start_month,range_start_day)
+
     # Get closed potholes, last x days
-    potholes_closed = gid_ph_closed[gid_ph_closed['date_requested'] >=
-                                    range_start].shape[0]
+    potholes_sub = gid_ph_closed.loc[gid_ph_closed['date_requested'] >= range_start_naive]
+
+    potholes_closed = potholes_sub.shape[0]
 
     # Return expected dict
     return {'value': potholes_closed}

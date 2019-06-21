@@ -748,7 +748,7 @@ def find_new_committees():
   """ Find new committees """
   recipients = pd.read_csv('http://seshat.datasd.org/' + \
     'campaign_fin/' + \
-    'financial_support_recipients_datasd_v1.csv')
+    'financial_support_recipients_datasd.csv')
   outputDF = pd.read_csv(prod_file)
 
   recipients_committees = recipients[recipients["committee_id"].notnull()]
