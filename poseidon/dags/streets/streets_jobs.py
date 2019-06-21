@@ -239,46 +239,51 @@ def build_sonar_miles_aggs(mode='sdif', pav_type='total', **kwargs):
     pav_csv = prod_file[mode]
     dbl_spec = 2
 
-    range_start_dt = kwargs['range_start']
+    range_start = kwargs['range_start']
+    range_start_year = range_start.year
+    range_start_month = range_start.month
+    range_start_day = range_start.day
+
+    range_start_naive = datetime(range_start_year,range_start_month,range_start_day)
 
     # Read CSV
     df = pd.read_csv(pav_csv)
 
     # Multiply Length by 2x when street is over 50 feet wide
-    df.loc[df['WIDTH'] > 50, "LENGTH"] = (df.loc[df['WIDTH'] > 50, "LENGTH"] * 2)
+    df.loc[df['width'] > 50, "length"] = (df.loc[df['width'] > 50, "length"] * 2)
 
     # Convert to miles
-    df['LENGTH'] = df.LENGTH / 5280
+    df['length'] = df.length / 5280
 
     # Convert moratorium to date
-    df["MORATORIUM"] = pd.to_datetime(df["MORATORIUM"])
+    df["moratorium"] = pd.to_datetime(df["moratorium"])
 
     # Get post construction, within range
-    mask = (df.STATUS == 'Post Construction') & \
-           (df.MORATORIUM >= range_start_dt)
+    mask = (df.status == 'Post Construction') & \
+           (df.moratorium >= range_start_naive)
     df = df[mask]
 
     # Get sums
-    sums = df[["LENGTH", "TYPE"]].groupby("TYPE").sum()
+    sums = df[["length", "type"]].groupby("type").sum()
     sums.reset_index(inplace=True)
 
     # Get total paved
-    total = round(sums["LENGTH"].sum(), dbl_spec)
+    total = round(sums["length"].sum(), dbl_spec)
 
     # Get total overlay
-    overlay = sums.loc[sums["TYPE"] == 'Overlay', "LENGTH"].reset_index()
+    overlay = sums.loc[sums["type"] == 'Overlay', "length"].reset_index()
 
     if len(overlay) == 0:
         overlay = 0
     else:
-        overlay = round(overlay["LENGTH"][0], dbl_spec)
+        overlay = round(overlay["length"][0], dbl_spec)
 
     # Get total slurry
-    slurry = sums.loc[sums["TYPE"] == 'Slurry', "LENGTH"].reset_index()
+    slurry = sums.loc[sums["type"] == 'Slurry', "length"].reset_index()
     if len(slurry) == 0:
         slurry = 0
     else:
-        slurry = round(slurry["LENGTH"][0], dbl_spec)
+        slurry = round(slurry["length"][0], dbl_spec)
 
 
     # Return dicts
