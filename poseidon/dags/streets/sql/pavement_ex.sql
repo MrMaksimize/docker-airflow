@@ -22,7 +22,6 @@ SELECT
          pve.lastupdateddate as job_updated_dt,
          pvm.placedinservice as seg_placed_in_srvc,
          pvm.functionalclassification as seg_func_class,
-         pvm.placedinservice as seg_placed_in_service,
          pvm.district as seg_council_district,
          pvm.length as seg_length_ft,
          pvm.pavementwidth as seg_width_ft

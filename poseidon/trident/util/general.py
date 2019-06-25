@@ -191,6 +191,7 @@ start_date = {
     'dsd_code_enforcement': default_date,
     'streets_sdif': default_date,
     'streets_imcat': default_date,
+    'streets': datetime(2019, 6, 24),
     'get_it_done': default_date,
     'gid_potholes': default_date,
     'gid_ava': default_date,

@@ -27,7 +27,7 @@ streets_latest_only = LatestOnlyOperator(task_id='imcat_latest_only', dag=dag)
 
 #: Get streets data from DB
 get_streets_data = PythonOperator(
-    task_id='get_streets_data_imcat',
+    task_id='process_paving_data',
     python_callable=get_streets_paving_data,
     op_kwargs={'mode': 'imcat'},
     provide_context=True,

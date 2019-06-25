@@ -8,17 +8,32 @@ from trident.util import general
 
 conf = general.config
 
+temp_file = conf['temp_data_dir'] + '/sd_paving_results.csv'
+
 prod_file = {
     'sdif': conf['prod_data_dir'] + '/sd_paving_datasd_v1.csv',
-    'imcat': conf['prod_data_dir'] + '/sd_paving_imcat_datasd_v1.csv'
+    'imcat': conf['prod_data_dir'] + '/sd_paving_imcat_datasd.csv'
 }
 
 
-def get_streets_paving_data(mode='sdif', **kwargs):
+def get_streets_paving_data():
     """Get streets paving data from DB."""
+    
     pv_query = general.file_to_string('./sql/pavement_ex.sql', __file__)
     pv_conn = MsSqlHook(mssql_conn_id='streets_cg_sql')
 
+    df = pv_conn.get_pandas_df(pv_query)
+
+    results = df.shape[0]
+
+    general.pos_write_csv(
+        df, temp_file)
+    
+    return f"Successfully wrote temp file with {results} records"
+
+def process_paving_data(mode='sdif', **kwargs):
+
+    """Get streets paving data from DB."""
     moratorium_string = "Post Construction"
     phone_UTLY = "858-627-3200"
     phone_OTHER = "619-527-7500"
@@ -31,7 +46,11 @@ def get_streets_paving_data(mode='sdif', **kwargs):
     #if mode == 'imcat':
         #moratorium_string = "Post-Construction"
 
-    df = pv_conn.get_pandas_df(pv_query)
+    date_cols = ['wo_design_start_dt','wo_design_end_dt','job_start_dt','job_end_dt']
+
+    df = pd.read_csv(temp_file,parse_dates=date_cols,low_memory=False)
+
+
 
     for i in [
             'seg_id', 'rd_seg_id', 'wo_id', 'wo_name', 'wo_status',
@@ -51,9 +70,7 @@ def get_streets_paving_data(mode='sdif', **kwargs):
     # Remove Records w/o A Completed Date ONLY in the UTLY and TSW work order
     # IMCAT ONLY
     if mode == 'imcat':
-        df = df.query('not '\
-                    + '((wo_id == "UTLY" & job_end_dt.isnull()) '\
-                    + 'or (wo_id == "TSW" & job_end_dt.isnull()))')
+        df = df[~((df.wo_id == "UTLY") & (df.job_end_dt.isnull()))]
 
         # Remove empty activities (IMCAT ONLY)
         df = df.query('not '\
@@ -109,14 +126,8 @@ def get_streets_paving_data(mode='sdif', **kwargs):
                  (df.job_end_dt < three_yrs_ago))
         df = df[mask]
 
-    # Create a feature for completed jobs
-    df['final_job_completion_state'] = False
-    #pv[(!is.na(pv$job_end_dt) & pv$job_completed_cbox == 1), "final_job_completion_state"] <- 1
-
-    df.loc[df.job_end_dt.notnull(), "final_job_completion_state"] = True
-
     # Set all completed jobs to Moratorium status
-    df.loc[df.final_job_completion_state == True,
+    df.loc[df.job_completed_cbox == True,
            "wo_status"] = moratorium_string
 
     # Set Dates in The future for TSW work orders as Construction.
@@ -125,6 +136,10 @@ def get_streets_paving_data(mode='sdif', **kwargs):
            (df.job_end_dt > today)
 
     df.loc[mask, "wo_status"] = "Construction"
+
+    # Set other TSW works orders as Construction
+    df.loc[(df.wo_id == "TSW") & 
+          (df.job_completed_cbox == False),'wo_status'] = "Construction"
 
     # Set Phone # For UTLY
     df.loc[df.wo_id == 'UTLY', 'wo_pm_phone'] = phone_UTLY
@@ -162,6 +177,20 @@ def get_streets_paving_data(mode='sdif', **kwargs):
     # Remove unknown
     df = df[~mask]
 
+    # Create separate moratorium column based on job end dt
+    df['moratorium'] = df['job_end_dt']
+    
+    # But do not set moratorium for concrete
+    df.loc[df.wo_proj_type == 'Concrete','moratorium'] = None
+    
+    # Start column is the wo_design_start only when job_completed_cbox is not checked
+    df['start'] = df['wo_design_start_dt']
+    df.loc[df.job_completed_cbox == True,'start'] = df.loc[df.job_completed_cbox == True,'job_start_dt']
+
+    # End column is the wo_design_end only when job_completed_cbox is not checked
+    df['end'] = df['wo_design_end_dt']
+    df.loc[df.job_completed_cbox == True,'end'] = df.loc[df.job_completed_cbox == True,'job_end_dt']
+
     # Sort by job end date time
     df = df.sort_values(by='job_end_dt', na_position='last', ascending=False)
 
@@ -169,59 +198,40 @@ def get_streets_paving_data(mode='sdif', **kwargs):
     # This is wrong.
     df = df.drop_duplicates('seg_id', keep='first')
 
-    df = df.loc[:,['pve_id',
-    'seg_id',
-    'wo_id',
-    'wo_name',
-    'wo_pm',
-    'wo_pm_phone',
-    'wo_design_start_dt',
-    'wo_design_end_dt',
-    'wo_resident_engineer',
-    'job_end_dt',
-    'wo_status',
-    'wo_proj_type',
-    'seg_length_ft',
-    'seg_width_ft'
-    ]]
-
-    # Remove START and END for projects in moratorium:
-    df.loc[df.wo_status == moratorium_string, ['wo_design_start_dt', 
-        'wo_design_end_dt']] = None
+    # Now that start and end columns are correct, remove other date columns
+    df = df.drop(columns=['wo_design_start_dt','wo_design_end_dt','job_start_dt','job_end_dt'])
 
     # For IMCAT uppercase status
     if mode == 'imcat':
-        df.columns = ['PVE_ID',
-        'SEG_ID',
-        'PROJECTID',
-        'TITLE',
-        'PM',
-        'PM_PHONE',
-        'START',
-        'END',
-        'RESIDENT_ENGINEER',
-        'MORATORIUM',
-        'STATUS',
-        'TYPE',
-        'LENGTH',
-        'WIDTH']
+
+
+        df.columns = ['PVE_ID','SEG_ID','RD_SEG_ID','PROJECTID','TITLE','PM',
+        'PM_PHONE','COMPLETED','STATUS','PROJ_TYPE','ACTIVITY','RESIDENT_ENGINEER',
+        'STREET','STREET_FROM','STREET_TO','ENTRY_DT','LAST_UPDATE','SEG_IN_SERV',
+        'SEG_FUN_CLASS','SEG_CD','LENGTH','WIDTH','MORATORIUM','START','END']
 
         df['STATUS'] = df['STATUS'].str.upper()
+
     else:
-        df.columns = ['pve_id',
-        'seg_id',
-        'project_id',
-        'title',
-        'project_manager',
-        'project_manager_phone',
-        'date_project_start',
-        'date_project_end',
-        'resident_engineer',
-        'moratorium',
-        'status',
-        'type',
-        'length',
-        'width']
+
+        # Drop additional columns for public dataset
+
+        df = df.drop(columns=['rd_seg_id',
+            'job_completed_cbox',
+            'job_activity',
+            'job_entry_dt',
+            'job_updated_dt',
+            'seg_placed_in_srvc',
+            'seg_func_class',
+            'seg_council_district'
+            ])
+
+        df.columns = ['pve_id','seg_id','project_id','title','project_manager',
+        'project_manager_phone','status','type','resident_engineer','street',
+        'street_from','street_to','length','width','moratorium',
+        'date_start','date_end']
+
+        df['status'] = df['status'].str.lower()
 
     
     logging.info(mode)
@@ -232,6 +242,7 @@ def get_streets_paving_data(mode='sdif', **kwargs):
     logging.info('Writing ' + str(df.shape[0]) + ' rows in mode ' + mode)
     general.pos_write_csv(
         df, prod_file[mode], date_format=conf['date_format_ymd_hms'])
+    
     return "Successfully wrote prod file at " + prod_file[mode]
 
 

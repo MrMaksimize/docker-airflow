@@ -27,7 +27,7 @@ streets_latest_only = LatestOnlyOperator(task_id='sdif_latest_only', dag=dag)
 
 #: Get streets data from DB
 get_streets_data = PythonOperator(
-    task_id='get_streets_data_sdif',
+    task_id='process_paving_data',
     python_callable=get_streets_paving_data,
     op_kwargs={'mode': 'sdif'},
     provide_context=True,
