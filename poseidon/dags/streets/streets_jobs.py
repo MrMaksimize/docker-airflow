@@ -12,8 +12,16 @@ temp_file = conf['temp_data_dir'] + '/sd_paving_results.csv'
 
 prod_file = {
     'sdif': conf['prod_data_dir'] + '/sd_paving_datasd_v1.csv',
-    'imcat': conf['prod_data_dir'] + '/sd_paving_imcat_datasd.csv'
+    'imcat': conf['prod_data_dir'] + '/sd_paving_imcat_datasd_v1.csv'
 }
+
+def get_paving_miles(row):
+    """ Calculate paving miles """
+    
+    if row['seg_width_ft'] > 50:
+        return (row['seg_length_ft'] * 2)/5280
+    else:
+        return row['seg_length_ft']/5280
 
 
 def get_streets_paving_data():
@@ -42,10 +50,6 @@ def process_paving_data(mode='sdif', **kwargs):
     ACT_OVERLAY_CONCRETE_PM = "CHudson@sandiego.gov"
     ACT_SLURRY_SERIES_PM = "AVance@sandiego.gov"
 
-    # Different String for imcat mode.
-    #if mode == 'imcat':
-        #moratorium_string = "Post-Construction"
-
     date_cols = ['wo_design_start_dt','wo_design_end_dt','job_start_dt','job_end_dt']
 
     df = pd.read_csv(temp_file,parse_dates=date_cols,low_memory=False)
@@ -67,7 +71,7 @@ def process_paving_data(mode='sdif', **kwargs):
         regex=True,
         case=False), "wo_status"] = moratorium_string
 
-    # Remove Records w/o A Completed Date ONLY in the UTLY and TSW work order
+    # Remove Records w/o A Completed Date ONLY in the UTLY work order
     # IMCAT ONLY
     if mode == 'imcat':
         df = df[~((df.wo_id == "UTLY") & (df.job_end_dt.isnull()))]
@@ -107,11 +111,7 @@ def process_paving_data(mode='sdif', **kwargs):
     df.loc[df.job_activity.str.contains(
         overlay_search, regex=True, case=False), 'wo_proj_type'] = 'Overlay'
 
-    # Remove All Records over 5 Years Old;
-    #pv <- pv[(as.Date(pv$job_end_dt) > (today() - years(5))) | is.na(pv$job_end_dt),]
-
     # Create ref dates
-    #today = kwargs['execution_date']
     today = general.today()
     five_yrs_ago = today.replace(year=(today.year - 5))
     three_yrs_ago = today.replace(year=(today.year - 3))
@@ -201,6 +201,10 @@ def process_paving_data(mode='sdif', **kwargs):
     # Now that start and end columns are correct, remove other date columns
     df = df.drop(columns=['wo_design_start_dt','wo_design_end_dt','job_start_dt','job_end_dt'])
 
+    # Calculate paving miles
+    paving_miles = df.apply(get_paving_miles, axis=1)
+    df = df.assign(paving_miles=paving_miles)
+
     # For IMCAT uppercase status
     if mode == 'imcat':
 
@@ -208,7 +212,7 @@ def process_paving_data(mode='sdif', **kwargs):
         df.columns = ['PVE_ID','SEG_ID','RD_SEG_ID','PROJECTID','TITLE','PM',
         'PM_PHONE','COMPLETED','STATUS','PROJ_TYPE','ACTIVITY','RESIDENT_ENGINEER',
         'STREET','STREET_FROM','STREET_TO','ENTRY_DT','LAST_UPDATE','SEG_IN_SERV',
-        'SEG_FUN_CLASS','SEG_CD','LENGTH','WIDTH','MORATORIUM','START','END']
+        'SEG_FUN_CLASS','SEG_CD','LENGTH','WIDTH','MORATORIUM','START','END','PAVING_MILES']
 
         df['STATUS'] = df['STATUS'].str.upper()
 
@@ -227,17 +231,13 @@ def process_paving_data(mode='sdif', **kwargs):
             ])
 
         df.columns = ['pve_id','seg_id','project_id','title','project_manager',
-        'project_manager_phone','status','type','resident_engineer','street',
-        'street_from','street_to','length','width','moratorium',
-        'date_start','date_end']
+        'project_manager_phone','status','type','resident_engineer','address_street',
+        'street_from','street_to','length','width','date_moratorium',
+        'date_start','date_end','paving_miles']
 
         df['status'] = df['status'].str.lower()
 
     
-    logging.info(mode)
-    logging.info(df.columns)
-    
-
     # Write csv
     logging.info('Writing ' + str(df.shape[0]) + ' rows in mode ' + mode)
     general.pos_write_csv(
@@ -260,11 +260,6 @@ def build_sonar_miles_aggs(mode='sdif', pav_type='total', **kwargs):
     # Read CSV
     df = pd.read_csv(pav_csv)
 
-    # Multiply Length by 2x when street is over 50 feet wide
-    df.loc[df['width'] > 50, "length"] = (df.loc[df['width'] > 50, "length"] * 2)
-
-    # Convert to miles
-    df['length'] = df.length / 5280
 
     # Convert moratorium to date
     df["moratorium"] = pd.to_datetime(df["moratorium"])
@@ -275,26 +270,26 @@ def build_sonar_miles_aggs(mode='sdif', pav_type='total', **kwargs):
     df = df[mask]
 
     # Get sums
-    sums = df[["length", "type"]].groupby("type").sum()
+    sums = df[["paving_miles", "type"]].groupby("type").sum()
     sums.reset_index(inplace=True)
 
     # Get total paved
-    total = round(sums["length"].sum(), dbl_spec)
+    total = round(sums["paving_miles"].sum(), dbl_spec)
 
     # Get total overlay
-    overlay = sums.loc[sums["type"] == 'Overlay', "length"].reset_index()
+    overlay = sums.loc[sums["type"] == 'Overlay', "paving_miles"].reset_index()
 
     if len(overlay) == 0:
         overlay = 0
     else:
-        overlay = round(overlay["length"][0], dbl_spec)
+        overlay = round(overlay["paving_miles"][0], dbl_spec)
 
     # Get total slurry
-    slurry = sums.loc[sums["type"] == 'Slurry', "length"].reset_index()
+    slurry = sums.loc[sums["type"] == 'Slurry', "paving_miles"].reset_index()
     if len(slurry) == 0:
         slurry = 0
     else:
-        slurry = round(slurry["length"][0], dbl_spec)
+        slurry = round(slurry["paving_miles"][0], dbl_spec)
 
 
     # Return dicts
