@@ -9,8 +9,8 @@ from trident.util import general
 conf = general.config
 
 prod_file = {
-    'sdif': conf['prod_data_dir'] + '/sd_paving_datasd.csv',
-    'imcat': conf['prod_data_dir'] + '/sd_paving_imcat_datasd.csv'
+    'sdif': conf['prod_data_dir'] + '/sd_paving_datasd_v1.csv',
+    'imcat': conf['prod_data_dir'] + '/sd_paving_imcat_datasd_v1.csv'
 }
 
 
@@ -169,33 +169,64 @@ def get_streets_paving_data(mode='sdif', **kwargs):
     # This is wrong.
     df = df.drop_duplicates('seg_id', keep='first')
 
-    # Rename columns we're keeping
-    df = df.rename(columns={
-        'pve_id': 'PVE_ID',
-        'seg_id': 'SEG_ID',
-        'wo_id': 'PROJECTID',
-        'wo_name': 'TITLE',
-        'wo_pm': 'PM',
-        'wo_pm_phone': 'PM_PHONE',
-        'wo_design_start_dt': 'START',
-        'wo_design_end_dt': 'END',
-        'wo_resident_engineer': 'RESIDENT_ENGINEER',
-        'job_end_dt': 'MORATORIUM',
-        'wo_status': 'STATUS',
-        'wo_proj_type': 'TYPE',
-        'seg_length_ft': 'LENGTH',
-        'seg_width_ft': 'WIDTH',
-    })
-
-    # Regex for the keeps:
-    df = df.filter(regex="^[A-Z0-9]")
+    df = df.loc[:,['pve_id',
+    'seg_id',
+    'wo_id',
+    'wo_name',
+    'wo_pm',
+    'wo_pm_phone',
+    'wo_design_start_dt',
+    'wo_design_end_dt',
+    'wo_resident_engineer',
+    'job_end_dt',
+    'wo_status',
+    'wo_proj_type',
+    'seg_length_ft',
+    'seg_width_ft'
+    ]]
 
     # Remove START and END for projects in moratorium:
-    df.loc[df.STATUS == moratorium_string, ['START', 'END']] = None
+    df.loc[df.wo_status == moratorium_string, ['wo_design_start_dt', 
+        'wo_design_end_dt']] = None
 
     # For IMCAT uppercase status
     if mode == 'imcat':
+        df.columns = ['PVE_ID',
+        'SEG_ID',
+        'PROJECTID',
+        'TITLE',
+        'PM',
+        'PM_PHONE',
+        'START',
+        'END',
+        'RESIDENT_ENGINEER',
+        'MORATORIUM',
+        'STATUS',
+        'TYPE',
+        'LENGTH',
+        'WIDTH']
+
         df['STATUS'] = df['STATUS'].str.upper()
+    else:
+        df.columns = ['pve_id',
+        'seg_id',
+        'project_id',
+        'title',
+        'project_manager',
+        'project_manager_phone',
+        'date_project_start',
+        'date_project_end',
+        'resident_engineer',
+        'moratorium',
+        'status',
+        'type',
+        'length',
+        'width']
+
+    
+    logging.info(mode)
+    logging.info(df.columns)
+    
 
     # Write csv
     logging.info('Writing ' + str(df.shape[0]) + ' rows in mode ' + mode)
@@ -208,46 +239,51 @@ def build_sonar_miles_aggs(mode='sdif', pav_type='total', **kwargs):
     pav_csv = prod_file[mode]
     dbl_spec = 2
 
-    range_start_dt = kwargs['range_start']
+    range_start = kwargs['range_start']
+    range_start_year = range_start.year
+    range_start_month = range_start.month
+    range_start_day = range_start.day
+
+    range_start_naive = datetime(range_start_year,range_start_month,range_start_day)
 
     # Read CSV
     df = pd.read_csv(pav_csv)
 
     # Multiply Length by 2x when street is over 50 feet wide
-    df.loc[df['WIDTH'] > 50, "LENGTH"] = (df.loc[df['WIDTH'] > 50, "LENGTH"] * 2)
+    df.loc[df['width'] > 50, "length"] = (df.loc[df['width'] > 50, "length"] * 2)
 
     # Convert to miles
-    df['LENGTH'] = df.LENGTH / 5280
+    df['length'] = df.length / 5280
 
     # Convert moratorium to date
-    df["MORATORIUM"] = pd.to_datetime(df["MORATORIUM"])
+    df["moratorium"] = pd.to_datetime(df["moratorium"])
 
     # Get post construction, within range
-    mask = (df.STATUS == 'Post Construction') & \
-           (df.MORATORIUM >= range_start_dt)
+    mask = (df.status == 'Post Construction') & \
+           (df.moratorium >= range_start_naive)
     df = df[mask]
 
     # Get sums
-    sums = df[["LENGTH", "TYPE"]].groupby("TYPE").sum()
+    sums = df[["length", "type"]].groupby("type").sum()
     sums.reset_index(inplace=True)
 
     # Get total paved
-    total = round(sums["LENGTH"].sum(), dbl_spec)
+    total = round(sums["length"].sum(), dbl_spec)
 
     # Get total overlay
-    overlay = sums.loc[sums["TYPE"] == 'Overlay', "LENGTH"].reset_index()
+    overlay = sums.loc[sums["type"] == 'Overlay', "length"].reset_index()
 
     if len(overlay) == 0:
         overlay = 0
     else:
-        overlay = round(overlay["LENGTH"][0], dbl_spec)
+        overlay = round(overlay["length"][0], dbl_spec)
 
     # Get total slurry
-    slurry = sums.loc[sums["TYPE"] == 'Slurry', "LENGTH"].reset_index()
+    slurry = sums.loc[sums["type"] == 'Slurry', "length"].reset_index()
     if len(slurry) == 0:
         slurry = 0
     else:
-        slurry = round(slurry["LENGTH"][0], dbl_spec)
+        slurry = round(slurry["length"][0], dbl_spec)
 
 
     # Return dicts

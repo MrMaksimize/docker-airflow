@@ -94,6 +94,7 @@ def buildConfig(env):
         'date_format_keen': "%Y-%m-%dT%H:%M:%S",
         'dags_dir': "{}/poseidon/dags".format(os.environ.get("AIRFLOW_HOME", "")),
         'dest_s3_bucket': os.environ.get('S3_DATA_BUCKET', 'datasd-dev'),
+        'ref_s3_bucket': os.environ.get('S3_REF_BUCKET', 'datasd-reference'),
         'oracle_wpl': os.environ.get('CONN_ORACLEWPL'),
         'ftp_sannet_user': os.environ.get("FTP_SANNET_USER", "anonymous"),
         'ftp_sannet_pass': os.environ.get("FTP_SANNET_PASS", "anonymous"),
@@ -124,7 +125,7 @@ def buildConfig(env):
         'keen_read_key': os.environ.get('KEEN_READ_KEY'),
         'keen_ti_collection': os.environ.get('KEEN_TI_COLLECTION'),
         'mrm_buffer_access_token': os.environ.get('MRM_BUFFER_ACCESS_TOKEN'),
-        'executable_path': '/usr/local/airflow/poseidon/bin',
+        'executable_path': f"{os.environ.get('AIRFLOW_HOME')}/poseidon/bin",
         'google_token': os.environ.get("GOOGLE_TOKEN"),
         'sde_user': os.environ.get("SDE_USER"),
         'sde_pw': os.environ.get("SDE_PW"),
@@ -174,7 +175,7 @@ schedule = {
     'cip': '@daily'
 }
 
-default_date = datetime(2019, 4, 2)
+default_date = datetime(2019, 6, 21)
 
 start_date = {
     'fd_incidents' : default_date,

@@ -10,12 +10,11 @@ from trident.util.geospatial import spatial_join_pt
 
 conf = general.config
 credentials = general.source['dsd_permits']
-#year = general.get_year()
-year = 2018
+year = datetime.now().year
 temp_permits = conf['temp_data_dir'] + '/permits_{}_extract.csv'.format(year)
 prod_permits = conf['temp_data_dir'] + '/permits_{}_clean.csv'.format(year)
-solar_permits = conf['prod_data_dir'] + '/solar_permits_{}_datasd.csv'.format(year)
-bid_permits = conf['prod_data_dir'] + '/dsd_permits_{}_datasd.csv'.format(year)
+solar_permits = conf['prod_data_dir'] + '/solar_permits_{}_datasd_v1.csv'.format(year)
+bid_permits = conf['prod_data_dir'] + '/dsd_permits_{}_datasd_v1.csv'.format(year)
 
 
 def get_permits_files():
@@ -23,7 +22,8 @@ def get_permits_files():
     logging.info('Retrieving permits data.')
     db = cx_Oracle.connect(credentials)
     sql = general.file_to_string('./sql/pts.sql', __file__)
-    sql += "WHERE a.issue_dt >= TO_DATE('"+str(year)+"-JAN-01', 'YYYY-MON-DD') AND a.issue_dt < TO_DATE('"+str(year+1)+"-JAN-01', 'YYYY-MON-DD')"
+    next_year = year+1
+    sql += "WHERE a.issue_dt >= TO_DATE('"+str(year)+"-JAN-01', 'YYYY-MON-DD') AND a.issue_dt < TO_DATE('"+str(next_year)+"-JAN-01', 'YYYY-MON-DD')"
     df = pd.read_sql_query(sql, db)
     logging.info('Query returned {} results for {}'.format(df.shape[0],year))
     general.pos_write_csv(
