@@ -64,6 +64,29 @@ def get_onbase():
             general.pos_write_csv(df, save_path)
 
     return "Successfully retrieved OnBase tables"
+
+def get_onbase_test():
+    """Get tables from OnBase."""
+    logging.info('Getting files from onbase')
+    for root, dirs, files in os.walk('./poseidon/dags/city_docs/sql/onbase'):
+        for name in files:
+            logging.info('Querying for '+name)
+            path = './sql/onbase/{}'.format(name)
+            query_string = general.file_to_string(path, __file__)
+            logging.info('Connecting to MS Database')
+            onbase_conn = MsSqlHook(mssql_conn_id='onbase_test_sql')
+            logging.info('Reading data to Pandas DataFrame')
+            df = onbase_conn.get_pandas_df(query_string)
+            table_type = name[0:-4]
+
+            logging.info('Correcting title column')
+            df['TITLE'] = fix_title(df[['TITLE','OBJECT_NAME']])
+
+            save_path =  '{0}/onbase_test_{1}.csv'.format(conf['prod_data_dir'],table_type)
+            logging.info('Writting Production file')
+            general.pos_write_csv(df, save_path)
+
+    return "Successfully retrieved OnBase tables"
     
 def get_documentum(mode, **kwargs):
     """Get tables from Documentum."""

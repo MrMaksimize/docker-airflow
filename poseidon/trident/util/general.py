@@ -169,7 +169,8 @@ schedule = {
     'documentum_24' : "0 7 * * *",
     'documentum_others' : "30 * * * *",
     'tsw_integration': '0 6 * * *',  # daily at 6am UTC / 10pm PST
-    'cip': '@daily'
+    'cip': '@daily',
+    'onbase_test': None
 }
 
 default_date = datetime(2019, 4, 2)
@@ -205,7 +206,8 @@ start_date = {
     'documentum_24' : default_date,
     'documentum_others' : default_date,
     'tsw_integration': default_date,
-    'cip': default_date
+    'cip': default_date,
+    'onbase_test': datetime(2019, 6, 25)
 }
 
 
