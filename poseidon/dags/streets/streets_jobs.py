@@ -65,7 +65,7 @@ def process_paving_data(mode='sdif', **kwargs):
         df[i] = df[i].astype(str)
 
 
-    # Backfill - set all fields to mora or construction
+    # Backfill - set all fields to mora or construction    
     df.loc[(df.job_completed_cbox == 1), "wo_status"] = moratorium_string
     df.loc[(df.job_completed_cbox != 1) &
        (df.wo_status.str.contains('post construction|moratorium|post-construction',
@@ -77,12 +77,15 @@ def process_paving_data(mode='sdif', **kwargs):
     # IMCAT ONLY
     if mode == 'imcat':
         df = df[~((df.wo_id == "UTLY") & (df.job_end_dt.isnull()))]
+        
 
         # Remove empty activities (IMCAT ONLY)
         df = df.query('not '\
                     + '(job_activity.isnull() '\
                     + '| job_activity == "" '\
                     + '| job_activity == "None")')
+
+        
 
     # Remove Data Entry
     # Remove mill / pave
@@ -95,6 +98,8 @@ def process_paving_data(mode='sdif', **kwargs):
 
     df = df[~(df.job_activity.str.contains(
         remove_search, regex=True, case=False))]
+
+    
 
     # Search Strings
     concrete_search = "panel rep|pcc - reconstruc"
@@ -127,6 +132,8 @@ def process_paving_data(mode='sdif', **kwargs):
         mask = ~((df.wo_proj_type == 'Slurry') &
                  (df.job_end_dt < three_yrs_ago))
         df = df[mask]
+
+        
 
     # Set all completed jobs to Moratorium status
     df.loc[(df.job_completed_cbox == 1),
@@ -179,6 +186,8 @@ def process_paving_data(mode='sdif', **kwargs):
     # Remove unknown
     df = df[~mask]
 
+    
+
     # Create separate moratorium column based on job end dt
     df['moratorium'] = df['job_end_dt']
     
@@ -200,6 +209,8 @@ def process_paving_data(mode='sdif', **kwargs):
     # Remove duplicates, although it doesn't make sense
     # This is wrong.
     df = df.drop_duplicates('seg_id', keep='first')
+
+
 
     # Now that start and end columns are correct, remove other date columns
     df = df.drop(columns=['wo_design_start_dt','wo_design_end_dt','job_start_dt','job_end_dt'])
