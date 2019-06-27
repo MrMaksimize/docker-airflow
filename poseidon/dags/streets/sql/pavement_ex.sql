@@ -35,7 +35,7 @@ WHERE (
    OR wo.id LIKE 'pcc%'
    OR wo.id LIKE 'ACR%'
    OR wo.id LIKE 's2%'
-   OR wo.id LIKE 'SP'
+   OR wo.id LIKE 'SP%'
    OR wo.id = 'TSW'
    OR wo.id = 'utly'
    OR wo.id = 'DMP1A'

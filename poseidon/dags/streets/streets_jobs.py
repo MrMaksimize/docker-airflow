@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import requests
+import numpy as np
 from datetime import datetime, timedelta
 import logging
 from airflow.hooks.mssql_hook import MsSqlHook
@@ -63,13 +64,14 @@ def process_paving_data(mode='sdif', **kwargs):
 
         df[i] = df[i].astype(str)
 
-    df['job_completed_cbox'] = df['job_completed_cbox'].astype(bool)
 
-    # Backfill - set all fields to mora
-    df.loc[df.wo_status.str.contains(
-        'post construction|moratorium|post-construction',
+    # Backfill - set all fields to mora or construction
+    df.loc[(df.job_completed_cbox == 1), "wo_status"] = moratorium_string
+    df.loc[(df.job_completed_cbox != 1) &
+       (df.wo_status.str.contains('post construction|moratorium|post-construction',
         regex=True,
-        case=False), "wo_status"] = moratorium_string
+        case=False)), "wo_status"] = "Construction"
+
 
     # Remove Records w/o A Completed Date ONLY in the UTLY work order
     # IMCAT ONLY
@@ -127,7 +129,7 @@ def process_paving_data(mode='sdif', **kwargs):
         df = df[mask]
 
     # Set all completed jobs to Moratorium status
-    df.loc[df.job_completed_cbox == True,
+    df.loc[(df.job_completed_cbox == 1),
            "wo_status"] = moratorium_string
 
     # Set Dates in The future for TSW work orders as Construction.
@@ -139,7 +141,7 @@ def process_paving_data(mode='sdif', **kwargs):
 
     # Set other TSW works orders as Construction
     df.loc[(df.wo_id == "TSW") & 
-          (df.job_completed_cbox == False),'wo_status'] = "Construction"
+          (df.job_completed_cbox == 0),'wo_status'] = "Construction"
 
     # Set Phone # For UTLY
     df.loc[df.wo_id == 'UTLY', 'wo_pm_phone'] = phone_UTLY
@@ -182,14 +184,15 @@ def process_paving_data(mode='sdif', **kwargs):
     
     # But do not set moratorium for concrete
     df.loc[df.wo_proj_type == 'Concrete','moratorium'] = None
+    df.loc[df.wo_status != moratorium_string,'moratorium'] = None
     
     # Start column is the wo_design_start only when job_completed_cbox is not checked
     df['start'] = df['wo_design_start_dt']
-    df.loc[df.job_completed_cbox == True,'start'] = df.loc[df.job_completed_cbox == True,'job_start_dt']
+    df.loc[df.job_completed_cbox == 1,'start'] = df.loc[df.job_completed_cbox == 1,'job_start_dt']
 
     # End column is the wo_design_end only when job_completed_cbox is not checked
     df['end'] = df['wo_design_end_dt']
-    df.loc[df.job_completed_cbox == True,'end'] = df.loc[df.job_completed_cbox == True,'job_end_dt']
+    df.loc[df.job_completed_cbox == 1,'end'] = df.loc[df.job_completed_cbox == 1,'job_end_dt']
 
     # Sort by job end date time
     df = df.sort_values(by='job_end_dt', na_position='last', ascending=False)
