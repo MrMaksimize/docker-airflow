@@ -120,7 +120,7 @@ for index, subset in enumerate(subset_names):
             source_key=f'sd_businesses_{task_name}_datasd_v1.csv',
             dest_s3_conn_id=conf['default_s3_conn_id'],
             dest_s3_bucket=conf['dest_s3_bucket'],
-            dest_s3_key=f'sd_businesses_{task_name}_datasd_v1.csv',
+            dest_s3_key=f'ttcs/sd_businesses_{task_name}_datasd_v1.csv',
             on_failure_callback=notify,
             on_retry_callback=notify,
             on_success_callback=notify,
