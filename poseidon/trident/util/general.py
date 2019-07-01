@@ -172,7 +172,8 @@ schedule = {
     'documentum_24' : "0 7 * * *",
     'documentum_others' : "30 * * * *",
     'tsw_integration': '0 6 * * *',  # daily at 6am UTC / 10pm PST
-    'cip': '@daily'
+    'cip': '@daily',
+    'gis_tree_canopy': None
 }
 
 default_date = datetime(2019, 6, 21)
@@ -209,7 +210,8 @@ start_date = {
     'documentum_24' : default_date,
     'documentum_others' : default_date,
     'tsw_integration': default_date,
-    'cip': default_date
+    'cip': default_date,
+    'gis_tree_canopy': datetime(2019, 6, 30)
 }
 
 
