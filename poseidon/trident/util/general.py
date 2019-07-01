@@ -172,7 +172,8 @@ schedule = {
     'documentum_24' : "0 7 * * *",
     'documentum_others' : "30 * * * *",
     'tsw_integration': '0 6 * * *',  # daily at 6am UTC / 10pm PST
-    'cip': '@daily'
+    'cip': '@daily',
+    'gis_tree_canopy': None
 }
 
 default_date = datetime(2019, 6, 21)
@@ -191,7 +192,6 @@ start_date = {
     'dsd_code_enforcement': default_date,
     'streets_sdif': default_date,
     'streets_imcat': default_date,
-    'streets': datetime(2019, 6, 24),
     'get_it_done': default_date,
     'gid_potholes': default_date,
     'gid_ava': default_date,
@@ -210,7 +210,8 @@ start_date = {
     'documentum_24' : default_date,
     'documentum_others' : default_date,
     'tsw_integration': default_date,
-    'cip': default_date
+    'cip': default_date,
+    'gis_tree_canopy': datetime(2019, 6, 30)
 }
 
 

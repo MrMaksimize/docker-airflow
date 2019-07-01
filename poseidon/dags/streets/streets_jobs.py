@@ -1,7 +1,6 @@
 import os
 import pandas as pd
 import requests
-import numpy as np
 from datetime import datetime, timedelta
 import logging
 from airflow.hooks.mssql_hook import MsSqlHook
@@ -9,72 +8,70 @@ from trident.util import general
 
 conf = general.config
 
-temp_file = conf['temp_data_dir'] + '/sd_paving_results.csv'
-
 prod_file = {
     'sdif': conf['prod_data_dir'] + '/sd_paving_datasd_v1.csv',
     'imcat': conf['prod_data_dir'] + '/sd_paving_imcat_datasd_v1.csv'
 }
 
-def get_paving_miles(row):
-    """ Calculate paving miles """
-    
-    if row['seg_width_ft'] >= 50:
-        return (row['seg_length_ft'] * 2)/5280
-    else:
-        return row['seg_length_ft']/5280
 
-
-def get_streets_paving_data():
+def get_streets_paving_data(mode='sdif', **kwargs):
     """Get streets paving data from DB."""
-    
     pv_query = general.file_to_string('./sql/pavement_ex.sql', __file__)
     pv_conn = MsSqlHook(mssql_conn_id='streets_cg_sql')
 
-    df = pv_conn.get_pandas_df(pv_query)
-
-    results = df.shape[0]
-
-    general.pos_write_csv(
-        df, temp_file)
-    
-    return f"Successfully wrote temp file with {results} records"
-
-def process_paving_data(mode='sdif', **kwargs):
-
-    """Get streets paving data from DB."""
     moratorium_string = "Post Construction"
     phone_UTLY = "858-627-3200"
     phone_OTHER = "619-527-7500"
     TSW_PM = "JLahmann@sandiego.gov"
     UTLY_PM = "Engineering@sandiego.gov"
     ACT_OVERLAY_CONCRETE_PM = "CHudson@sandiego.gov"
-    ACT_SLURRY_SERIES_PM = "AVance@sandiego.gov"
-    ACT_SERIES_CIRCUIT_PM = "CHoenes@sandiego.gov"
+    ACT_SLURRY_SERIES_PM = "JJaro@sandiego.gov"
 
-    today = general.today()
+    # Different String for imcat mode.
+    if mode == 'imcat':
+        moratorium_string = "Post-Construction"
 
-    date_cols = ['wo_design_start_dt','wo_design_end_dt','job_start_dt','job_end_dt']
+    df = pv_conn.get_pandas_df(pv_query)
 
-    df = pd.read_csv(temp_file,parse_dates=date_cols,low_memory=False)
+    for i in [
+            'seg_id', 'rd_seg_id', 'wo_id', 'wo_name', 'wo_status',
+            'wo_proj_type', 'job_activity', 'seg_func_class'
+    ]:
 
-    # Update column types
+        df[i] = df[i].astype(str)
 
-    str_cols = ['seg_id',
-    'rd_seg_id',
-    'wo_id',
-    'wo_name',
-    'wo_status',
-    'wo_proj_type',
-    'job_activity',
-    'seg_func_class']
+    df['job_completed_cbox'] = df['job_completed_cbox'].astype(bool)
 
-    df.loc[:,str_cols] = df.loc[:,str_cols].astype(str)
-    df.loc[:,str_cols] = df.loc[:,str_cols].fillna('')
+    # Backfill - set all fields to mora
+    df.loc[df.wo_status.str.contains(
+        'post construction|moratorium|post-construction',
+        regex=True,
+        case=False), "wo_status"] = moratorium_string
 
-    #*** Update project types for consistency ***
+    # Remove Records w/o A Completed Date ONLY in the UTLY and TSW work order
+    # IMCAT ONLY
+    if mode == 'imcat':
+        df = df.query('not '\
+                    + '((wo_id == "UTLY" & job_end_dt.isnull()) '\
+                    + 'or (wo_id == "TSW" & job_end_dt.isnull()))')
 
-    logging.info("Updating project type to Concrete, Slurry or Overlay")
+        # Remove empty activities (IMCAT ONLY)
+        df = df.query('not '\
+                    + '(job_activity.isnull() '\
+                    + '| job_activity == "" '\
+                    + '| job_activity == "None")')
+
+    # Remove Data Entry
+    # Remove mill / pave
+    # Remove Structure Widening
+    # Remove Patching
+    if mode == 'imcat':
+        remove_search = 'data entry|mill|structure wid|patching'
+    else:
+        remove_search = 'data entry|structure wid|patching'
+
+    df = df[~(df.job_activity.str.contains(
+        remove_search, regex=True, case=False))]
 
     # Search Strings
     concrete_search = "panel rep|pcc - reconstruc"
@@ -93,33 +90,41 @@ def process_paving_data(mode='sdif', **kwargs):
     df.loc[df.job_activity.str.contains(
         overlay_search, regex=True, case=False), 'wo_proj_type'] = 'Overlay'
 
-    #*** Update job status ***
+    # Remove All Records over 5 Years Old;
+    #pv <- pv[(as.Date(pv$job_end_dt) > (today() - years(5))) | is.na(pv$job_end_dt),]
 
-    logging.info(f"Creating new status column with fixed status")
+    # Create ref dates
+    #today = kwargs['execution_date']
+    today = general.today()
+    five_yrs_ago = today.replace(year=(today.year - 5))
+    three_yrs_ago = today.replace(year=(today.year - 3))
 
-    df['status'] = ''
+    # Remove records
+    df = df[(df.job_end_dt > five_yrs_ago) | (df.job_end_dt.isnull())]
 
-    df.loc[(df.job_completed_cbox == 1), "status"] = moratorium_string
-    
-    df.loc[(df.job_completed_cbox != 1) &
-       (df.wo_status.str.contains('post construction|moratorium|post-construction',
-        regex=True,
-        case=False)), "status"] = "Construction"
+    # Remove Slurry Records > 3 Years Old
+    # IMCAT ONLY
+    if mode == 'imcat':
+        mask = ~((df.wo_proj_type == 'Slurry') &
+                 (df.job_end_dt < three_yrs_ago))
+        df = df[mask]
+
+    # Create a feature for completed jobs
+    df['final_job_completion_state'] = False
+    #pv[(!is.na(pv$job_end_dt) & pv$job_completed_cbox == 1), "final_job_completion_state"] <- 1
+
+    df.loc[df.job_end_dt.notnull(), "final_job_completion_state"] = True
+
+    # Set all completed jobs to Moratorium status
+    df.loc[df.final_job_completion_state == True,
+           "wo_status"] = moratorium_string
 
     # Set Dates in The future for TSW work orders as Construction.
     mask = (df.wo_id == 'TSW') & \
            (df.job_end_dt.notnull()) & \
            (df.job_end_dt > today)
 
-    df.loc[mask, "status"] = "Construction"
-
-    # Set other TSW works orders as Construction
-    df.loc[(df.wo_id == "TSW") & 
-          (df.job_completed_cbox == 0),'status'] = "Construction"
-
-    #*** Update project manager ***
-
-    logging.info(f"Updating project manager names and phone")
+    df.loc[mask, "wo_status"] = "Construction"
 
     # Set Phone # For UTLY
     df.loc[df.wo_id == 'UTLY', 'wo_pm_phone'] = phone_UTLY
@@ -139,69 +144,12 @@ def process_paving_data(mode='sdif', **kwargs):
                                   (df.wo_proj_type == 'Concrete'))
     df.loc[mask, 'wo_pm'] = ACT_OVERLAY_CONCRETE_PM
 
-    # Set PM for Slurry
-    mask = (df.wo_pm.isnull()) & (df.wo_proj_type == 'Slurry')
+    # Set PM for Slurry / Series
+    mask = (df.wo_pm.isnull()) & ((df.wo_proj_type == 'Slurry') |
+                                  (df.wo_proj_type == 'Series Circuit'))
     df.loc[mask, 'wo_pm'] = ACT_SLURRY_SERIES_PM
 
-    # Set PM for Series
-    mask = (df.wo_pm.isnull()) & (df.wo_proj_type == 'Series Circuit')
-    df.loc[mask, 'wo_pm'] = ACT_SERIES_CIRCUIT_PM
-
-    #*** Update moratorium, start and end dates ***
-
-    logging.info(f"Updating moratorium, start, and end dates")
-    
-    # Create separate moratorium column based on job end dt
-    df['moratorium'] = df['job_end_dt']
-    
-    # But do not set moratorium for concrete
-    df.loc[df.wo_proj_type == 'Concrete','moratorium'] = None
-    df.loc[df.wo_status != moratorium_string,'moratorium'] = None
-    
-    # Start/end column is the wo_design_start/wo_design_end 
-    # only when job_completed_cbox is not checked
-    # And job isn't UTLY or TSW
-    df['start'] = df['wo_design_start_dt']
-    df['end'] = df['wo_design_end_dt']
-
-    mask = df.job_completed_cbox == 1
-
-    df.loc[mask,['start','end']] = df.loc[mask,['job_start_dt','job_end_dt']]
-
-    mask = (df.wo_id == 'UTLY') | (df.wo_id == 'TSW')
-    
-    df.loc[mask, ['start','end']] = df.loc[mask, ['job_start_dt', 'job_end_dt']]
-
-    #*** Calculate paving miles ***
-    
-    paving_miles = df.apply(get_paving_miles, axis=1)
-    df = df.assign(paving_miles=paving_miles)
-
-    #*** Remove unneeded records ***
-
-    logging.info(f"Starting with {df.shape[0]} rows before removing records")
-
-    # UTLY jobs where job end date is missing
-    df = df[~((df.wo_id == "UTLY") & (df.job_end_dt.isnull()))]
-
-    # Records for data entry, mill / pave, structure widening, and patching
-    remove_search = 'data entry|mill|structure wid|patching'
-    df = df[~(df.job_activity.str.contains(
-        remove_search, regex=True, case=False))]    
-
-    five_yrs_ago = today.replace(year=(today.year - 5))
-    three_yrs_ago = today.replace(year=(today.year - 3))
-
-    # Older than 5 years for both datasets
-    df = df[(df.job_end_dt > five_yrs_ago) | (df.job_end_dt.isnull())]
-
-    # Plus slurry records older than 3 years for imcat
-    if mode == 'imcat':
-        mask = ~((df.wo_proj_type == 'Slurry') &
-                 (df.job_end_dt < three_yrs_ago))
-        df = df[mask]
-
-    # Records with no activity, type or status
+    # Spot Unknown
     mask = (df.job_activity.isnull()) | (df.job_activity == None) | (df.job_activity == 'None') | (df.job_activity == '')\
         |(df.wo_proj_type.isnull()) | (df.wo_proj_type == None) | (df.wo_proj_type == 'None') | (df.wo_proj_type == '')\
         |(df.wo_status.isnull()) | (df.wo_status == None) | (df.wo_status == 'None') | (df.wo_status == '')
@@ -214,91 +162,76 @@ def process_paving_data(mode='sdif', **kwargs):
     # Remove unknown
     df = df[~mask]
 
+    # Sort by job end date time
+    df = df.sort_values(by='job_end_dt', na_position='last', ascending=False)
+
     # Remove duplicates, although it doesn't make sense
     # This is wrong.
-    df = df.sort_values(by='job_end_dt', na_position='last', ascending=False)
     df = df.drop_duplicates('seg_id', keep='first')
 
-    logging.info(f"End with {df.shape[0]} rows after removing records")
+    df = df.loc[:,['pve_id',
+    'seg_id',
+    'wo_id',
+    'wo_name',
+    'wo_pm',
+    'wo_pm_phone',
+    'wo_design_start_dt',
+    'wo_design_end_dt',
+    'wo_resident_engineer',
+    'job_end_dt',
+    'wo_status',
+    'wo_proj_type',
+    'seg_length_ft',
+    'seg_width_ft'
+    ]]
 
-    #*** Rename columns and create subsets ***
+    # Remove START and END for projects in moratorium:
+    df.loc[df.wo_status == moratorium_string, ['wo_design_start_dt', 
+        'wo_design_end_dt']] = None
 
     # For IMCAT uppercase status
     if mode == 'imcat':
+        df.columns = ['PVE_ID',
+        'SEG_ID',
+        'PROJECTID',
+        'TITLE',
+        'PM',
+        'PM_PHONE',
+        'START',
+        'END',
+        'RESIDENT_ENGINEER',
+        'MORATORIUM',
+        'STATUS',
+        'TYPE',
+        'LENGTH',
+        'WIDTH']
 
-        df = df.rename(columns={'wo_id':'projectid',
-            'wo_name':'title',
-            'wo_pm':'pm',
-            'wo_pm_phone':'pm_phone',
-            'job_completed_cbox':'completed',
-            'wo_proj_type':'proj_type',
-            'job_activity':'activity',
-            'wo_resident_engineer':'resident_engineer',
-            'seg_placed_in_srvc':'seg_in_serv',
-            'seg_func_class':'seg_fun_class',
-            'seg_length_ft':'length',
-            'seg_width_ft':'width',
-            'seg_council_district':'seg_cd',
-            'job_entry_dt':'entry_dt',
-            'seg_func_class':'seg_fun',
-            'job_updated_dt':'last_update'
-            })
-
-        final_cols = ['pve_id','rd_seg_id','seg_id','projectid','title',
-        'pm','pm_phone','moratorium','status','proj_type','resident_engineer',
-        'start','end','completed','job_start_dt','job_end_dt',
-        'wo_design_start_dt','wo_design_end_dt','wo_status','activity',
-        'entry_dt','last_update','street','street_from','street_to',
-        'seg_fun','seg_cd','length','width','seg_in_serv','paving_miles']
-
-        df_final = df[final_cols].copy()
-
-        df_final.columns = [x.upper() for x in df_final.columns]
-        df_final['STATUS'] = df_final['STATUS'].str.upper()
-
+        df['STATUS'] = df['STATUS'].str.upper()
     else:
-
-        # Drop additional columns for public dataset
-
-        df = df.drop(columns=['rd_seg_id',
-            'job_completed_cbox',
-            'job_activity',
-            'job_entry_dt',
-            'job_updated_dt',
-            'seg_placed_in_srvc',
-            'seg_func_class',
-            'seg_council_district'
-            ])
-
-        df = df.rename(columns={'wo_id':'project_id',
-            'wo_name':'title',
-            'wo_pm':'project_manager',
-            'wo_pm_phone':'project_manager_phone',
-            'wo_proj_type':'type',
-            'wo_resident_engineer':'resident_engineer',
-            'street':'address_street',
-            'seg_length_ft':'length',
-            'seg_width_ft':'width',
-            'moratorium':'date_moratorium',
-            'start':'date_start',
-            'end':'date_end'
-            })
-
-        final_cols = ['pve_id','seg_id','project_id','title','project_manager',
-        'project_manager_phone','status','type','resident_engineer','address_street',
-        'street_from','street_to','length','width','date_moratorium',
-        'date_start','date_end','paving_miles']
-
-        df_final = df[final_cols].copy()
-
-        df_final['status'] = df_final['status'].str.lower()
+        df.columns = ['pve_id',
+        'seg_id',
+        'project_id',
+        'title',
+        'project_manager',
+        'project_manager_phone',
+        'date_project_start',
+        'date_project_end',
+        'resident_engineer',
+        'moratorium',
+        'status',
+        'type',
+        'length',
+        'width']
 
     
+    logging.info(mode)
+    logging.info(df.columns)
+    
+
     # Write csv
-    logging.info('Writing ' + str(df_final.shape[0]) + ' rows in mode ' + mode)
+    logging.info('Writing ' + str(df.shape[0]) + ' rows in mode ' + mode)
     general.pos_write_csv(
-        df_final, prod_file[mode], date_format=conf['date_format_ymd'])
-    
+        df, prod_file[mode], date_format=conf['date_format_ymd_hms'])
     return "Successfully wrote prod file at " + prod_file[mode]
 
 
@@ -316,6 +249,11 @@ def build_sonar_miles_aggs(mode='sdif', pav_type='total', **kwargs):
     # Read CSV
     df = pd.read_csv(pav_csv)
 
+    # Multiply Length by 2x when street is over 50 feet wide
+    df.loc[df['width'] > 50, "length"] = (df.loc[df['width'] > 50, "length"] * 2)
+
+    # Convert to miles
+    df['length'] = df.length / 5280
 
     # Convert moratorium to date
     df["moratorium"] = pd.to_datetime(df["moratorium"])
@@ -326,26 +264,26 @@ def build_sonar_miles_aggs(mode='sdif', pav_type='total', **kwargs):
     df = df[mask]
 
     # Get sums
-    sums = df[["paving_miles", "type"]].groupby("type").sum()
+    sums = df[["length", "type"]].groupby("type").sum()
     sums.reset_index(inplace=True)
 
     # Get total paved
-    total = round(sums["paving_miles"].sum(), dbl_spec)
+    total = round(sums["length"].sum(), dbl_spec)
 
     # Get total overlay
-    overlay = sums.loc[sums["type"] == 'Overlay', "paving_miles"].reset_index()
+    overlay = sums.loc[sums["type"] == 'Overlay', "length"].reset_index()
 
     if len(overlay) == 0:
         overlay = 0
     else:
-        overlay = round(overlay["paving_miles"][0], dbl_spec)
+        overlay = round(overlay["length"][0], dbl_spec)
 
     # Get total slurry
-    slurry = sums.loc[sums["type"] == 'Slurry', "paving_miles"].reset_index()
+    slurry = sums.loc[sums["type"] == 'Slurry', "length"].reset_index()
     if len(slurry) == 0:
         slurry = 0
     else:
-        slurry = round(slurry["paving_miles"][0], dbl_spec)
+        slurry = round(slurry["length"][0], dbl_spec)
 
 
     # Return dicts
