@@ -18,6 +18,7 @@ from fiona import crs
 import pymssql
 import zipfile
 from osgeo import ogr
+from osgeo import ogr2ogr
 from osgeo import osr
 import geojson
 import geobuf
@@ -430,6 +431,17 @@ def shp2geojson(layer):
         + ' -proj wgs84'\
         + ' -o format=geojson precision=0.00000001'\
         + ' {layer}.geojson'
+
+    cmd = cmd.format(layer=layer)
+
+    return cmd
+
+def shp2geojsonOgr(layer):
+    """Shapefile to Geojson conversion using ogr."""
+    cmd = 'ogr2ogr -f GeoJSON -t_srs'\
+        + ' crs:84'\
+        + ' {layer}.geojson'\
+        + ' {layer}.shp'
 
     cmd = cmd.format(layer=layer)
 

@@ -53,12 +53,14 @@ RUN apt-get update -yqq \
         curl \
         freetds-bin \
         freetds-dev \
+	gdal-bin \
         git \
         gnupg2 \
         less \
         locales \
         libaio1 \
         libcurl4-gnutls-dev \
+	libgdal20 \
         libgdal-dev \
         libgeos-dev \
         libhdf4-alt-dev \

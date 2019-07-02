@@ -19,7 +19,6 @@ dtypes = OrderedDict([
 
 gtype = 'Polygon'
 
-
 def sde_to_shp():
     """SDE table to Shapefile."""
     logging.info('Extracting {layername} layer from SDE.'.format(
@@ -42,3 +41,30 @@ def sde_to_shp():
 
     return 'Successfully converted {layername} to shapefile.'.format(
            layername=layername)
+
+def shp_to_geojson():
+    """Shapefile to GeoJSON."""
+    cmd = geospatial.shp2geojsonOgr(layer)
+    return cmd
+
+def shp_to_topojson():
+    """Shapefile to TopoJSON."""
+    cmd = geospatial.shp2topojson(layer)
+    return cmd
+
+def geojson_to_geobuf():
+    """Geojson to Geobuf."""
+    geospatial.geojson2geobuf(layer)
+    return 'Successfully converted geojson to geobuf.'
+
+
+def geobuf_to_gzip():
+    """Geobuf to gzip."""
+    geospatial.geobuf2gzip(layername)
+    return 'Successfully compressed geobuf.'
+
+
+def shp_to_zip():
+    """Shapefile to zip."""
+    geospatial.shp2zip(layername)
+    return 'Successfully transfered shapefiles to zip archive.'
