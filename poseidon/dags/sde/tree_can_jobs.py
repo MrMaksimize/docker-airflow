@@ -14,8 +14,7 @@ prod_file = f"{prod_dir}/tree_canopy_tab_datasd.csv"
 
 dtypes = OrderedDict([
         ('objectid', 'int:9'),
-        ('treecanopy', 'int:5'),
-        ('shape.starea()', 'float:12.6')
+        ('treecanopy', 'int:5')
     ])
 
 gtype = 'Polygon'
@@ -24,7 +23,20 @@ def sde_to_shp():
     """SDE table to Shapefile."""
     logging.info('Extracting {layername} layer from SDE.'.format(
         layername=layername))
-    df = geospatial.extract_sde_data(table=table)
+    
+
+    sde_server = conf['sde_server']
+    sde_user = conf['sde_user']
+    sde_pw = conf['sde_pw']
+
+    sde_conn = pymssql.connect(sde_server, sde_user, sde_pw, 'sdw')
+    query = 'SELECT *,'\
+          + '[Shape].STAsText() as geom'\
+          + '[Shape].STArea as geom_area'
+          + f'FROM FROM SDW.CITY.{table}'
+
+    df = pd.read_sql(query, sde_conn)
+    df.columns = [x.lower() for x in df.columns]
 
     logging.info('Processing {layername} df.'.format(layername=layername))
 
