@@ -145,9 +145,9 @@ RUN apt-get update \
     && apt-get install -t unstable -y --no-install-recommends \
       littler \
       r-cran-littler \
-      r-base=${R_BASE_VERSION}-* \
-      r-base-dev=${R_BASE_VERSION}-* \
-      r-recommended=${R_BASE_VERSION}-* \
+      r-base \
+      r-base-dev \
+      r-recommended \
       && ln -s /usr/lib/R/site-library/littler/examples/install.r /usr/local/bin/install.r \
       && ln -s /usr/lib/R/site-library/littler/examples/install2.r /usr/local/bin/install2.r \
       && ln -s /usr/lib/R/site-library/littler/examples/installGithub.r /usr/local/bin/installGithub.r \
