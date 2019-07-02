@@ -14,7 +14,8 @@ prod_file = f"{prod_dir}/tree_canopy_tab_datasd.csv"
 
 dtypes = OrderedDict([
         ('objectid', 'int:9'),
-        ('treecanopy', 'int:5')
+        ('treecanopy', 'int:5'),
+        ('shape.starea()')
     ])
 
 gtype = 'Polygon'
