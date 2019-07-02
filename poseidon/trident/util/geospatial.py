@@ -18,7 +18,6 @@ from fiona import crs
 import pymssql
 import zipfile
 from osgeo import ogr
-from osgeo import ogr2ogr
 from osgeo import osr
 import geojson
 import geobuf
