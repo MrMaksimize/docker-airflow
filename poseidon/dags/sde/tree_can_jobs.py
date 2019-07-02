@@ -31,9 +31,11 @@ def sde_to_shp():
 
     sde_conn = pymssql.connect(sde_server, sde_user, sde_pw, 'sdw')
     query = 'SELECT *,'\
-          + '[Shape].STAsText() as geom'\
-          + '[Shape].STArea as geom_area'
-          + f'FROM FROM SDW.CITY.{table}'
+    + ' [Shape].STAsText() as geom, '\
+    + ' [Shape].STArea() as geom_area'\
+    + f' FROM SDW.CITY.{table}'
+
+    logging.info(query)
 
     df = pd.read_sql(query, sde_conn)
     df.columns = [x.lower() for x in df.columns]
