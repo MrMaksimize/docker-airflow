@@ -60,7 +60,7 @@ addresses_to_S3 = S3FileTransferOperator(
 
 #: Upload prod SE file to S3
 upload_special_events_web = S3FileTransferOperator(
-    task_id='upload_special_events',
+    task_id='upload_special_events_web',
     source_base_path=conf['prod_data_dir'],
     source_key='special_events_list_datasd.csv',
     dest_s3_conn_id=conf['default_s3_conn_id'],
