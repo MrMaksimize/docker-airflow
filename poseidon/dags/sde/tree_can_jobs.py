@@ -4,6 +4,7 @@ from trident.util import geospatial
 import pandas as pd
 from collections import OrderedDict
 import logging
+import pymssql
 
 conf = general.config
 table = 'ECO_TCANOPY_2014_SANDIEGO'
