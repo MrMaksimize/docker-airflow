@@ -16,6 +16,14 @@ prod_file = {
     'imcat': conf['prod_data_dir'] + '/sd_paving_imcat_datasd_v1.csv'
 }
 
+def number_str_cols(col):
+    col = col.fillna(-9999.0)
+    col = col.astype(int)
+    col = col.astype(str)
+    col = col.replace('-9999', '')
+
+    return col
+
 def get_paving_miles(row):
     """ Calculate paving miles """
     
@@ -56,21 +64,18 @@ def process_paving_data(mode='sdif', **kwargs):
 
     date_cols = ['wo_design_start_dt','wo_design_end_dt','job_start_dt','job_end_dt']
 
-    df = pd.read_csv(temp_file,parse_dates=date_cols,low_memory=False)
+    df = pd.read_csv(temp_file,low_memory=False,parse_dates=date_cols)
 
     # Update column types
 
-    str_cols = ['seg_id',
-    'rd_seg_id',
-    'wo_id',
-    'wo_name',
-    'wo_status',
-    'wo_proj_type',
-    'job_activity',
-    'seg_func_class']
+    float_cols = ['pve_id','rd_seg_id','seg_council_district']
 
-    df.loc[:,str_cols] = df.loc[:,str_cols].astype(str)
-    df.loc[:,str_cols] = df.loc[:,str_cols].fillna('')
+    for i in float_cols:
+        df[i] = number_str_cols(df[i])
+
+    str_cols = ['seg_id','wo_proj_type','wo_id','wo_name']
+
+    df.loc[:,str_cols] = df.loc[:,str_cols].replace(np.nan, '')
 
     #*** Update project types for consistency ***
 
@@ -85,13 +90,13 @@ def process_paving_data(mode='sdif', **kwargs):
     df['wo_proj_type'] = None
     # Concrete
     df.loc[df.job_activity.str.contains(
-        concrete_search, regex=True, case=False), 'wo_proj_type'] = 'Concrete'
+        concrete_search, regex=True, case=False, na=False), 'wo_proj_type'] = 'Concrete'
     # Slurry
     df.loc[df.job_activity.str.contains(
-        slurry_search, regex=True, case=False), 'wo_proj_type'] = 'Slurry'
+        slurry_search, regex=True, case=False, na=False), 'wo_proj_type'] = 'Slurry'
     # Overlay
     df.loc[df.job_activity.str.contains(
-        overlay_search, regex=True, case=False), 'wo_proj_type'] = 'Overlay'
+        overlay_search, regex=True, case=False, na=False), 'wo_proj_type'] = 'Overlay'
 
     #*** Update job status ***
 
@@ -107,11 +112,9 @@ def process_paving_data(mode='sdif', **kwargs):
         case=False)), "status"] = "Construction"
 
     # Set Dates in The future for TSW work orders as Construction.
-    mask = (df.wo_id == 'TSW') & \
-           (df.job_end_dt.notnull()) & \
-           (df.job_end_dt > today)
-
-    df.loc[mask, "status"] = "Construction"
+    df.loc[(df.wo_id == 'TSW') &
+           (df.job_end_dt.notnull()) &
+           (df.job_end_dt > today), "status"] = "Construction"
 
     # Set other TSW works orders as Construction
     df.loc[(df.wo_id == "TSW") & 
@@ -134,18 +137,17 @@ def process_paving_data(mode='sdif', **kwargs):
     df.loc[df.wo_id == 'TSW', 'wo_pm'] = TSW_PM
 
     # Set PM for Overlay / Concrete
-    #mask = (df.wo_proj_type == 'Overlay') | (df.wo_proj_type == 'Concrete') & (df.wo_pm.isnull())
-    mask = (df.wo_pm.isnull()) & ((df.wo_proj_type == 'Overlay') |
-                                  (df.wo_proj_type == 'Concrete'))
-    df.loc[mask, 'wo_pm'] = ACT_OVERLAY_CONCRETE_PM
+    df.loc[(df.wo_pm.isnull()) & 
+        ((df.wo_proj_type == 'Overlay') |
+        (df.wo_proj_type == 'Concrete')), 'wo_pm'] = ACT_OVERLAY_CONCRETE_PM
 
     # Set PM for Slurry
-    mask = (df.wo_pm.isnull()) & (df.wo_proj_type == 'Slurry')
-    df.loc[mask, 'wo_pm'] = ACT_SLURRY_SERIES_PM
+    df.loc[((df.wo_pm.isnull()) & 
+        (df.wo_proj_type == 'Slurry')), 'wo_pm'] = ACT_SLURRY_SERIES_PM
 
-    # Set PM for Series
-    mask = (df.wo_pm.isnull()) & (df.wo_proj_type == 'Series Circuit')
-    df.loc[mask, 'wo_pm'] = ACT_SERIES_CIRCUIT_PM
+    # Set PM for Series 
+    df.loc[((df.wo_pm.isnull()) & 
+        (df.wo_proj_type == 'Series Circuit')), 'wo_pm'] = ACT_SERIES_CIRCUIT_PM
 
     #*** Update moratorium, start and end dates ***
 
@@ -164,13 +166,15 @@ def process_paving_data(mode='sdif', **kwargs):
     df['start'] = df['wo_design_start_dt']
     df['end'] = df['wo_design_end_dt']
 
-    mask = df.job_completed_cbox == 1
-
-    df.loc[mask,['start','end']] = df.loc[mask,['job_start_dt','job_end_dt']]
-
-    mask = (df.wo_id == 'UTLY') | (df.wo_id == 'TSW')
+    df.loc[df.job_completed_cbox == 1,'start'] = df.loc[df.job_completed_cbox == 1,'job_start_dt']
+    df.loc[df.job_completed_cbox == 1,'end'] = df.loc[df.job_completed_cbox == 1,'job_end_dt']
     
-    df.loc[mask, ['start','end']] = df.loc[mask, ['job_start_dt', 'job_end_dt']]
+    df.loc[((df.wo_id == 'UTLY') | 
+        (df.wo_id == 'TSW')),['start']] = df.loc[((df.wo_id == 'UTLY') | 
+        (df.wo_id == 'TSW')),['job_start_dt']]
+    df.loc[((df.wo_id == 'UTLY') | 
+        (df.wo_id == 'TSW')),['end']] = df.loc[((df.wo_id == 'UTLY') | 
+        (df.wo_id == 'TSW')),['job_end_dt']]
 
     #*** Calculate paving miles ***
     
@@ -187,7 +191,7 @@ def process_paving_data(mode='sdif', **kwargs):
     # Records for data entry, mill / pave, structure widening, and patching
     remove_search = 'data entry|mill|structure wid|patching'
     df = df[~(df.job_activity.str.contains(
-        remove_search, regex=True, case=False))]    
+        remove_search, regex=True, case=False, na=False))]    
 
     five_yrs_ago = today.replace(year=(today.year - 5))
     three_yrs_ago = today.replace(year=(today.year - 3))
@@ -197,9 +201,8 @@ def process_paving_data(mode='sdif', **kwargs):
 
     # Plus slurry records older than 3 years for imcat
     if mode == 'imcat':
-        mask = ~((df.wo_proj_type == 'Slurry') &
-                 (df.job_end_dt < three_yrs_ago))
-        df = df[mask]
+        df = df[~((df.wo_proj_type == 'Slurry') &
+                 (df.job_end_dt < three_yrs_ago))]
 
     # Records with no activity, type or status
     mask = (df.job_activity.isnull()) | (df.job_activity == None) | (df.job_activity == 'None') | (df.job_activity == '')\
@@ -214,17 +217,23 @@ def process_paving_data(mode='sdif', **kwargs):
     # Remove unknown
     df = df[~mask]
 
-    # Remove duplicates, although it doesn't make sense
-    # This is wrong.
-    df = df.sort_values(by='job_end_dt', na_position='last', ascending=False)
-    df = df.drop_duplicates('seg_id', keep='first')
-
     logging.info(f"End with {df.shape[0]} rows after removing records")
 
     #*** Rename columns and create subsets ***
 
     # For IMCAT uppercase status
     if mode == 'imcat':
+
+        # Remove duplicates, although it doesn't make sense
+        # This is wrong.
+        df = df.sort_values(by=['seg_id','job_end_dt'], na_position='first', ascending=[True,False])
+        df_seg_groups = df.groupby(['seg_id'])
+        for name, group in df_seg_groups:
+            if group.shape[0] > 1:
+                logging.info(group.loc[:,['seg_id','job_end_dt','start','end','moratorium']])
+
+
+        #df = df.drop_duplicates('seg_id', keep='first')
 
         df = df.rename(columns={'wo_id':'projectid',
             'wo_name':'title',
@@ -257,6 +266,10 @@ def process_paving_data(mode='sdif', **kwargs):
         df_final['STATUS'] = df_final['STATUS'].str.upper()
 
     else:
+
+        # Remove duplicates
+        df = df.sort_values(by='job_end_dt', na_position='last', ascending=False)
+        df = df.drop_duplicates('seg_id', keep='first')
 
         # Drop additional columns for public dataset
 
