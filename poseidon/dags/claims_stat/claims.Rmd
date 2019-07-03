@@ -1,18 +1,18 @@
 ---
 title: "ClaimStat TSW"
 runtime: shiny
-output: 
+output:
   flexdashboard::flex_dashboard:
     orientation: rows
     navbar:
       - { title: "Tool Dictionary", href: "https://docs.google.com/spreadsheets/d/1GLVlV_zh2T-GayA83EWmTcC1wZTo2XhDsJl1QUIIS48/edit?usp=sharing", align: left }
-    
+
 
 ---
 
 
 
-```{r global, include=FALSE} 
+```{r global, include=FALSE}
 library(flexdashboard)
 library(data.table)
 library(dygraphs)
@@ -25,7 +25,7 @@ library(rsconnect)
 library(shiny)
 
 #setwd("~/Documents/SD_data/TSW_dashboard_050719")
-claims <- read.csv("TSW_test.csv", header=T, na.strings=c(""," ","NA"))
+claims <- read.csv("/usr/local/airflow/poseidon/data/prod/claim_stat_datasd.csv", header=T, na.strings=c(""," ","NA"))
 claims<-unique(claims)
 
 claims <-data.table(claims)
@@ -39,10 +39,10 @@ claims$incident_month<-format(claims$INCIDENT_DATE, "%m")
 
 
 ##Create FISCAL YEAR variable
-#This variable considers that fiscal years start the first day of July (first day of month 7) 
-##and run through the last day of June 
+#This variable considers that fiscal years start the first day of July (first day of month 7)
+##and run through the last day of June
 claims$Fiscal_Year<- ifelse(as.numeric(claims$incident_month)>= 7, (as.numeric(claims$incident_year)+1), claims$incident_year)
-claims<-claims[order(-Fiscal_Year),] 
+claims<-claims[order(-Fiscal_Year),]
 claims$Fiscal_Year<- as.numeric(claims$Fiscal_Year)
 
 ###Create reserves variable
@@ -60,7 +60,7 @@ Inputs {.sidebar data-width=200}
 ```{r}
 
 
- selectInput("year", label = "Fiscal Year of Incident", 
+ selectInput("year", label = "Fiscal Year of Incident",
     choices = claims$Fiscal_Year,
     selected=1,
     multiple=FALSE
@@ -103,13 +103,13 @@ renderValueBox({
 Row {.tabset}
 -----------------------------------------------------------------------
 ### Payments to Date {.tabset}
-Share of payments by Loss Code: includes all Loss Codes amounting to 1% or more of total payments. For further detail refer to Loss Code Table. 
+Share of payments by Loss Code: includes all Loss Codes amounting to 1% or more of total payments. For further detail refer to Loss Code Table.
 
 
 
 ```{r}
 renderPlotly({
-  
+
 filtered<-subset(claims, Fiscal_Year == input$year)
 options(scipen = 999)
 
@@ -133,19 +133,19 @@ test$Losses<- format(test$Losses, big.mark=",", scientific=FALSE, digits=0)
    layout(margin = list(b= 220), yaxis = list(title = 'Share of Payments by Code'), xaxis = list(title = 'Loss Code', tickangle = -60),barmode = 'group') %>%
   layout(yaxis = list(tickformat = "%"))
 
-  
+
   })
 
 ```
 
 
-### Reserves 
-Share of outstanding reserves by Loss Code: includes all Loss Codes amounting to 1% or more of total outstanding reserves. 
+### Reserves
+Share of outstanding reserves by Loss Code: includes all Loss Codes amounting to 1% or more of total outstanding reserves.
 *Note that only open claims have outstanding reserves, for incident years with no open claims, no graph will be displayed*
 
 ```{r}
 renderPlotly({
-  
+
 filtered<-subset(claims, Fiscal_Year == input$year & CLAIMANT_STATUS_DESC=="Open")
 options(scipen = 999)
 
@@ -172,21 +172,21 @@ test$Reserves<- format(test$Reserves, big.mark=",", scientific=FALSE, digits=0)
    layout(margin = list(b= 220), yaxis = list(title = 'Share of Reserves by Code'), xaxis = list(title = 'Loss Code', tickangle = -60),barmode = 'group') %>%
   layout(yaxis = list(tickformat = "%"))
 
-  
+
   })
 
 ```
 
 ### Loss Code Table
-Loss leaders are shown on top of the table: Loss codes are ranked by the share of total payments they represent for the selected FY of incident. 
+Loss leaders are shown on top of the table: Loss codes are ranked by the share of total payments they represent for the selected FY of incident.
 ```{r}
 
 renderTable({
-  
-##filter data by year selected in sidebar  
+
+##filter data by year selected in sidebar
 filtered<-subset(claims, Fiscal_Year == input$year)
 
-##create data table 
+##create data table
 ##############
 ##all claims
 ##############
@@ -218,7 +218,7 @@ final$Total_Losses<- paste("$", final$Total_Losses, sep="")
 final$Reserves<-prettyNum(final$Reserves, big.mark= ",", digits=0)
 final$Reserves<- paste("$", final$Reserves, sep="")
 
-##Remove na Loss codes 
+##Remove na Loss codes
 final<-final[!is.na(final$CLAIMANT_REFERENCE2_Desc),]
 
 ############################
@@ -226,8 +226,8 @@ final<-final[!is.na(final$CLAIMANT_REFERENCE2_Desc),]
 ############################
 
   final %>%
-    select("Loss Code" = CLAIMANT_REFERENCE2_Desc, "% of Total Payments" = percentage, "Total Payments to Date"= Total_Losses, "Claims Count"= Count, 
-                                                     "Reserves"= Reserves) %>% 
+    select("Loss Code" = CLAIMANT_REFERENCE2_Desc, "% of Total Payments" = percentage, "Total Payments to Date"= Total_Losses, "Claims Count"= Count,
+                                                     "Reserves"= Reserves) %>%
     as.data.frame()
 
 
@@ -254,7 +254,7 @@ map<-map[!is.na(map$lng),]
 
 ##Sort data by number of claims per loss code
 map<- map %>% group_by(CLAIMANT_REFERENCE2_Desc) %>% mutate(count = n())
-map<-map[order(-map$count),] 
+map<-map[order(-map$count),]
 
 ##Remove rows with generic geocodes (lat long of SD City)
 ##lat= 32.715738, lng= -117.1610838
@@ -264,12 +264,12 @@ map <- map[!(map$lat == "32.715738" & map$lng=="-117.1610838" ),]
 
 
 
- selectInput("losscode", label = "Loss Code", 
+ selectInput("losscode", label = "Loss Code",
     choices = map$CLAIMANT_REFERENCE2_Desc,
     selected=1,
     multiple=FALSE
    )
- 
+
 
 
 ```
@@ -283,7 +283,7 @@ Outputs
 ```{r}
 renderLeaflet({
   filtered<-subset(map, CLAIMANT_REFERENCE2_Desc == input$losscode)
-  
+
 
 leaflet(filtered) %>% addTiles() %>% addMarkers(
   label= ~paste('Claim Number:', CLAIM_NUMBER, '*   Claim Status:', CLAIMANT_STATUS_DESC, '*    Total Paid: $', PAID_TOTAL),
@@ -338,7 +338,7 @@ claims$INCIDENT_DATE<-as.Date(claims$INCIDENT_DATE)
 claims_sub<- claims[, c("INCIDENT_DATE","Fiscal_Year", "CLAIM_NUMBER","CLAIMANT_STATUS_DESC","PAID_TOTAL", "CLAIMANT_REFERENCE2_Desc", "INCIDENT_DESC", "ORGANIZATION_DESC")]
 claims_sub$Fiscal_Year<-as.factor(claims_sub$Fiscal_Year)
 claims_sub<-claims_sub[!is.na(claims_sub$CLAIMANT_REFERENCE2_Desc),]
-claims_sub<-claims_sub[order(claims_sub$CLAIMANT_STATUS_DESC),] 
+claims_sub<-claims_sub[order(claims_sub$CLAIMANT_STATUS_DESC),]
 
 datatable(claims_sub, rownames = FALSE, filter = 'top', colnames = c( 'Incident Date', 'Fiscal Year','Claim Number','Claim Status','Total Payment to Date', 'Loss Code', 'Incident Description', 'Organization Description'), options = list(
   pageLength = 10, autoWidth = TRUE, columnDefs = list(list(width = '100px', targets = "_all"))
