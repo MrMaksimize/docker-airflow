@@ -33,14 +33,22 @@ get_public_art = PythonOperator(
     on_success_callback=notify,
     dag=dag)
 
+process_public_art = PythonOperator(
+    task_id='process_public_art',
+    python_callable=process_public_art,
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
+
 #: Upload prod art file to S3
 upload_public_art = S3FileTransferOperator(
     task_id='upload_public_art',
     source_base_path=conf['prod_data_dir'],
-    source_key='public_art_locations_datasd.csv',
+    source_key='public_art_locations_datasd_v1.csv',
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_bucket=conf['dest_s3_bucket'],
-    dest_s3_key='public_art/public_art_locations_datasd.csv',
+    dest_s3_key='public_art/public_art_locations_datasd_v1.csv',
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
@@ -54,7 +62,9 @@ update_public_art_md = get_seaboard_update_dag('public-art.md', dag)
 #: Execution rules
 #: public_art_latest_only must run before get_public_art
 get_public_art.set_upstream(public_art_latest_only)
+#: public_art_latest_only must run before get_public_art
+process_public_art.set_upstream(get_public_art)
 #: get_public_art must run before file upload
-upload_public_art.set_upstream(get_public_art)
+upload_public_art.set_upstream(process_public_art)
 #: upload_gid_requests must succeed before updating github
 update_public_art_md.set_upstream(upload_public_art)

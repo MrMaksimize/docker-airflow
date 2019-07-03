@@ -1,4 +1,4 @@
-"""Sidewalk _dags file."""
+"""_dags file for tree canopy sde extraction."""
 from __future__ import print_function
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.bash_operator import BashOperator
@@ -11,42 +11,39 @@ from trident.util import general
 from trident.util.geospatial import *
 from trident.util.notifications import notify
 
-from dags.sidewalks.sidewalk_jobs import *
+from dags.sde.tree_can_jobs import *
 from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag
 
-# All times in Airflow UTC.  Set Start Time in PST?
 args = general.args
 conf = general.config
-schedule = general.schedule['streets_sdif']
-start_date = general.start_date['streets_sdif']
+schedule = general.schedule['gis_tree_canopy']
+start_date = general.start_date['gis_tree_canopy']
+folder = 'trees'
+layer = 'tree_canopy'
+datasd_name = 'tree_canopy_datasd'
+path_to_file = conf['prod_data_dir'] + '/' + datasd_name
 
-#: Dag spec
-dag = DAG(dag_id='sidewalk', default_args=args, start_date=start_date, schedule_interval=schedule)
+dag = DAG(dag_id='gis_{layer}'.format(layer=layer),
+          default_args=args,
+          start_date=start_date,
+          schedule_interval=schedule)
+
 
 #: Latest Only Operator for sdif
-sidewalk_latest_only = LatestOnlyOperator(task_id='sidewalk_latest_only', dag=dag)
+treecan_latest_only = LatestOnlyOperator(task_id='tree_canopy_latest_only', dag=dag)
 
-#: Get sidewalk data from DB
-get_sidewalk_data = PythonOperator(
-    task_id='get_sidewalk_oci',
-    python_callable=get_sidewalk_data,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
-    dag=dag)
-
-#: Get sidewalks shapefile from Atlas
-get_sw_shapefiles = PythonOperator(
-    task_id='get_sidewalk_gis',
-    python_callable=get_sidewalk_gis,
+#: Get tree canopy shapefile from Atlas
+get_shapefiles = PythonOperator(
+    task_id='get_tree_canopy_gis',
+    python_callable=sde_to_shp,
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
     dag=dag)
 
 #: Convert shp to geojson
-sidewalks_to_geojson = BashOperator(
-    task_id='sidewalks_to_geojson',
+shp_to_geojson = BashOperator(
+    task_id='tree_canopy_to_geojson',
     bash_command=shp_to_geojson(),
     on_failure_callback=notify,
     on_retry_callback=notify,
@@ -54,8 +51,8 @@ sidewalks_to_geojson = BashOperator(
     dag=dag)
 
 #: Convert shp to topojson
-sidewalks_to_topojson = BashOperator(
-    task_id='sidewalks_to_topojson',
+shp_to_topojson = BashOperator(
+    task_id='tree_canopy_to_topojson',
     bash_command=shp_to_topojson(),
     on_failure_callback=notify,
     on_retry_callback=notify,
@@ -63,8 +60,8 @@ sidewalks_to_topojson = BashOperator(
     dag=dag)
 
 #: Convert geojson to geobuf
-sidewalks_to_geobuf = PythonOperator(
-    task_id='sidewalks_to_geobuf',
+geojson_to_geobuf = PythonOperator(
+    task_id='tree_canopy_to_geobuf',
     python_callable=geojson_to_geobuf,
     on_failure_callback=notify,
     on_retry_callback=notify,
@@ -73,7 +70,7 @@ sidewalks_to_geobuf = PythonOperator(
 
 #: Convert geojson to geobuf
 geobuf_zip = PythonOperator(
-    task_id='sidewalks_geobuf_to_zip',
+    task_id='geobuf_to_zip',
     python_callable=geobuf_to_gzip,
     on_failure_callback=notify,
     on_retry_callback=notify,
@@ -82,7 +79,7 @@ geobuf_zip = PythonOperator(
 
 #: Convert geojson to geobuf
 shape_zip = PythonOperator(
-    task_id='sidewalks_shape_to_zip',
+    task_id='shape_to_zip',
     python_callable=shp_to_zip,
     on_failure_callback=notify,
     on_retry_callback=notify,
@@ -90,13 +87,13 @@ shape_zip = PythonOperator(
     dag=dag)
 
 #: Upload OCI file to S3
-upload_oci_file = S3FileTransferOperator(
-    task_id='upload_oci',
+upload_tab_file = S3FileTransferOperator(
+    task_id='upload_tree_canopy_tab',
     source_base_path=conf['prod_data_dir'],
-    source_key='sidewalk_cond_datasd_v1.csv',
+    source_key='tree_canopy_tab_datasd.csv',
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_bucket=conf['dest_s3_bucket'],
-    dest_s3_key='tsw/sidewalk_cond_datasd_v1.csv',
+    dest_s3_key='sde/tree_canopy_tab_datasd.csv',
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
@@ -105,12 +102,12 @@ upload_oci_file = S3FileTransferOperator(
 
 #: Upload shp GIS file to S3
 upload_shp_file = S3FileTransferOperator(
-    task_id='sidewalks_shp_to_S3',
+    task_id='tree_canopy_shp_to_S3',
     source_base_path=conf['prod_data_dir'],
-    source_key='sidewalks.zip',
+    source_key='tree_canopy_datasd.zip',
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_bucket=conf['dest_s3_bucket'],
-    dest_s3_key='tsw/sidewalks.zip',
+    dest_s3_key='sde/tree_canopy_datasd.zip',
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
@@ -119,12 +116,12 @@ upload_shp_file = S3FileTransferOperator(
 
 #: Upload geojson GIS file to S3
 upload_geojson_file = S3FileTransferOperator(
-    task_id='sidewalks_geojson_to_S3',
+    task_id='tree_canopy_geojson_to_S3',
     source_base_path=conf['prod_data_dir'],
-    source_key='sidewalks.geojson',
+    source_key='tree_canopy_datasd.geojson',
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_bucket=conf['dest_s3_bucket'],
-    dest_s3_key='tsw/sidewalks.geojson',
+    dest_s3_key='sde/tree_canopy_datasd.geojson',
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
@@ -133,12 +130,12 @@ upload_geojson_file = S3FileTransferOperator(
 
 #: Upload topojson GIS file to S3
 upload_topojson_file = S3FileTransferOperator(
-    task_id='sidewalks_topojson_to_S3',
+    task_id='tree_canopy_topojson_to_S3',
     source_base_path=conf['prod_data_dir'],
-    source_key='sidewalks.topojson',
+    source_key='tree_canopy_datasd.topojson',
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_bucket=conf['dest_s3_bucket'],
-    dest_s3_key='tsw/sidewalks.topojson',
+    dest_s3_key='sde/tree_canopy_datasd.topojson',
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
@@ -147,12 +144,12 @@ upload_topojson_file = S3FileTransferOperator(
 
 #: Upload topojson GIS file to S3
 upload_pbf_file = S3FileTransferOperator(
-    task_id='sidewalks_pbf_to_S3',
+    task_id='tree_canopy_pbf_to_S3',
     source_base_path=conf['prod_data_dir'],
-    source_key='sidewalks.pbf',
+    source_key='tree_canopy_datasd.pbf',
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_bucket=conf['dest_s3_bucket'],
-    dest_s3_key='tsw/sidewalks.pbf',
+    dest_s3_key='sde/tree_canopy_datasd.pbf',
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
@@ -160,42 +157,39 @@ upload_pbf_file = S3FileTransferOperator(
     dag=dag)
 
 #: Update portal modified date
-update_gis_md = get_seaboard_update_dag('sidewalk-gis.md', dag)
+update_gis_md = get_seaboard_update_dag('tree-canopy-2014.md', dag)
 
 #: Execution order
 
-#: Latest only operator must run before getting sidewalk data
-get_sidewalk_data.set_upstream(sidewalk_latest_only)
+#: Latest only operator must run before getting tree canopy data
+get_shapefiles.set_upstream(treecan_latest_only)
 
-#: Getting sidewalk data must run before uploading
-upload_oci_file.set_upstream(get_sidewalk_data)
+#: Getting tree canopy data must run before uploading
+upload_tab_file.set_upstream(get_shapefiles)
 
-#: get_sidewalk_data must run before get shapefiles so they can be joined
-get_sw_shapefiles.set_upstream(sidewalk_latest_only)
+#: get_shapefiles must run before converting to geojson
+shp_to_geojson.set_upstream(get_shapefiles)
 
-#: get_sw_shapefiles must run before converting to geojson
-sidewalks_to_geojson.set_upstream(get_sw_shapefiles)
-
-#: get_sw_shapefiles must run before converting to topojson
-sidewalks_to_topojson.set_upstream(get_sw_shapefiles)
+#: get_shapefiles must run before converting to topojson
+shp_to_topojson.set_upstream(get_shapefiles)
 
 #: to_geojson must run before converting to geobuf
-sidewalks_to_geobuf.set_upstream(sidewalks_to_geojson)
+geojson_to_geobuf.set_upstream(shp_to_geojson)
 
 #: to_geobuf must run before zipping geobuf
-geobuf_zip.set_upstream(sidewalks_to_geobuf)
+geobuf_zip.set_upstream(geojson_to_geobuf)
 
-#: get_sw_shapefile must run before zipping shapefile
-shape_zip.set_upstream(get_sw_shapefiles)
+#: get_shapefile must run before zipping shapefile
+shape_zip.set_upstream(get_shapefiles)
 
 #: zipping shapefile must run before uploading
 upload_shp_file.set_upstream(shape_zip)
 
 #: converting to geojson must run before uploading
-upload_geojson_file.set_upstream(sidewalks_to_geojson)
+upload_geojson_file.set_upstream(shp_to_geojson)
 
 #: converting to topojson must run before uploading
-upload_topojson_file.set_upstream(sidewalks_to_topojson)
+upload_topojson_file.set_upstream(shp_to_topojson)
 
 #: zip geobuf must run before uploading
 upload_pbf_file.set_upstream(geobuf_zip)

@@ -39,6 +39,9 @@ ENV ARCH x86_64
 ENV DYLD_LIBRARY_PATH /opt/oracle
 ENV LD_LIBRARY_PATH /opt/oracle
 
+#R
+ENV R_BASE_VERSION 3.5.3
+
 
 
 # Update apt and install
@@ -50,12 +53,14 @@ RUN apt-get update -yqq \
         curl \
         freetds-bin \
         freetds-dev \
+	gdal-bin \
         git \
         gnupg2 \
         less \
         locales \
         libaio1 \
         libcurl4-gnutls-dev \
+	libgdal20 \
         libgdal-dev \
         libgeos-dev \
         libhdf4-alt-dev \
@@ -68,6 +73,7 @@ RUN apt-get update -yqq \
         libspatialite-dev \
         libxml2-dev \
         netcat \
+        pandoc \
         python3-software-properties \
         python3-dev \
         python3-numpy \
@@ -85,11 +91,13 @@ RUN sed -i 's/^# en_US.UTF-8 UTF-8$/en_US.UTF-8 UTF-8/g' /etc/locale.gen \
     && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
     && useradd -ms /bin/bash -d ${AIRFLOW_HOME} airflow
 
+
 # NodeJS packages
 RUN curl -sL https://deb.nodesource.com/setup_10.x | bash - \
     && apt-get install -y nodejs \
     && npm install -g mapshaper \
     && npm install -g geobuf
+
 
 RUN pip install -U pip setuptools wheel \
     && pip install apache-airflow[crypto,celery,postgres,slack,s3,jdbc,mysql,mssql,ssh,password,rabbitmq,samba]==${AIRFLOW_VERSION} \
@@ -126,6 +134,51 @@ RUN pip install -U pip setuptools wheel \
         /usr/share/man \
         /usr/share/doc \
         /usr/share/doc-base
+
+
+
+# R Installs
+## Use Debian unstable via pinning -- new style via APT::Default-Release
+RUN echo "deb http://http.debian.net/debian sid main" > /etc/apt/sources.list.d/debian-unstable.list \
+    && echo 'APT::Default-Release "testing";' > /etc/apt/apt.conf.d/default
+
+## Now install R and littler, and create a link for littler in /usr/local/bin
+RUN apt-get update \
+    && apt-get install -t unstable -y --no-install-recommends \
+      littler \
+      r-cran-littler \
+      r-base \
+      r-base-dev \
+      r-recommended \
+      && ln -s /usr/lib/R/site-library/littler/examples/install.r /usr/local/bin/install.r \
+      && ln -s /usr/lib/R/site-library/littler/examples/install2.r /usr/local/bin/install2.r \
+      && ln -s /usr/lib/R/site-library/littler/examples/installGithub.r /usr/local/bin/installGithub.r \
+      && ln -s /usr/lib/R/site-library/littler/examples/testInstalled.r /usr/local/bin/testInstalled.r \
+      && install.r docopt \
+      && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
+      #&& rm -rf /var/lib/apt/lists/*
+
+
+RUN install.r dplyr \
+    crosstalk \
+    data.table \
+    DT \
+    dygraphs \
+    flexdashboard \
+    ggplot2 \
+    leaflet \
+    mgcv \
+    plotly \
+    rmarkdown \
+    rsconnect \
+    shiny \
+    tidyr \
+    viridis
+
+RUN chown -R airflow /usr/local/lib/R/site-library* /usr/local/lib/R/site-library/*
+
+
+
 
 # Get Oracle Client
 # TODO -- ADD

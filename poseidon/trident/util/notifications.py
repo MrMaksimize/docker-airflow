@@ -122,7 +122,7 @@ def send_email_swu(to,
     }
 
 
-    for elisttype, elist in {'cc': cc, 'bcc': bcc}.iteritems():
+    for elisttype, elist in {'cc': cc, 'bcc': bcc}.items():
         if elist is not None and len(elist) > 0:
             all_receivers + elist
             payload[elisttype] = []
@@ -199,7 +199,7 @@ def notify_keen(payload, collection, raise_for_status = False):
 
 
 def get_email_address_list(address_string):
-    if isinstance(address_string, basestring):
+    if isinstance(address_string, str):
         if ',' in address_string:
             address_string = address_string.split(',')
         elif ';' in address_string:

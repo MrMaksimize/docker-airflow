@@ -88,12 +88,13 @@ def buildConfig(env):
         'default_s3_conn_id': 's3data',
         'prod_data_dir': "/data/prod",
         'temp_data_dir': "/data/temp",
-        'home_dir': "/usr/local/airflow",
+        'home_dir': os.environ.get("AIRFLOW_HOME", ""),
         'date_format_ymd': "%Y-%m-%d",
         'date_format_ymd_hms': "%Y-%m-%d %H:%M:%S",
         'date_format_keen': "%Y-%m-%dT%H:%M:%S",
-        'dags_dir': "/poseidon/poseidon/dags",
+        'dags_dir': "{}/poseidon/dags".format(os.environ.get("AIRFLOW_HOME", "")),
         'dest_s3_bucket': os.environ.get('S3_DATA_BUCKET', 'datasd-dev'),
+        'ref_s3_bucket': os.environ.get('S3_REF_BUCKET', 'datasd-reference'),
         'oracle_wpl': os.environ.get('CONN_ORACLEWPL'),
         'ftp_sannet_user': os.environ.get("FTP_SANNET_USER", "anonymous"),
         'ftp_sannet_pass': os.environ.get("FTP_SANNET_PASS", "anonymous"),
@@ -124,13 +125,14 @@ def buildConfig(env):
         'keen_read_key': os.environ.get('KEEN_READ_KEY'),
         'keen_ti_collection': os.environ.get('KEEN_TI_COLLECTION'),
         'mrm_buffer_access_token': os.environ.get('MRM_BUFFER_ACCESS_TOKEN'),
-        'executable_path': '/usr/local/airflow/poseidon/bin',
-        'client':
-        "python /usr/local/airflow/poseidon/poseidon/util/FMEEngineClient.py fmeengine 7777",
+        'executable_path': f"{os.environ.get('AIRFLOW_HOME')}/poseidon/bin",
         'google_token': os.environ.get("GOOGLE_TOKEN"),
         'sde_user': os.environ.get("SDE_USER"),
         'sde_pw': os.environ.get("SDE_PW"),
         'sde_server': os.environ.get("SDE_SERVER"),
+        'shiny_acct_name': os.environ.get("SHINY_ACCT_NAME"),
+        'shiny_token': os.environ.get("SHINY_TOKEN"),
+        'shiny_secret': os.environ.get("SHINY_SECRET")
     }
     return config
 
@@ -140,6 +142,7 @@ config = buildConfig(os.environ.get('SD_ENV'))
 # https://crontab.guru/
 schedule = {
     'fd_incidents' : "@daily",
+    'claims_stat': "@daily",
     'pd_cfs': "@daily",
     'pd_col': "@daily",
     'ttcs': "@daily",
@@ -171,14 +174,16 @@ schedule = {
     'tsw_integration': '0 6 * * *',  # daily at 6am UTC / 10pm PST
     'cip': '@daily',
     'onbase_test': None
+    'gis_tree_canopy': None
 }
 
-default_date = datetime(2019, 4, 2)
+default_date = datetime(2019, 6, 21)
 
 start_date = {
     'fd_incidents' : default_date,
     'pd_cfs': default_date,
     'pd_col': default_date,
+    'claims_stat': default_date,
     'ttcs': default_date,
     'indicator_bacteria_tests': default_date,
     'parking_meters': default_date,
@@ -208,13 +213,15 @@ start_date = {
     'tsw_integration': default_date,
     'cip': default_date,
     'onbase_test': datetime(2019, 6, 25)
+    'gis_tree_canopy': datetime(2019, 6, 30)
 }
 
 
 source = {'ttcs': os.environ.get('CONN_ORACLETTCS'),
 'cef':os.environ.get('CONN_ORACLE_CEF'),
 'dsd_permits' : os.environ.get('CONN_ORACLE_PERMITS'),
-'cip': os.environ.get('CONN_ORACLECIP')
+'cip': os.environ.get('CONN_ORACLECIP'),
+'risk': os.environ.get('CONN_ORACLE_RISK')
 }
 
 args = {
