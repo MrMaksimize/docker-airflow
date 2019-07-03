@@ -40,6 +40,7 @@ def sde_to_shp():
 
     df = pd.read_sql(query, sde_conn)
     df.columns = [x.lower() for x in df.columns]
+    df = df.drop('shape', 1)
 
     logging.info('Processing {layername} df.'.format(layername=layername))
 
@@ -51,9 +52,6 @@ def sde_to_shp():
                       dtypes=dtypes,
                       gtype=gtype,
                       epsg=2230)
-    logging.info('Writing records to table')
-
-    general.pos_write_csv(df, prod_file)
 
     return 'Successfully converted {layername} to shapefile.'.format(
            layername=layername)
@@ -61,11 +59,6 @@ def sde_to_shp():
 def shp_to_geojson():
     """Shapefile to GeoJSON."""
     cmd = geospatial.shp2geojsonOgr(layer)
-    return cmd
-
-def shp_to_topojson():
-    """Shapefile to TopoJSON."""
-    cmd = geospatial.shp2topojson(layer)
     return cmd
 
 def geojson_to_geobuf():

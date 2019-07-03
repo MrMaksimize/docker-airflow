@@ -50,15 +50,6 @@ shp_to_geojson = BashOperator(
     on_success_callback=notify,
     dag=dag)
 
-#: Convert shp to topojson
-shp_to_topojson = BashOperator(
-    task_id='tree_canopy_to_topojson',
-    bash_command=shp_to_topojson(),
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
-    dag=dag)
-
 #: Convert geojson to geobuf
 geojson_to_geobuf = PythonOperator(
     task_id='tree_canopy_to_geobuf',
@@ -84,20 +75,6 @@ shape_zip = PythonOperator(
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
-    dag=dag)
-
-#: Upload OCI file to S3
-upload_tab_file = S3FileTransferOperator(
-    task_id='upload_tree_canopy_tab',
-    source_base_path=conf['prod_data_dir'],
-    source_key='tree_canopy_tab_datasd.csv',
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_bucket=conf['dest_s3_bucket'],
-    dest_s3_key='sde/tree_canopy_tab_datasd.csv',
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
-    replace=True,
     dag=dag)
 
 #: Upload shp GIS file to S3
@@ -129,20 +106,6 @@ upload_geojson_file = S3FileTransferOperator(
     dag=dag)
 
 #: Upload topojson GIS file to S3
-upload_topojson_file = S3FileTransferOperator(
-    task_id='tree_canopy_topojson_to_S3',
-    source_base_path=conf['prod_data_dir'],
-    source_key='tree_canopy_datasd.topojson',
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_bucket=conf['dest_s3_bucket'],
-    dest_s3_key='sde/tree_canopy_datasd.topojson',
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
-    replace=True,
-    dag=dag)
-
-#: Upload topojson GIS file to S3
 upload_pbf_file = S3FileTransferOperator(
     task_id='tree_canopy_pbf_to_S3',
     source_base_path=conf['prod_data_dir'],
@@ -164,14 +127,8 @@ update_gis_md = get_seaboard_update_dag('tree-canopy-2014.md', dag)
 #: Latest only operator must run before getting tree canopy data
 get_shapefiles.set_upstream(treecan_latest_only)
 
-#: Getting tree canopy data must run before uploading
-upload_tab_file.set_upstream(get_shapefiles)
-
 #: get_shapefiles must run before converting to geojson
 shp_to_geojson.set_upstream(get_shapefiles)
-
-#: get_shapefiles must run before converting to topojson
-shp_to_topojson.set_upstream(get_shapefiles)
 
 #: to_geojson must run before converting to geobuf
 geojson_to_geobuf.set_upstream(shp_to_geojson)
@@ -187,9 +144,6 @@ upload_shp_file.set_upstream(shape_zip)
 
 #: converting to geojson must run before uploading
 upload_geojson_file.set_upstream(shp_to_geojson)
-
-#: converting to topojson must run before uploading
-upload_topojson_file.set_upstream(shp_to_topojson)
 
 #: zip geobuf must run before uploading
 upload_pbf_file.set_upstream(geobuf_zip)
