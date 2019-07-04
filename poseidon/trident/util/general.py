@@ -142,7 +142,7 @@ config = buildConfig(os.environ.get('SD_ENV'))
 # https://crontab.guru/
 schedule = {
     'fd_incidents' : "@daily",
-    'claims_stat': "@daily",
+    'claims_stat': "@monthly",
     'pd_cfs': "@daily",
     'pd_col': "@daily",
     'ttcs': "@daily",

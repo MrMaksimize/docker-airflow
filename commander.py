@@ -116,7 +116,7 @@ class Commander(object):
         """
         print("Connecting to {}".format(container))
 
-        command = "docker exec --user root -it {} secretly /usr/local/airflow/entrypoint.sh /bin/bash".format(container)
+        command = "docker exec -it {} secretly /usr/local/airflow/entrypoint.sh /bin/bash".format(container)
         subprocess.call(command, shell=True)
 
     def connect_container_root(self, container):

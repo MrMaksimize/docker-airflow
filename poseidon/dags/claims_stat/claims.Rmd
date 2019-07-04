@@ -4,9 +4,11 @@ runtime: shiny
 output:
   flexdashboard::flex_dashboard:
     orientation: rows
-    social: menu
----
+    navbar:
+      - { title: "Tool Dictionary", href: "https://docs.google.com/spreadsheets/d/1GLVlV_zh2T-GayA83EWmTcC1wZTo2XhDsJl1QUIIS48/edit?usp=sharing", align: left }
 
+
+---
 
 
 
@@ -23,20 +25,31 @@ library(rsconnect)
 library(shiny)
 
 #setwd("~/Documents/SD_data/TSW_dashboard_050719")
-claims <- read.csv("TSW_geoc.csv", header=T, na.strings=c(""," ","NA"))
+claims <- read.csv("/usr/local/airflow/poseidon/data/prod/claim_stat_datasd.csv", header=T, na.strings=c(""," ","NA"))
+claims<-unique(claims)
+
 claims <-data.table(claims)
 claims$INCIDENT_DATE<- as.Date(claims$INCIDENT_DATE)
 claims$incident_year = format(claims$INCIDENT_DATE, "%Y")
+
+###Create year and month variables
+claims$INCIDENT_DATE<- as.Date(claims$INCIDENT_DATE)
+claims$incident_year<-format(claims$INCIDENT_DATE, "%Y")
+claims$incident_month<-format(claims$INCIDENT_DATE, "%m")
+
+
+##Create FISCAL YEAR variable
+#This variable considers that fiscal years start the first day of July (first day of month 7)
+##and run through the last day of June
+claims$Fiscal_Year<- ifelse(as.numeric(claims$incident_month)>= 7, (as.numeric(claims$incident_year)+1), claims$incident_year)
 claims<-claims[order(-Fiscal_Year),]
 claims$Fiscal_Year<- as.numeric(claims$Fiscal_Year)
 
-
+###Create reserves variable
+claims$reserves=claims$INCURRED_TOTAL-claims$PAID_TOTAL
 
 
 ```
-
-
-
 
 Department Loss Experience
 =======================================================================
@@ -243,6 +256,12 @@ map<-map[!is.na(map$lng),]
 map<- map %>% group_by(CLAIMANT_REFERENCE2_Desc) %>% mutate(count = n())
 map<-map[order(-map$count),]
 
+##Remove rows with generic geocodes (lat long of SD City)
+##lat= 32.715738, lng= -117.1610838
+#(32.715738, -117.1610838)
+
+map <- map[!(map$lat == "32.715738" & map$lng=="-117.1610838" ),]
+
 
 
  selectInput("losscode", label = "Loss Code",
@@ -250,6 +269,8 @@ map<-map[order(-map$count),]
     selected=1,
     multiple=FALSE
    )
+
+
 
 ```
 
@@ -282,8 +303,7 @@ Time Trends
 renderPlotly({
 
 ##change this if I include a sidebar filter: FILTER BY COUNT OR AMOUNT, and by open/closed
-test<-setDT(claims)[, .(PAID_TOTAL= sum(PAID_TOTAL, na.rm = TRUE), PAID_BIPD= sum(PAID_BI + PAID_PD, na.rm = TRUE),
-                          PAID_EXP=sum(PAID_EXPENSE),Count=n_distinct(CLAIM_NUMBER)), by = .(Fiscal_Year)]
+test<-setDT(claims)[, .(PAID_TOTAL= sum(PAID_TOTAL, na.rm = TRUE), PAID_BIPD= sum(PAID_BI + PAID_PD, na.rm = TRUE), PAID_EXP=sum(PAID_EXPENSE),Count=n_distinct(CLAIM_NUMBER)), by = .(Fiscal_Year)]
 
 x <- test$Fiscal_Year
 y <- test$PAID_TOTAL
@@ -324,5 +344,4 @@ datatable(claims_sub, rownames = FALSE, filter = 'top', colnames = c( 'Incident 
   pageLength = 10, autoWidth = TRUE, columnDefs = list(list(width = '100px', targets = "_all"))
 ))
 ```
-
 
