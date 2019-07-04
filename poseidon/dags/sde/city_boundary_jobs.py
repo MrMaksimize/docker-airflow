@@ -23,7 +23,7 @@ def sde_to_shp():
     """SDE table to Shapefile."""
     logging.info('Extracting {layername} layer from SDE.'.format(
         layername=layername))
-    df = geospatial.extract_sde_data(table=table)
+    df = geospatial.extract_sde_data(table=table, where="CODE = 'SD'")
 
     logging.info('Processing {layername} df.'.format(layername=layername))
     
