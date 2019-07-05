@@ -4,6 +4,7 @@ from trident.util import geospatial
 import pandas as pd
 from collections import OrderedDict
 import logging
+import pymssql
 
 conf = general.config
 table = 'ECO_TCANOPY_2014_SANDIEGO'
@@ -19,12 +20,27 @@ dtypes = OrderedDict([
 
 gtype = 'Polygon'
 
-
 def sde_to_shp():
     """SDE table to Shapefile."""
     logging.info('Extracting {layername} layer from SDE.'.format(
         layername=layername))
-    df = geospatial.extract_sde_data(table=table)
+    
+
+    sde_server = conf['sde_server']
+    sde_user = conf['sde_user']
+    sde_pw = conf['sde_pw']
+
+    sde_conn = pymssql.connect(sde_server, sde_user, sde_pw, 'sdw')
+    query = 'SELECT *,'\
+    + ' [Shape].STAsText() as geom, '\
+    + ' [Shape].STArea() as geom_area'\
+    + f' FROM SDW.CITY.{table}'
+
+    logging.info(query)
+
+    df = pd.read_sql(query, sde_conn)
+    df.columns = [x.lower() for x in df.columns]
+    df = df.drop('shape', 1)
 
     logging.info('Processing {layername} df.'.format(layername=layername))
 
@@ -36,9 +52,28 @@ def sde_to_shp():
                       dtypes=dtypes,
                       gtype=gtype,
                       epsg=2230)
-    logging.info('Writing records to table')
-
-    general.pos_write_csv(df, prod_file)
 
     return 'Successfully converted {layername} to shapefile.'.format(
            layername=layername)
+
+def shp_to_geojson():
+    """Shapefile to GeoJSON."""
+    cmd = geospatial.shp2geojsonOgr(layer)
+    return cmd
+
+def geojson_to_geobuf():
+    """Geojson to Geobuf."""
+    geospatial.geojson2geobuf(layer)
+    return 'Successfully converted geojson to geobuf.'
+
+
+def geobuf_to_gzip():
+    """Geobuf to gzip."""
+    geospatial.geobuf2gzip(layername)
+    return 'Successfully compressed geobuf.'
+
+
+def shp_to_zip():
+    """Shapefile to zip."""
+    geospatial.shp2zip(layername)
+    return 'Successfully transfered shapefiles to zip archive.'

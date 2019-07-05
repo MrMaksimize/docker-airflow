@@ -119,7 +119,18 @@ class Commander(object):
         command = "docker exec -it {} secretly /usr/local/airflow/entrypoint.sh /bin/bash".format(container)
         subprocess.call(command, shell=True)
 
+    def connect_container_root(self, container):
+        """
+        Connect to a running container's bash; Mimick operating env from compose.
 
+        container : string
+            Container name from `docker ps`
+
+        """
+        print("Connecting to {}".format(container))
+
+        command = "docker exec -it --user root {} secretly /usr/local/airflow/entrypoint.sh /bin/bash".format(container)
+        subprocess.call(command, shell=True)
 
 
 

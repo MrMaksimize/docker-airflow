@@ -142,7 +142,7 @@ config = buildConfig(os.environ.get('SD_ENV'))
 # https://crontab.guru/
 schedule = {
     'fd_incidents' : "@daily",
-    'claims_stat': "@daily",
+    'claims_stat': "@monthly",
     'pd_cfs': "@daily",
     'pd_col': "@daily",
     'ttcs': "@daily",
@@ -173,6 +173,7 @@ schedule = {
     'documentum_others' : "30 * * * *",
     'tsw_integration': '0 6 * * *',  # daily at 6am UTC / 10pm PST
     'cip': '@daily',
+    'onbase_test': None,
     'gis_tree_canopy': None
 }
 
@@ -182,7 +183,7 @@ start_date = {
     'fd_incidents' : default_date,
     'pd_cfs': default_date,
     'pd_col': default_date,
-    'claims_stat': default_date,
+    'claims_stat': datetime(2019, 7, 2),
     'ttcs': default_date,
     'indicator_bacteria_tests': default_date,
     'parking_meters': default_date,
@@ -211,6 +212,7 @@ start_date = {
     'documentum_others' : default_date,
     'tsw_integration': default_date,
     'cip': default_date,
+    'onbase_test': datetime(2019, 6, 25),
     'gis_tree_canopy': datetime(2019, 6, 30)
 }
 
