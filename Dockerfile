@@ -13,7 +13,7 @@ ENV DEBIAN_FRONTEND noninteractive
 ENV TERM linux
 
 # Airflow
-ARG AIRFLOW_VERSION=1.10.2
+ARG AIRFLOW_VERSION=1.10.3
 ARG AIRFLOW_HOME=/usr/local/airflow
 ARG GDAL_VERSION=2.1.0
 
@@ -102,6 +102,17 @@ RUN pip install -U pip setuptools wheel \
     && pip install boto3 \
     && pip install bs4 \
     && pip install fiona \
+    && pip install "Flask==0.12.4" \
+    && pip install "Flask-Admin==1.5.2" \
+    && pip install "Flask-AppBuilder==1.12.1" \
+    && pip install "Flask-Babel==0.12.2" \
+    && pip install "Flask-Bcrypt==0.7.1" \
+    && pip install "Flask-Caching==1.3.3" \
+    && pip install "Flask-Login==0.4.1" \
+    && pip install "Flask-OpenID==1.2.5" \
+    && pip install "Flask-SQLAlchemy==2.4.0" \
+    && pip install "flask-swagger==0.2.13" \
+    && pip install "Flask-WTF==0.14.2" \
     && pip install gdal==2.1.0 \
     && pip install git+https://github.com/jguthmiller/pygeobuf.git@geobuf-v3 \
     && pip install geojson \
@@ -122,6 +133,7 @@ RUN pip install -U pip setuptools wheel \
     && pip install rtree \
     && pip install shapely \
     && pip install "tornado>=4.2.0,<6.0.0" \
+    && pip install "Werkzeug==0.14.1" \
     && pip install xlrd \
     && apt-get autoremove -yqq --purge \
     && apt-get clean \
