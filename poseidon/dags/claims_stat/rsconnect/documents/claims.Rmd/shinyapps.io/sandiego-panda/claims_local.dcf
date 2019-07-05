@@ -1,0 +1,10 @@
+name: claims_local
+title:
+username:
+account: sandiego-panda
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 1013749
+bundleId: 2204163
+url: https://sandiego-panda.shinyapps.io/claims_local/
+when: 1562365607.95748
