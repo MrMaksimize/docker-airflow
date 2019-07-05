@@ -61,7 +61,7 @@ def clean_geocode_claims():
     new_geocodes = add_book_join.loc[add_book_join['_merge'] == 'left_only']
     old_geocodes = add_book_join.loc[add_book_join['_merge'] == 'both']
 
-    if to_geocode.empty:
+    if new_geocodes.empty:
         logging.info("There is nothing new to geocode")
         new_claims=  pd.merge(df,
             add_book[['CLAIM_NUMBER','lat','lng']],
