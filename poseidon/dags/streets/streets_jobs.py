@@ -32,6 +32,23 @@ def get_paving_miles(row):
     else:
         return row['seg_length_ft']/5280
 
+def get_start_end_dates(row):
+    """ Determine correct start and end dates """
+
+    if row['wo_id'] == 'UTLY' or row['wo_id'] == 'TSW':
+
+        return row['job_start_dt'], row['job_end_dt']
+
+    else:
+
+        if row['job_completed_cbox'] == 1:
+            
+            return row['job_end_dt'], row['job_end_dt']
+
+        else:
+            
+            return row['start'], row['end']
+
 
 def get_streets_paving_data():
     """Get streets paving data from DB."""
@@ -64,7 +81,7 @@ def process_paving_data(mode='sdif', **kwargs):
 
     date_cols = ['wo_design_start_dt','wo_design_end_dt','job_start_dt','job_end_dt']
 
-    df = pd.read_csv(temp_file,low_memory=False,parse_dates=date_cols)
+    df = pd.read_csv(temp_file,low_memory=False, parse_dates=date_cols)
 
     # Update column types
 
@@ -158,23 +175,17 @@ def process_paving_data(mode='sdif', **kwargs):
     
     # But do not set moratorium for concrete
     df.loc[df.wo_proj_type == 'Concrete','moratorium'] = None
-    df.loc[df.wo_status != moratorium_string,'moratorium'] = None
+    df.loc[df.status != moratorium_string,'moratorium'] = None
     
-    # Start/end column is the wo_design_start/wo_design_end 
-    # only when job_completed_cbox is not checked
-    # And job isn't UTLY or TSW
+    # Start/end column is by default the wo_design_start/wo_design_end 
     df['start'] = df['wo_design_start_dt']
     df['end'] = df['wo_design_end_dt']
 
-    df.loc[df.job_completed_cbox == 1,'start'] = df.loc[df.job_completed_cbox == 1,'job_start_dt']
-    df.loc[df.job_completed_cbox == 1,'end'] = df.loc[df.job_completed_cbox == 1,'job_end_dt']
-    
-    df.loc[((df.wo_id == 'UTLY') | 
-        (df.wo_id == 'TSW')),['start']] = df.loc[((df.wo_id == 'UTLY') | 
-        (df.wo_id == 'TSW')),['job_start_dt']]
-    df.loc[((df.wo_id == 'UTLY') | 
-        (df.wo_id == 'TSW')),['end']] = df.loc[((df.wo_id == 'UTLY') | 
-        (df.wo_id == 'TSW')),['job_end_dt']]
+    # But here, we get an update based on a few criteria
+    new_dates = df.apply(get_start_end_dates,axis=1)
+    dates_final = new_dates.apply(pd.Series)
+    df['start'] = dates_final[0]
+    df['end'] = dates_final[1]
 
     #*** Calculate paving miles ***
     
@@ -224,16 +235,18 @@ def process_paving_data(mode='sdif', **kwargs):
     # For IMCAT uppercase status
     if mode == 'imcat':
 
-        # Remove duplicates, although it doesn't make sense
-        # This is wrong.
+        duplicates = []
         df = df.sort_values(by=['seg_id','job_end_dt'], na_position='first', ascending=[True,False])
         df_seg_groups = df.groupby(['seg_id'])
         for name, group in df_seg_groups:
             if group.shape[0] > 1:
-                logging.info(group.loc[:,['seg_id','job_end_dt','start','end','moratorium']])
+                selection = group.loc[group['moratorium'].notnull()]
+                if selection.shape[0] > 1:
+                    index_list = selection.index.tolist()
+                    select_remove = index_list[1:]
+                    duplicates.extend(select_remove)
 
-
-        #df = df.drop_duplicates('seg_id', keep='first')
+        df = df.drop(duplicates,axis=0)
 
         df = df.rename(columns={'wo_id':'projectid',
             'wo_name':'title',
