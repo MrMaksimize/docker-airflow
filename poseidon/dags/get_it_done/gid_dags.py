@@ -146,27 +146,28 @@ for i in services:
         #: get_task must run before sonar potholes
         get_task.set_downstream(create_potholes_sonar)
 
-filename = conf['prod_data_dir'] + "/get_it_done_*.csv"
+filename = conf['prod_data_dir'] + "/get_it_done_*_v1.csv"
 files = [os.path.basename(x) for x in glob.glob(filename)]
 
 for index, file_ in enumerate(files):
     file_name = file_.split('.')[0]
     name_parts = file_name.split('_')
+
     if 'v1' in name_parts:
         name_parts.remove('datasd')
         name_parts.remove('v1')
-        task_name = '_'.join(name_parts[3:])
-        md_name = '-'.join(name_parts[3:])
+        task_name = '_'.join(name_parts[3:-1])
+        md_name = '-'.join(name_parts[3:-1])
 
         #: Upload prod gid file to S3
         upload_task = S3FileTransferOperator(
             task_id='upload_' + task_name,
             source_base_path=conf['prod_data_dir'],
-            source_key='get_it_done_{}_datasd_v1.csv'.format(
+            source_key='get_it_done_{}_requests_datasd_v1.csv'.format(
                 task_name),
             dest_s3_conn_id=conf['default_s3_conn_id'],
             dest_s3_bucket=conf['dest_s3_bucket'],
-            dest_s3_key='get_it_done_311/get_it_done_{}_datasd_v1.csv'.
+            dest_s3_key='get_it_done_311/get_it_done_{}_requests_datasd_v1.csv'.
             format(task_name),
             on_failure_callback=notify,
             on_retry_callback=notify,

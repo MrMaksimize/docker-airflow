@@ -59,6 +59,20 @@ addresses_to_S3 = S3FileTransferOperator(
     dag=dag)
 
 #: Upload prod SE file to S3
+upload_special_events_web = S3FileTransferOperator(
+    task_id='upload_special_events_web',
+    source_base_path=conf['prod_data_dir'],
+    source_key='special_events_list_datasd.csv',
+    dest_s3_conn_id=conf['default_s3_conn_id'],
+    dest_s3_bucket=conf['dest_s3_bucket'],
+    dest_s3_key='special_events/special_events_list_datasd.csv',
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    replace=True,
+    dag=dag)
+
+#: Upload prod SE file to S3
 upload_special_events = S3FileTransferOperator(
     task_id='upload_special_events',
     source_base_path=conf['prod_data_dir'],
@@ -88,6 +102,8 @@ addresses_to_S3.set_upstream(process_special_events)
 
 #: upload_special_events dependent on process_special_events
 upload_special_events.set_upstream(process_special_events)
+#: upload_special_events dependent on process_special_events
+upload_special_events_web.set_upstream(process_special_events)
 
 #: update github modified date after S3 upload
 update_special_events_md.set_upstream(upload_special_events)

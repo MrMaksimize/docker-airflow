@@ -435,6 +435,17 @@ def shp2geojson(layer):
 
     return cmd
 
+def shp2geojsonOgr(layer):
+    """Shapefile to Geojson conversion using ogr."""
+    cmd = 'ogr2ogr -f GeoJSON -t_srs'\
+        + ' crs:84'\
+        + ' {layer}.geojson'\
+        + ' {layer}.shp'
+
+    cmd = cmd.format(layer=layer)
+
+    return cmd
+
 
 def shp2topojson(layer):
     """Shapefile to TopoJSON conversion using mapshaper."""
