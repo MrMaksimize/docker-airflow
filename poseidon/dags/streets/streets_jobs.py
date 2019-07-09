@@ -36,19 +36,15 @@ def get_start_end_dates(row):
     """ Determine correct start and end dates """
 
     if row['wo_id'] == 'UTLY' or row['wo_id'] == 'TSW':
-
         return row['job_start_dt'], row['job_end_dt']
 
     else:
 
         if row['job_completed_cbox'] == 1:
-            
             return row['job_end_dt'], row['job_end_dt']
 
         else:
-            
             return row['start'], row['end']
-
 
 def get_streets_paving_data():
     """Get streets paving data from DB."""
@@ -119,7 +115,7 @@ def process_paving_data(mode='sdif', **kwargs):
 
     logging.info(f"Creating new status column with fixed status")
 
-    df['status'] = ''
+    df['status'] = df['wo_status']
 
     df.loc[(df.job_completed_cbox == 1), "status"] = moratorium_string
     
@@ -235,6 +231,8 @@ def process_paving_data(mode='sdif', **kwargs):
     # For IMCAT uppercase status
     if mode == 'imcat':
 
+        logging.info("Flagging duplicates for removal")
+
         duplicates = []
         df = df.sort_values(by=['seg_id','job_end_dt'], na_position='first', ascending=[True,False])
         df_seg_groups = df.groupby(['seg_id'])
@@ -246,8 +244,9 @@ def process_paving_data(mode='sdif', **kwargs):
                     select_remove = index_list[1:]
                     duplicates.extend(select_remove)
 
-        df = df.drop(duplicates,axis=0)
-
+        df['to_delete'] = 0
+        df.loc[duplicates,['to_delete']] = 1
+        logging.info(duplicates)
         df = df.rename(columns={'wo_id':'projectid',
             'wo_name':'title',
             'wo_pm':'pm',
@@ -266,7 +265,7 @@ def process_paving_data(mode='sdif', **kwargs):
             'job_updated_dt':'last_update'
             })
 
-        final_cols = ['pve_id','rd_seg_id','seg_id','projectid','title',
+        final_cols = ['to_delete','pve_id','rd_seg_id','seg_id','projectid','title',
         'pm','pm_phone','moratorium','status','proj_type','resident_engineer',
         'start','end','completed','job_start_dt','job_end_dt',
         'wo_design_start_dt','wo_design_end_dt','wo_status','activity',
