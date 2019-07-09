@@ -192,24 +192,33 @@ def process_paving_data(mode='sdif', **kwargs):
 
     logging.info(f"Starting with {df.shape[0]} rows before removing records")
 
+    start_no = df.shape[0]
+
     # UTLY jobs where job end date is missing
     df = df[~((df.wo_id == "UTLY") & (df.job_end_dt.isnull()))]
+    logging.info(f"Removed {start_no - df.shape[0]} UTLY records with missing job end")
+    start_no = df.shape[0]
 
     # Records for data entry, mill / pave, structure widening, and patching
     remove_search = 'data entry|mill|structure wid|patching'
     df = df[~(df.job_activity.str.contains(
-        remove_search, regex=True, case=False, na=False))]    
+        remove_search, regex=True, case=False, na=False))]
+    logging.info(f"Removed {start_no - df.shape[0]} records for data entry, etc")
+    start_no = df.shape[0] 
 
     five_yrs_ago = today.replace(year=(today.year - 5))
     three_yrs_ago = today.replace(year=(today.year - 3))
 
     # Older than 5 years for both datasets
     df = df[(df.job_end_dt > five_yrs_ago) | (df.job_end_dt.isnull())]
+    logging.info(f"Removed {start_no - df.shape[0]} records older than 5 years")
+    start_no = df.shape[0]
 
     # Plus slurry records older than 3 years for imcat
     if mode == 'imcat':
         df = df[~((df.wo_proj_type == 'Slurry') &
                  (df.job_end_dt < three_yrs_ago))]
+        logging.info(f"Removed {start_no - df.shape[0]} Slurry records older than 3 years")
 
     # Records with no activity, type or status
     mask = (df.job_activity.isnull()) | (df.job_activity == None) | (df.job_activity == 'None') | (df.job_activity == '')\
@@ -246,7 +255,7 @@ def process_paving_data(mode='sdif', **kwargs):
 
         df['to_delete'] = 0
         df.loc[duplicates,['to_delete']] = 1
-        logging.info(duplicates)
+
         df = df.rename(columns={'wo_id':'projectid',
             'wo_name':'title',
             'wo_pm':'pm',

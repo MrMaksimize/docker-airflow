@@ -15,7 +15,7 @@ from dags.streets.streets_jobs import *
 # All times in Airflow UTC.  Set Start Time in PST?
 args = general.args
 conf = general.config
-schedule = general.schedule['streets_sdif']
+schedule = general.schedule['streets']
 start_date = general.start_date['streets']
 
 #: Dag spec
@@ -85,16 +85,16 @@ upload_sdif_data = S3FileTransferOperator(
     dag=dag)
 
 #: send file update email to interested parties
-send_last_file_updated_email = PoseidonEmailFileUpdatedOperator(
-    task_id='send_last_file_updated',
-    to='chudson@sandiego.gov,jlahmann@sandiego.gov,agomez@sandiego.gov',
-    subject='IMCAT Streets File Updated',
-    file_url='http://{}/{}'.format(conf['dest_s3_bucket'],
-                                   'tsw/sd_paving_imcat_datasd_v1.csv'),
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
-    dag=dag)
+#send_last_file_updated_email = PoseidonEmailFileUpdatedOperator(
+    #task_id='send_last_file_updated',
+    #to='chudson@sandiego.gov',
+    #subject='IMCAT Streets File Updated',
+    #file_url='http://{}/{}'.format(conf['dest_s3_bucket'],
+                                   #'tsw/sd_paving_imcat_datasd_v1.csv'),
+    #on_failure_callback=notify,
+    #on_retry_callback=notify,
+    #on_success_callback=notify,
+    #dag=dag)
 
 for i in ['total', 'overlay', 'slurry']:
 
@@ -132,4 +132,4 @@ upload_sdif_data.set_upstream(process_data_sdif)
 upload_imcat_data.set_upstream(process_data_imcat)
 
 #: email notification is sent after the data was uploaded to S3
-send_last_file_updated_email.set_upstream(upload_imcat_data)
+#send_last_file_updated_email.set_upstream(upload_imcat_data)
