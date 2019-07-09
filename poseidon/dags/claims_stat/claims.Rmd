@@ -4,9 +4,6 @@ runtime: shiny
 output:
   flexdashboard::flex_dashboard:
     orientation: rows
-    navbar:
-      - { title: "Tool Dictionary", href: "https://docs.google.com/spreadsheets/d/1GLVlV_zh2T-GayA83EWmTcC1wZTo2XhDsJl1QUIIS48/edit?usp=sharing", align: left }
-
 
 ---
 
@@ -47,6 +44,8 @@ claims$incident_month<-format(claims$INCIDENT_DATE, "%m")
 claims$Fiscal_Year<- ifelse(as.numeric(claims$incident_month)>= 7, (as.numeric(claims$incident_year)+1), claims$incident_year)
 claims<-claims[order(-Fiscal_Year),]
 claims$Fiscal_Year<- as.numeric(claims$Fiscal_Year)
+claims<- subset(claims, Fiscal_Year >=2009)
+
 
 ###Create reserves variable
 claims$reserves=claims$INCURRED_TOTAL-claims$PAID_TOTAL
@@ -252,8 +251,12 @@ Inputs {.sidebar data-width=200}
 ##Remove NA loss codes
 map<- subset(claims, CLAIMANT_REFERENCE2_Desc!= "NA")
 
+#Remove lat-longs clearly outside of SDC
+map<- subset(map, lng>=-117.27 & lng<=-117.11 & lat >=32.567 & lat <=32.88)
+
 #Remove rows with missing lat-longs
 map<-map[!is.na(map$lng),]
+
 
 ##Sort data by number of claims per loss code
 map<- map %>% group_by(CLAIMANT_REFERENCE2_Desc) %>% mutate(count = n())
@@ -348,3 +351,11 @@ datatable(claims_sub, rownames = FALSE, filter = 'top', colnames = c( 'Incident 
 ))
 ```
 
+
+About
+=======================================================================
+### ClaimStat Tool guide {data-width=350}
+
+For descriptions of each of the components of ClaimStat, as well as a Loss Code Dictionary, please visit the ClaimStat Tool Guide by going to the link below
+
+https://docs.google.com/spreadsheets/d/18WmU6Hifz4OaaupHqwKLhBJFZTGuwH3tEt6CaWiP1cs/edit?usp=sharing
