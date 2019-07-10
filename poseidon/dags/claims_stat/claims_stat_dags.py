@@ -21,6 +21,7 @@ args = general.args
 conf = general.config
 schedule = general.schedule
 start_date = general.start_date['claims_stat']
+email_recips = conf['mail_notify_claims']
 
 
 #: Dag definition
@@ -98,9 +99,10 @@ deploy_dashboard = RShinyDeployOperator(
 #: send file update email to interested parties
 send_last_file_updated_email = PoseidonEmailFileUpdatedOperator(
     task_id='send_dashboard_updated',
-    to='zrazuaznar@sandiego.gov',
+    to=email_recips,
     subject='Dashboard Updated',
     file_url='https://sandiego-panda.shinyapps.io/claims_{}/'.format(conf['env'].lower()),
+    message='<p>The ClaimStat tool has been updated.</p><p>Please follow the link below to view the tool.</p>',
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,

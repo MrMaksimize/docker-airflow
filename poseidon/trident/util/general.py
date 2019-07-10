@@ -121,6 +121,7 @@ def buildConfig(env):
         'mail_swu_sys_tpl': os.environ.get("MAIL_SWU_SYS_TPL"),
         'mail_swu_file_updated_tpl':
         os.environ.get("MAIL_SWU_FILE_UPDATED_TPL"),
+        'mail_notify_claims': os.environ.get("MAIL_NOTIFY_CLAIMS"),
         'keen_notify': int(os.environ.get("KEEN_NOTIFY")),
         'keen_project_id': os.environ.get('KEEN_PROJECT_ID'),
         'keen_write_key': os.environ.get('KEEN_WRITE_KEY'),
