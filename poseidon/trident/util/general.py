@@ -104,6 +104,8 @@ def buildConfig(env):
         'ftp_read_pass': os.environ.get("FTP_READ_PASS"),
         'mrm_sannet_user': os.environ.get("MRM_SANNET_USER"),
         'mrm_sannet_pass': os.environ.get("MRM_SANNET_PASS"),
+        'svc_acct_user': os.environ.get("SVC_ACCT_USER"),
+        'svc_acct_pass': os.environ.get("SVC_ACCT_PASS"),
         'alb_sannet_user': os.environ.get("ALB_SANNET_USER"),
         'alb_sannet_pass': os.environ.get("ALB_SANNET_PASS"),
         'mrm_sf_user': os.environ.get("MRM_SF_USER"),
