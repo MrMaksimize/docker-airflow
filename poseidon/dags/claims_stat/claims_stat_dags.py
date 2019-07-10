@@ -98,9 +98,10 @@ deploy_dashboard = RShinyDeployOperator(
 #: send file update email to interested parties
 send_last_file_updated_email = PoseidonEmailFileUpdatedOperator(
     task_id='send_dashboard_updated',
-    to='zrazuaznar@sandiego.gov',
+    to='zrazuaznar@sandiego.gov,sdcityabower@gmail.com,sdcityzrazu@gmail.com',
     subject='Dashboard Updated',
     file_url='https://sandiego-panda.shinyapps.io/claims_{}/'.format(conf['env'].lower()),
+    message='<p>The ClaimStat tool has been updated.</p><p>Please follow the link below to view the tool.</p>',
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
