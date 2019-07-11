@@ -50,9 +50,9 @@ def sap_case_sub_type(row):
 
 def get_gid_requests():
     """Get requests from sf, creates prod file."""
-    username = conf['mrm_sf_user']
-    password = conf['mrm_sf_pass']
-    security_token = conf['mrm_sf_token']
+    username = conf['dpint_sf_user']
+    password = conf['dpint_sf_pass']
+    security_token = conf['dpint_sf_token']
 
     report_id = "00Ot0000000TUnb"
 
