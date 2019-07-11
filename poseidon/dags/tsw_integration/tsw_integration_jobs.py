@@ -102,9 +102,9 @@ def get_vpm_violations_wget():
 
 def get_sf_violations():
     """Get violations from sf, creates temp file."""
-    username = conf['mrm_sf_user']
-    password = conf['mrm_sf_pass']
-    security_token = conf['mrm_sf_token']
+    username = conf['dpint_sf_user']
+    password = conf['dpint_sf_pass']
+    security_token = conf['dpint_sf_token']
 
     report_id = "00Ot0000000TPXC"
 
