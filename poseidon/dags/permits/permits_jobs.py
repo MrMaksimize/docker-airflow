@@ -3,6 +3,10 @@
 from datetime import datetime, timedelta
 import pandas as pd
 import time
+import string
+import glob
+import os
+import numpy as np
 from trident.util import general
 import logging
 import cx_Oracle
@@ -20,36 +24,51 @@ bid_permits = conf['prod_data_dir'] + '/dsd_permits_{}_datasd_v1.csv'.format(yea
 def get_permits_files():
     """Query DB for 'permits' and save data to temp directory."""
     logging.info('Retrieving permits data.')
-    db = cx_Oracle.connect(credentials)
-    sql = general.file_to_string('./sql/pts.sql', __file__)
-    next_year = year+1
-    sql += "WHERE a.issue_dt >= TO_DATE('"+str(year)+"-JAN-01', 'YYYY-MON-DD') AND a.issue_dt < TO_DATE('"+str(next_year)+"-JAN-01', 'YYYY-MON-DD')"
-    df = pd.read_sql_query(sql, db)
-    logging.info('Query returned {} results for {}'.format(df.shape[0],year))
-    general.pos_write_csv(
-        df,
-        temp_permits,
-        date_format=conf['date_format_ymd_hms'])
+    
+    wget_str = "wget -np --continue " \
+     + "--user=$ftp_user " \
+     + "--password='$ftp_pass' " \
+     + "--directory-prefix=$temp_dir " \
+     + "ftp://ftp.datasd.org/uploads/dsd/permits/pts_issued_*.csv"
+    tmpl = string.Template(wget_str)
+    command = tmpl.substitute(
+    ftp_user=conf['ftp_datasd_user'],
+    ftp_pass=conf['ftp_datasd_pass'],
+    temp_dir=conf['temp_data_dir'])
 
-    return 'Successfully retrieved permits data.'
+    return command
 
 def clean_data():
     """Get the permits file from temp directory, clean it, and save it in Prod directory"""
 
-    df = pd.read_csv(temp_permits)
+    filename = conf['temp_data_dir'] + "/pts_issued_YTD*.csv"
+    list_of_files = glob.glob(filename)
+    latest_file = max(list_of_files, key=os.path.getmtime)
+    logging.info(f"Reading in {latest_file}")
+
+    date_cols = ['APPROVAL_ISSUE_DT',
+    'APPROVAL_CLOSE_DT',
+    'PROJ_APPL_DATE',
+    'PROJ_DEEMED_CMPL_DATE'
+    ]
+
+    df = pd.read_csv(latest_file,encoding = "ISO-8859-1",dtype={'JOB_LNG':np.float64,
+        'JOB_LAT':np.float64,
+        'JOB_APN':str},parse_dates=date_cols)
+    
     df.columns = [x.lower() for x in df.columns]
-    df['approval_issue_dt'] = pd.to_datetime(
-    df['approval_issue_dt'], errors='coerce')
-    df['approval_close_dt'] = pd.to_datetime(
-    df['approval_close_dt'], errors='coerce')
+    
+    df = df.rename(columns={
+        'approval_issue_dt':'date_approval_issued',
+        'approval_close_dt':'date_approval_closed',
+        'proj_appl_date':'date_proj_appl',
+        'proj_deemed_cmpl_date':'date_proj_compl',
+        'job_lng':'lng_job',
+        'job_lat':'lat_job',
+        'job_address':'address_job'
+        })
 
-    df['proj_appl_date'] = pd.to_datetime(
-    df['proj_appl_date'], errors='coerce')
-
-    df['proj_deemed_cmpl_date'] = pd.to_datetime(
-    df['proj_deemed_cmpl_date'], errors='coerce')
-
-    df = df.sort_values(by='approval_issue_dt')
+    df = df.sort_values(by='date_approval_issued')
 
     logging.info('Writing all permits')
 
@@ -66,8 +85,8 @@ def join_bids():
     bids_geojson = conf['prod_data_dir'] + '/bids_datasd.geojson'
     bids_join = spatial_join_pt(prod_permits,
                              bids_geojson,
-                             lat='job_lat',
-                             lon='job_lng')
+                             lat='lat_job',
+                             lon='lng_job')
 
     bids_join = bids_join.drop(['objectid',
         'long_name',

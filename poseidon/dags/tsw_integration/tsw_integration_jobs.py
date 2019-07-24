@@ -139,12 +139,6 @@ def get_pts_violations():
     ftp_pass=conf['ftp_datasd_pass'],
     temp_dir=conf['temp_data_dir'])
 
-    #db = cx_Oracle.connect(credentials)
-    #sql = general.file_to_string('./sql/pts_sw.sql', __file__)
-    #df = pd.read_sql_query(sql, db)
-
-    #general.pos_write_csv(df, temp_file_pts, date_format='%Y-%m-%dT%H:%M:%S%z')
-
     return command
 
 def combine_violations():
