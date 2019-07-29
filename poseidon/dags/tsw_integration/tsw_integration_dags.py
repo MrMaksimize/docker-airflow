@@ -115,9 +115,17 @@ get_sf_violations = PythonOperator(
 
 
 #: get_pts_violations, process, output file
-get_pts_violations = PythonOperator(
+#get_pts_violations = PythonOperator(
+    #task_id='get_pts_violations',
+    #python_callable=get_pts_violations,
+    #on_failure_callback=notify,
+    #on_retry_callback=notify,
+    #on_success_callback=notify,
+    #dag=dag)
+
+get_pts_violations = BashOperator(
     task_id='get_pts_violations',
-    python_callable=get_pts_violations,
+    bash_command=get_pts_violations(),
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
@@ -182,7 +190,18 @@ violations_geojson_to_s3 = S3FileTransferOperator(
     dag=dag)
 
 
-
+addresses_to_S3 = S3FileTransferOperator(
+    task_id='upload_address_book',
+    source_base_path=conf['prod_data_dir'],
+    source_key='sw_viols_address_book.csv',
+    dest_s3_conn_id=conf['default_s3_conn_id'],
+    dest_s3_bucket=conf['ref_s3_bucket'],
+    dest_s3_key='sw_viols_address_book.csv',
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    replace=True,
+    dag=dag)
 
 
 #: Execution rules
@@ -200,3 +219,4 @@ combine_sw_violations.set_upstream(get_vpm_violations)
 violations_csv_to_s3.set_upstream(combine_sw_violations)
 violations_geojson_to_s3.set_upstream(combine_sw_violations)
 violations_csv_null_geos_to_s3.set_upstream(combine_sw_violations)
+addresses_to_S3.set_upstream(combine_sw_violations)
