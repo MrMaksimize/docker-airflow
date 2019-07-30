@@ -2,14 +2,15 @@ import requests
 import json
 from datetime import *
 
-
-token = ''
+from airflow.models import DAG
+from airflow.operators.python_operator import PythonOperator
+from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
 
 # starting to test the dag functuon
 def get_token_response():
 	url = "https://auth.aa.cityiq.io/oauth/token"
 
-	querystring = {"grant_type":"client_credentials"}
+	query_string = {"grant_type":"client_credentials"}
 
 	payload = ""
 	headers = {
@@ -24,17 +25,69 @@ def get_token_response():
 		'cache-control': "no-cache"
 		}
 
-	response = requests.request("GET", url, data=payload, headers=headers, params=querystring)
+	response = requests.request("GET", url, data=payload, headers=headers, params=query_string)
 	token_data = json.loads(response.text)
 	token = token_data['access_token']
 	return token
 
-def get_assets():
-	token = get_token_response()
+
+def get_pkout_bbox(**kwargs):
+	ti = kwargs['ti']
+	token = ti.xcom_pull(task_ids='get_token_response') # get outputs from get_token_response task
+	
+	url = "https://sandiego.cityiq.io/api/v2/event/locations/events"
+	end = datetime.now()
+	start = end - timedelta(days=1)
+	query_string = {"bbox":"33.077762:-117.663817,32.559574:-116.584410","locationType":"PARKING_ZONE","eventType":"PKOUT","startTime":str(int(start.timestamp() * 1000)),"endTime":str(int(end.timestamp() * 1000)),"pageSize":"100"}
+	headers = {
+		'Authorization': "Bearer {}".format(token),
+		'predix-zone-id': "SD-IE-PARKING",
+		'cache-control': "no-cache",
+		'postman-token': "e8199816-04a2-29e4-ec0d-1a68a94fe771"
+	}
+	response = requests.request("GET", url, headers=headers, params=query_string)
+	assets = response.json()
+
+	path = '/data/temp/'
+	file_name = datetime.now().strftime('%Y_%m_%d_pkout.json')
+	path += file_name
+	with open(path, 'w') as f:
+		json.dump(assets, f)
+	return
+
+
+def get_pkin_bbox(**kwargs):
+	ti = kwargs['ti']
+	token = ti.xcom_pull(task_ids='get_token_response')
+
+	url = "https://sandiego.cityiq.io/api/v2/event/locations/events"
+	end = datetime.now()
+	start = end - timedelta(days=1)
+	query_string = {"bbox":"33.077762:-117.663817,32.559574:-116.584410","locationType":"PARKING_ZONE","eventType":"PKIN","startTime":str(int(start.timestamp() * 1000)),"endTime":str(int(end.timestamp() * 1000)),"pageSize":"100"}
+	headers = {
+		'Authorization': "Bearer {}".format(token),
+		'predix-zone-id': "SD-IE-PARKING",
+		'cache-control': "no-cache",
+		'postman-token': "63188df1-b0db-c553-aecd-4882b65e5dcc"
+	}
+
+	response = requests.request("GET", url, headers=headers, params=query_string)
+	assets = response.json()
+
+	path = '/data/temp/'
+	file_name = datetime.now().strftime('%Y_%m_%d_pkin.json')
+	path += file_name
+	with open(path, 'w') as f:
+		json.dump(assets, f)
+	return
+
+
+def get_assets(**kwargs):
+	ti = kwargs['ti']
+	token = ti.xcom_pull(task_ids='get_token_response') # get outputs from get_token_response task
+
 	url = "https://sandiego.cityiq.io/api/v2/metadata/assets/search"
-
-	querystring = {"bbox":"33.077762:-117.663817,32.559574:-116.584410","page":"0","size":"2000000","q":"assetType:CAMERA"}
-
+	query_string = {"bbox":"33.077762:-117.663817,32.559574:-116.584410","page":"0","size":"2000000","q":"assetType:CAMERA"}
 	payload = ""
 	headers = {
 		'Authorization': "Bearer {}".format(token),
@@ -49,12 +102,17 @@ def get_assets():
 		'cache-control': "no-cache"
 		}
 
-	response = requests.request("GET", url, data=payload, headers=headers, params=querystring)
+	response = requests.request("GET", url, data=payload, headers=headers, params=query_string)
 	assets = response.json()
 
 	### --- Modify file path --- ###
-	with open('/usr/local/airflow/poseidon/dags/cityiq/assets.json', 'w') as f:
+	path = '/data/temp/'
+	file_name = datetime.now().strftime('%Y_%m_%d_assets.json')
+	path += file_name
+	with open(path, 'w') as f:
 		json.dump(assets, f)
+	return
+
 
 def get_asset_details():
 	with open('/usr/local/airflow/poseidon/dags/cityiq/assets.json') as f:
@@ -72,59 +130,17 @@ def get_asset_details():
 	#data[0]
 	#print([d.get('assetUid') for d in data])
 
-def get_pkout_bbox():
-	token = get_token_response()
-	url = "https://sandiego.cityiq.io/api/v2/event/locations/events"
-	end = datetime.now()
-	start = end - timedelta(days=1)
-	querystring = {"bbox":"33.077762:-117.663817,32.559574:-116.584410","locationType":"PARKING_ZONE","eventType":"PKOUT","startTime":str(int(start.timestamp() * 1000)),"endTime":str(int(end.timestamp() * 1000)),"pageSize":"100"}
-	headers = {
-		'Authorization': "Bearer {}".format(token),
-		'predix-zone-id': "SD-IE-PARKING",
-		'cache-control': "no-cache",
-		'postman-token': "e8199816-04a2-29e4-ec0d-1a68a94fe771"
-	}
-	response = requests.request("GET", url, headers=headers, params=querystring)
-	assets = response.json()
-	path = '/data/temp/'
-	file_name = datetime.now().strftime('%Y_%m_%d_pkout.json')
-	path += file_name
-	with open(path, 'w') as f:
-		json.dump(assets, f)
-
-def get_pkin_bbox():
-	token = get_token_response()
-	url = "https://sandiego.cityiq.io/api/v2/event/locations/events"
-	end = datetime.now()
-	start = end - timedelta(days=1)
-
-	querystring = {"bbox":"33.077762:-117.663817,32.559574:-116.584410","locationType":"PARKING_ZONE","eventType":"PKIN","startTime":str(int(start.timestamp() * 1000)),"endTime":str(int(end.timestamp() * 1000)),"pageSize":"100"}
-	headers = {
-		'Authorization': "Bearer {}".format(token),
-		'predix-zone-id': "SD-IE-PARKING",
-		'cache-control': "no-cache",
-		'postman-token': "63188df1-b0db-c553-aecd-4882b65e5dcc"
-	}
-	response = requests.request("GET", url, headers=headers, params=querystring)
-	assets = response.json()
-
-	path = '/data/temp/'
-	file_name = datetime.now().strftime('%Y_%m_%d_pkin.json')
-	path += file_name
-	with open(path, 'w') as f:
-		json.dump(assets, f)
-	
 
 def get_parking(assetID):
 	token = get_token_response()
 	url = "https://sandiego.cityiq.io/api/v2/event/assets/{}/events".format(assetID)
 	#look into increasing pageSize
-	querystring = {"eventType":"PKIN","startTime":"1558049253306","endTime":"1558567653306","pageSize":"100"}
+	query_string = {"eventType":"PKIN","startTime":"1558049253306","endTime":"1558567653306","pageSize":"100"}
 	headers = {
 		'Authorization': "Bearer {}".format(token),
 		'predix-zone-id': "SD-IE-PARKING",
 		'cache-control': "no-cache",
 		'postman-token': "abbbec83-ff55-1748-f703-b617bd17b794"
 		}
-	response = requests.request("GET", url, headers=headers, params=querystring)
-	print(response.text)
+	response = requests.request("GET", url, headers=headers, params=query_string)
+	return
