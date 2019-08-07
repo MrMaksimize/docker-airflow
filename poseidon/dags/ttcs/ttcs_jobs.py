@@ -205,9 +205,8 @@ def geocode_data():
                 'zip_short'])
                         
             logging.info('Need to geocode {}'.format(geocode_dedupe.shape[0]))
-            geocode_test = geocode_dedupe.iloc[0:2]
-
-            geocoder_results = geocode_test.apply(lambda x: geospatial.census_address_geocoder(address_line=x['address_full'],locality=x['city'],state=x['state'],zip=x['zip_short']), axis=1)
+        
+            geocoder_results = geocode_dedupe.apply(lambda x: geospatial.census_address_geocoder(address_line=x['address_full'],locality=x['city'],state=x['state'],zip=x['zip_short']), axis=1)
 
             logging.info('Adding new coords to the df')
             coords = geocoder_results.apply(pd.Series)
