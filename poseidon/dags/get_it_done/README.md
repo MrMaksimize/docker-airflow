@@ -8,9 +8,11 @@ Owning department: Performance & Analytics
 
 Contact person: Alex Hempton, AHempton@sandiego.gov
 
+Date last updated: 
+
 ## To Dos
 
-None
+Investigate bad geocodes. Potentially re-geocode for requests that fall outside of the City boundary.
 
 ## Data transformations
 
@@ -24,7 +26,7 @@ The variety of string values in the Case Record Type column in the source data b
 
 ### Create a service_name field
 
-The goal of the creating the service name field is to provide data users with one column they can use to filter the data according to the familiar service names in the app. For example, users see "Parking issue" as an option in the app, but in the data, the users would have to look for "Abandoned Vehicle" in a Problem Category column as well as "72 Hour Report" in the Case Record Type column to find reports for "Parking issue."
+The goal of the creating the service name field is to provide data users with one column they can use to filter the data according to the familiar service names in the app. For example, users see "Parking issue" as an option in the app, but in the data, the users would have to look for "Abandoned Vehicle" in the Problem Category column as well as "72 Hour Report" in the Case Record Type column to find reports for "Parking issue."
 
 The Salesforce database schema has changed as more service types have been added, so the script creates case_type_new and case_sub_type_new fields based off of the values in these 10 fields:
 
@@ -39,9 +41,23 @@ The Salesforce database schema has changed as more service types have been added
 - Violation Name
 - Violation Type
 
-These 10 fields are later dropped. The two new fields are used to join to an [external crosswalk file](https://datasd-reference.s3.amazonaws.com/gid/gid_crosswalk.csv). From that join, the data gets another new field, case_category, which is later renamed to service_name. The crosswalk was manually created by Alex Hempton, and it standardizes a large number of very granular descriptions in the case_type_new and case_sub_type_new columns.
+These 10 fields are later dropped. The two new fields are used to join to an [external crosswalk file](https://datasd-reference.s3.amazonaws.com/gid/gid_crosswalk.csv). From that join, the data gets another new field, case_category, which is later renamed to service_name. Alex Hempton, the GID SME, manually created the crosswalk. It standardizes a large number of very granular descriptions that show up in the case_type_new and case_sub_type_new columns to the terminology that exists in the app. The crosswalk only standardizes descriptions when there are at least 100 of those requests. Many of the descriptions with only a few requests contained bad data and can be disregarded with no impact on analyses.
 
 ### Correct closure dates
+
+A bug in the integration between Salesforce and SAP resulted in SAP not automatically closing cases  in Salesforce when the SAP work order was closed. These cases were closed in Salesforce manually, but the closure date is incorrect.
+
+Greg Gerhant on the GID team emails extracts from SAP that contain a unique identifier and correct closure date. These files, saved with a prefix of cases_, are located in an [S3 reference bucket](https://datasd-reference.s3.amazonaws.com/gid/) and used to correct closure dates in the data.
+
+### Created the referred column
+
+A request is considered referred if it's handled by an external agency or an internal partner who is not integrated with Salesforce. For those cases, Salesforce is not connected to the system that tracks work orders.
+
+Three different columns are considered when choosing a value. If a value exists in Display Referral Information, that is used. If that is blank, the next column the script checks is Referred Department. Finally, Referral Email List is used.
+
+### Spatial joins
+
+Spatial joins are performed for three different polygon types: Council Districts, Community Plan Areas, and Parks.
 
 ### Final field name map
 
@@ -78,6 +94,9 @@ These 10 fields are later dropped. The two new fields are used to join to an [ex
 | Age (Days) | case_age_days |
 | Hide from Web | *dropped* |
 | Public Description | public_description |
+| Display Referral Information | *dropped* |
+| Referral Email List | *dropped* |
+| Action Taken | *dropped* |
 
 ## Notes from SME
 
