@@ -6,9 +6,9 @@ Data source: Salesforce
 
 Owning department: Performance & Analytics
 
-Contact person: Alex Hempton, AHempton@sandiego.gov
+SME: Alex Hempton, AHempton@sandiego.gov
 
-Date last updated: 
+Date last updated: Thu Jul 11 10:41:03 2019 -0700
 
 ## To Dos
 

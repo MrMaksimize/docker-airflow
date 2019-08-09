@@ -6,7 +6,9 @@ Data source: Cartegraph
 
 Owning department: Transportation & Storm Water Streets Division
 
-Contact person: Chris Hudson, CHudson@sandiego.gov
+SME: Chris Hudson, CHudson@sandiego.gov
+
+Date last updated: Tue Jul 9 10:12:48 2019 -0700
 
 ## To Dos
 
