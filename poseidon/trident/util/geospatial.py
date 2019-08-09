@@ -569,10 +569,8 @@ def get_address_for_apn(apn):
     response = requests.request("POST", url, headers=headers, params=querystring)
     data = response.json()
 
-    address = ""
     if response.status_code == requests.codes.ok:
         apn_info = data['features'][0]['attributes']
-        address = "{} {} {}".format(apn_info['SITUS_ADDRESS'], apn_info['SITUS_STREET'], apn_info['SITUS_SUFFIX'])
-
-
-    return address
+        return "{} {} {}".format(apn_info['SITUS_ADDRESS'], apn_info['SITUS_STREET'], apn_info['SITUS_SUFFIX'])
+    else:
+        return f"APN: {apn}"
