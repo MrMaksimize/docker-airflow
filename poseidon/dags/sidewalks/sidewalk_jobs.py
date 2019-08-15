@@ -14,7 +14,7 @@ import pymssql
 
 conf = general.config
 
-cond_file = conf['prod_data_dir'] + '/sidewalk_cond_datasd.csv'
+cond_file = conf['prod_data_dir'] + '/sidewalk_cond_datasd_v1.csv'
 layername = 'sidewalks'
 prod_dir = conf['prod_data_dir']
 dtypes = OrderedDict([
@@ -93,21 +93,9 @@ def get_sidewalk_gis(**kwargs):
 
     df = df.fillna('')
 
-    oci = pd.read_csv(conf['prod_data_dir'] + '/sidewalk_cond_datasd.csv')
-    oci['oci_yr'] = oci['oci_date'].map(lambda x: pd.to_datetime(x).year)
-
-    df_merge = pd.merge(df,
-        oci,
-        how="left",
-        left_on=['seg_id','geojoin_id'],
-        right_on=['seg_id','geojoin_id']
-        )
-
-    rows = df_merge.shape[0]
-
     logging.info('processed {} rows'.format(rows))
 
-    geospatial.df2shp(df=df_merge,
+    geospatial.df2shp(df=df,
                       folder=prod_dir,
                       layername=layername,
                       dtypes=dtypes,

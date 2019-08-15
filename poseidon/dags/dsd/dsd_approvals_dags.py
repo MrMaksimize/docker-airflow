@@ -99,10 +99,10 @@ for key in app.approval_dict:
     upload_solar = S3FileTransferOperator(
         task_id='upload_solar_' + key,
         source_base_path=conf['prod_data_dir'],
-        source_key='solar_permits_' + key + '_ytd_datasd.csv',
+        source_key='solar_permits_' + key + '_ytd_datasd_v1.csv',
         dest_s3_bucket=conf['dest_s3_bucket'],
         dest_s3_conn_id=conf['default_s3_conn_id'],
-        dest_s3_key='dsd/' + 'solar_permits_' + key + '_ytd_datasd.csv',
+        dest_s3_key='dsd/' + 'solar_permits_' + key + '_ytd_datasd_v1.csv',
         replace=True,
         on_failure_callback=notify,
         on_retry_callback=notify,

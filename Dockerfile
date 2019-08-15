@@ -13,7 +13,7 @@ ENV DEBIAN_FRONTEND noninteractive
 ENV TERM linux
 
 # Airflow
-ARG AIRFLOW_VERSION=1.10.2
+ARG AIRFLOW_VERSION=1.10.3
 ARG AIRFLOW_HOME=/usr/local/airflow
 ARG GDAL_VERSION=2.1.0
 
@@ -53,12 +53,14 @@ RUN apt-get update -yqq \
         curl \
         freetds-bin \
         freetds-dev \
+	gdal-bin \
         git \
         gnupg2 \
         less \
         locales \
         libaio1 \
         libcurl4-gnutls-dev \
+	libgdal20 \
         libgdal-dev \
         libgeos-dev \
         libhdf4-alt-dev \
@@ -102,6 +104,17 @@ RUN pip install -U pip setuptools wheel \
     && pip install boto3 \
     && pip install bs4 \
     && pip install fiona \
+    && pip install "Flask==0.12.4" \
+    && pip install "Flask-Admin==1.5.2" \
+    && pip install "Flask-AppBuilder==1.12.1" \
+    && pip install "Flask-Babel==0.12.2" \
+    && pip install "Flask-Bcrypt==0.7.1" \
+    && pip install "Flask-Caching==1.3.3" \
+    && pip install "Flask-Login==0.4.1" \
+    && pip install "Flask-OpenID==1.2.5" \
+    && pip install "Flask-SQLAlchemy==2.4.0" \
+    && pip install "flask-swagger==0.2.13" \
+    && pip install "Flask-WTF==0.14.2" \
     && pip install gdal==2.1.0 \
     && pip install git+https://github.com/jguthmiller/pygeobuf.git@geobuf-v3 \
     && pip install geojson \
@@ -122,6 +135,7 @@ RUN pip install -U pip setuptools wheel \
     && pip install rtree \
     && pip install shapely \
     && pip install "tornado>=4.2.0,<6.0.0" \
+    && pip install "Werkzeug==0.14.1" \
     && pip install xlrd \
     && apt-get autoremove -yqq --purge \
     && apt-get clean \
@@ -145,9 +159,9 @@ RUN apt-get update \
     && apt-get install -t unstable -y --no-install-recommends \
       littler \
       r-cran-littler \
-      r-base=${R_BASE_VERSION}-* \
-      r-base-dev=${R_BASE_VERSION}-* \
-      r-recommended=${R_BASE_VERSION}-* \
+      r-base \
+      r-base-dev \
+      r-recommended \
       && ln -s /usr/lib/R/site-library/littler/examples/install.r /usr/local/bin/install.r \
       && ln -s /usr/lib/R/site-library/littler/examples/install2.r /usr/local/bin/install2.r \
       && ln -s /usr/lib/R/site-library/littler/examples/installGithub.r /usr/local/bin/installGithub.r \

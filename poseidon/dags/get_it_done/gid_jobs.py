@@ -22,7 +22,7 @@ parks_file_gid = conf['temp_data_dir'] + '/gid_parks.csv'
 services_file = conf['temp_data_dir'] + '/gid_final.csv'
 
 prod_file_base = conf['prod_data_dir'] + '/get_it_done_'
-prod_file_end = 'requests_datasd.csv'
+prod_file_end = 'requests_datasd_v1.csv'
 prod_file_gid = prod_file_base + prod_file_end
 
 
@@ -50,9 +50,9 @@ def sap_case_sub_type(row):
 
 def get_gid_requests():
     """Get requests from sf, creates prod file."""
-    username = conf['mrm_sf_user']
-    password = conf['mrm_sf_pass']
-    security_token = conf['mrm_sf_token']
+    username = conf['dpint_sf_user']
+    password = conf['dpint_sf_pass']
+    security_token = conf['dpint_sf_token']
 
     report_id = "00Ot0000000TUnb"
 
@@ -567,27 +567,27 @@ def create_prod_files():
         'case_number':'service_request_id',
         'parent_case_number':'service_request_parent_id',
         'case_category':'service_name',
-        'date_time_opened':'requested_datetime',
-        'date_time_closed':'updated_datetime',
+        'date_time_opened':'date_requested',
+        'date_time_closed':'date_updated',
         'district':'council_district',
         'cpcode':'comm_plan_code',
         'cpname':'comm_plan_name',
-        'name':'park_name'
-
+        'name':'park_name',
+        'long':'lng'
         })
 
     final_reports = final_reports[[
     'service_request_id',
     'service_request_parent_id',
     'sap_notification_number',
-    'requested_datetime',
+    'date_requested',
     'case_age_days',
     'service_name',
     'case_record_type',
-    'updated_datetime',
+    'date_updated',
     'status',
     'lat',
-    'long',
+    'lng',
     'council_district',
     'comm_plan_code',
     'comm_plan_name',
@@ -598,15 +598,15 @@ def create_prod_files():
     'public_description'
     ]]
 
-    final_reports = final_reports.sort_values(by=['service_request_id','requested_datetime','updated_datetime'])
+    final_reports = final_reports.sort_values(by=['service_request_id','date_requested','date_updated'])
 
     general.pos_write_csv(
         final_reports,
         services_file,
         date_format='%Y-%m-%dT%H:%M:%S%z')
 
-    min_report = final_reports['requested_datetime'].min().year
-    max_report = final_reports['requested_datetime'].max().year
+    min_report = final_reports['date_requested'].min().year
+    max_report = final_reports['date_requested'].max().year
 
     final_reports = final_reports.drop(['specify_the_issue'],axis=1)
 
@@ -616,8 +616,8 @@ def create_prod_files():
         logging.info('Subsetting records for {}'.format(year))
         file_path = prod_file_base+this_yr+'_'+prod_file_end
         file_subset = final_reports[
-            (final_reports['requested_datetime'] >= this_yr+'-01-01 00:00:00') &
-            (final_reports['requested_datetime'] < next_yr+'-01-01 00:00:00')]
+            (final_reports['date_requested'] >= this_yr+'-01-01 00:00:00') &
+            (final_reports['date_requested'] < next_yr+'-01-01 00:00:00')]
 
         logging.info('Writing {} records to prod'.format(file_subset.shape[0]))
         general.pos_write_csv(
@@ -659,15 +659,15 @@ def prepare_sonar_gid_data():
     gid = pd.read_csv(potholes_file)
 
     # Set accepted fields
-    fields = ['service_request_id', 'requested_datetime', 'updated_datetime',
-              'case_origin', 'service_name', 'status', 'lat', 'long']
+    fields = ['service_request_id', 'date_requested', 'date_updated',
+              'case_origin', 'service_name', 'status', 'lat', 'lng']
 
     # Filter on field
     gid = gid[fields]
 
     # Convert datetime columns
-    gid['requested_datetime'] = pd.to_datetime(gid['requested_datetime'])
-    gid['updated_datetime'] = pd.to_datetime(gid['updated_datetime'])
+    gid['date_requested'] = pd.to_datetime(gid['date_requested'])
+    gid['date_updated'] = pd.to_datetime(gid['date_updated'])
 
     return gid
 
@@ -683,9 +683,16 @@ def build_gid_sonar_ph_closed(**kwargs):
     gid_ph_closed = gid[mask]
     gid_ph_closed = gid_ph_closed.copy()
 
+    range_start_year = range_start.year
+    range_start_month = range_start.month
+    range_start_day = range_start.day
+
+    range_start_naive = dt.datetime(range_start_year,range_start_month,range_start_day)
+
     # Get closed potholes, last x days
-    potholes_closed = gid_ph_closed[gid_ph_closed['requested_datetime'] >=
-                                    range_start].shape[0]
+    potholes_sub = gid_ph_closed.loc[gid_ph_closed['date_requested'] >= range_start_naive]
+
+    potholes_closed = potholes_sub.shape[0]
 
     # Return expected dict
     return {'value': potholes_closed}
