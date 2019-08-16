@@ -1,6 +1,6 @@
 from airflow.operators.python_operator import PythonOperator
 from airflow.models import DAG
-from dags.cityiq.cityiqjobs import get_token_response, get_assets, get_asset_details, get_pkout_bbox, get_pkin_bbox
+from dags.cityiq.cityiqjobs import get_token_response, get_pkout_bbox, get_pkin_bbox #, get_assets, get_asset_details, get_pedevt_bbox, get_tfevt_bbox
 from trident.util import general
 from trident.util.notifications import notify
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
@@ -44,19 +44,40 @@ get_pkin_bbox = PythonOperator(
     on_success_callback=notify,
     dag=dag)
 
-get_assets = PythonOperator(
-    task_id='get_assets',
-    provide_context=True,
-    python_callable=get_assets,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
-    dag=dag)
+# get_pedevt_bbox = PythonOperator(
+#     task_id='get_pedevt_bbox',
+#     provide_context=True,
+#     python_callable=get_pedevt_bbox,
+#     on_failure_callback=notify,
+#     on_retry_callback=notify,
+#     on_success_callback=notify,
+#     dag=dag)
+
+# get_tfevt_bbox = PythonOperator(
+#     task_id='get_tfevt_bbox',
+#     provide_context=True,
+#     python_callable=get_tfevt_bbox,
+#     on_failure_callback=notify,
+#     on_retry_callback=notify,
+#     on_success_callback=notify,
+#     dag=dag)
+
+# get_assets = PythonOperator(
+#     task_id='get_assets',
+#     provide_context=True,
+#     python_callable=get_assets,
+#     on_failure_callback=notify,
+#     on_retry_callback=notify,
+#     on_success_callback=notify,
+#     dag=dag)
 
 upstream_dict = {
     'pkin': get_pkin_bbox, 
     'pkout': get_pkout_bbox, 
-    'assets': get_assets}
+    'pedevt': get_pedevt_bbox
+    # 'tfevt': get_tfevt_bbox,
+    # 'assets': get_assets
+    }
 
 for prefix in upstream_dict.keys():
     file_time = datetime.now().strftime('%Y_%m_%d_') 
