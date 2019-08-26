@@ -180,6 +180,7 @@ schedule = {
     'documentum_others' : "30 * * * *",
     'tsw_integration': '0 6 * * *',  # daily at 6am UTC / 10pm PST
     'cip': '@daily',
+	'cityiq': '@daily',
     'onbase_test': '*/15 * * * *',
     'gis_tree_canopy': None
 }
@@ -220,6 +221,7 @@ start_date = {
     'documentum_others' : default_date,
     'tsw_integration': default_date,
     'cip': default_date,
+    'cityiq': datetime(2019, 8, 25),
     'onbase_test': datetime(2019, 7, 28),
     'gis_tree_canopy': datetime(2019, 6, 30)
 }
