@@ -141,14 +141,25 @@ def split_reso_ords():
             logging.info(f"Wrote {div_years[i-1]}_{year-1}")
             record_count += sub_div.shape[0]
 
-    df_current = df.loc[df['DOC_DATE'] >= f"01/01/{div_years[-1]}"]
-    general.pos_write_csv(df_current, f"{save_path}_{div_years[-1]}_current.csv")
-    logging.info(f"Wrote {year}_current")
-    record_count += df_current.shape[0]
-
     df_invalid = df.loc[df['DOC_DATE'].isnull()]
     general.pos_write_csv(df_invalid, f"{save_path}_invalid.csv")
     logging.info("Wrote records with invalid date")
     record_count += df_invalid.shape[0]
 
     return f"Successfully divided {record_count} from {filename}"
+
+def latest_res_ords():
+    """Get last decade from reso and ords table"""
+
+    filename = 'documentum_scs_council_reso_ordinance_v.csv'
+    save_path = f"{conf['prod_data_dir']}/documentum_scs_council_reso_ordinance_v"
+    df = pd.read_csv(f"{conf['prod_data_dir']}/{filename}",
+        low_memory=False)
+
+    df['DOC_DATE'] = pd.to_datetime(df['DOC_DATE'],errors='coerce')
+
+    df_current = df.loc[df['DOC_DATE'] >= f"01/01/2016"]
+    general.pos_write_csv(df_current, f"{save_path}_2016_current.csv")
+    logging.info(f"Wrote 2016_current")
+
+    return f"Successfully extracted this decade of resos and ords"
