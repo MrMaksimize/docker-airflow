@@ -11,6 +11,8 @@ conf = general.config
 prod_path = conf['prod_data_dir']
 temp_path = conf['temp_data_dir']
 
+
+
 def get_crb_excel():
     """Use mget on to download CRB Excel files."""
     logging.info('Retrieving CRB Excel files.')
@@ -35,6 +37,13 @@ def get_crb_excel():
         return p
     except subprocess.CalledProcessError as e:
         return e.output
+
+def get_officer_anon(g):
+    
+    g['pid'] = g['officer_name'].astype('category').cat.codes
+    g['pid'] = g['pid'].apply(lambda x: x+1)
+    
+    return g
 
 def create_crb_cases_prod():
     """ Pick up CRB excel from temp and process """
@@ -94,11 +103,18 @@ def create_crb_cases_prod():
                     fy_cols[comp_race[0]] = 'race_0'
                     fy_cols[comp_gend[0]] = 'gender_0'
                     fy_crb_rows.columns = fy_cols
+                    # Removing blank rows using Allegation columns
+                    fy_crb_rows = fy_crb_rows.dropna(subset=['allegation'])
+                    fy_crb_rows['#'] = fy_crb_rows['#'].fillna(method='ffill')
+                    fy_crb_rows['case'] = fy_crb_rows['case'].fillna(method='ffill')
+                    fy_crb_rows["officer's_name"] = fy_crb_rows["officer's_name"].fillna(method='ffill')
                     # Appending sheet data to data list
                     data.append(fy_crb_rows[temp_cols])
                     logging.info(f"Read {ky} sheet from {f}")
 
     df = pd.concat(data,ignore_index=True)
+
+    df['vote'] = df['vote'].str.split('-').str.join(' ')
 
     logging.info("Renaming columns")
 
@@ -118,28 +134,76 @@ def create_crb_cases_prod():
     "officer's_name":'officer_name',
     'race':'officer_race',
     'gender':'officer_gender',
-    'years_of_service':'officer_yrs_of_svce'})
+    'years_of_service':'officer_yrs_of_svce',
+    'bwc_on/off':'bwc_on'})
+
+    # Breaking out officers
+    officer_series = df['officer_name'].str.split(';').apply(pd.Series, 1).stack()
+    officer_series.index = officer_series.index.droplevel(-1)
+    officer_series.name = 'officer_name'
+
+    df = df.rename(columns={'officer_name':'officer_name_orig'})
+    df = df.join(officer_series)
+    df = df.reset_index(drop=True)
 
     # Need to add an anonymous officer id
+    officers = df.loc[:,['id',
+    'case_number',
+    'officer_name',
+    'bwc_on']]
+
+    officers_dedupe = officers.copy().dropna(subset=['bwc_on'])
+    officers_dedupe = officers_dedupe.drop_duplicates(['id','officer_name'])
+
+    officers_dedupe['pid'] = -1
+
+    officers_anon = officers_dedupe.groupby(['id']).apply(get_officer_anon)
+    officers_final = officers_anon.dropna()
+
+    df_anon = pd.merge(df,officers_final[['id','case_number','officer_name','pid']],
+        how='left',
+        right_on=['id','case_number','officer_name'],
+        left_on=['id','case_number','officer_name'])
+
+
+    officers_final = officers_final.drop('officer_name',axis=1)
+
+    officers_final = officers_final[['id','pid','case_number','bwc_on']]
+    officers_final = officers_final.sort_values(by=['id','pid'],ascending=[False,True])
+
+    general.pos_write_csv(
+        officers_final,
+        f"{prod_path}/crb_cases_bwc_datasd.csv")
 
     # Cannot publish officer name, complainant name,
     # officer race, gender, or yrs of service
-    df = df.drop(['complainant_name',
+    df_anon = df_anon.drop(['complainant_name',
         'officer_name',
+        'officer_name_orig',
         'officer_race',
         'officer_gender',
         'incident_address',
-        'officer_yrs_of_svce'
+        'officer_yrs_of_svce',
+        'bwc_viewed_by_crb_team'
         ],axis=1)
 
     logging.info("Filling in missing values for rows belonging to same case")
 
-    df = df.fillna(method='ffill')
+    df_anon = df_anon.fillna(method='ffill')
+    df_anon = df_anon.sort_values(by=['id','pid'],ascending=[False,True])
+    prod_cols = list(df_anon.columns)
+    prod_cols = [prod_cols[0]] + [prod_cols[-1]] + prod_cols[1:-1]
+    prod_file = df_anon[prod_cols]
 
     prod_file_name = 'crb_cases_datasd'
+    prod_file2 = prod_file.drop(['bwc_on'],axis=1)
 
     general.pos_write_csv(
-        df,
+        prod_file,
         f"{prod_path}/{prod_file_name}.csv")
+
+    general.pos_write_csv(
+        prod_file2,
+        f"{prod_path}/crb_cases_nobwc_datasd.csv")
 
     return "Successfully processed CRB cases"
