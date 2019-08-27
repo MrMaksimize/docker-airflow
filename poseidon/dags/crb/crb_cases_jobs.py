@@ -14,16 +14,19 @@ temp_path = conf['temp_data_dir']
 def get_crb_excel():
     """Use mget on to download CRB Excel files."""
     logging.info('Retrieving CRB Excel files.')
-    adname = conf['mrm_sannet_user']
-    adpass = conf['mrm_sannet_pass']
-
-    command = f"smbclient //ad.sannet.gov/dfs " \
+    command = "smbclient //ad.sannet.gov/dfs " \
         + "--user={adname}%{adpass} -W ad -c " \
+        + "'prompt OFF;"\
         + " cd \"PublicServ-Shared/" \
         + "CitizenReviewBrd/CRB/" \
         + "Case Tracking Information/" \
-        + "CRB Case Tracking FY 2018-2019\";" \
-        + " get CRB Case Tracking FY 2018-2019.xlsx {temp_path}/crb_cases_fy18-19.xlsx'"
+        + "CRB CASE TRACKING/\";" \
+        + " lcd \"/data/temp/\";" \
+        + " mget *.xlsx'"
+
+    command = command.format(adname=conf['alb_sannet_user'],
+                             adpass=conf['alb_sannet_pass'],
+                             temp_dir=conf['temp_data_dir'])
 
     logging.info(command)
 
@@ -48,8 +51,8 @@ def create_crb_cases_prod():
     'presented',
     'days',
     '60_days_or_less', 
-    '90days_or_less',
-    '120days_or_less',
+    '90_days_or_less',
+    '120_days_or_less',
     'allegation',
     'ia_finding',
     'crb_decision',
@@ -58,7 +61,8 @@ def create_crb_cases_prod():
     'unanimous_vote',
     'incident_address',
     'pd_division',
-    'body_camera?',
+    'bwc_viewed_by_crb_team',
+    'bwc_on/off',
     "complainant's_name",
     'race_0',
     'gender_0',
@@ -70,7 +74,7 @@ def create_crb_cases_prod():
     logging.info("Looping through temp files to find crb case tracking excel docs")
 
     for f in temp_files:
-        if 'crb_cases' in f:
+        if 'CRB Case Tracking' in f:
             logging.info(f"Found {f} excel, processing")
             file_path = f"{temp_path}/{f}"
             file_read = pd.read_excel(file_path,sheet_name=None,header=None)
@@ -78,6 +82,7 @@ def create_crb_cases_prod():
             logging.info("Looking in Excel for fy sheets")
             for ky in keys:
                 if fy_regx.match(ky):
+                    logging.info(f"Using sheet {ky}")
                     # Reading from row 3
                     fy_crb_rows = file_read[ky].loc[3:].copy()
                     # Creating column list from line 2
@@ -114,6 +119,8 @@ def create_crb_cases_prod():
     'race':'officer_race',
     'gender':'officer_gender',
     'years_of_service':'officer_yrs_of_svce'})
+
+    # Need to add an anonymous officer id
 
     # Cannot publish officer name, complainant name,
     # officer race, gender, or yrs of service
