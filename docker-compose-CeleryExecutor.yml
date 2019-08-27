@@ -14,12 +14,11 @@ services:
             - POSTGRES_USER=${POSTGRES_USER}
             - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
             - POSTGRES_DB=postgres
-            - PGDATA="/var/lib/postgresql/data/pgdata"
         volumes:
-            - ./pgdata:/var/lib/postgresql/data/pgdata
+            - ./pgdata:/var/lib/postgresql/data
 
     webserver:
-        image: mrmaksimize/docker-airflow:1.10.2
+        image: mrmaksimize/docker-airflow:1.10.3
         restart: always
         depends_on:
             - postgres
@@ -54,7 +53,7 @@ services:
             retries: 3
 
     flower:
-        image: mrmaksimize/docker-airflow:1.10.2
+        image: mrmaksimize/docker-airflow:1.10.3
         restart: always
         depends_on:
             - redis
@@ -79,7 +78,7 @@ services:
         command: flower
 
     scheduler:
-        image: mrmaksimize/docker-airflow:1.10.2
+        image: mrmaksimize/docker-airflow:1.10.3
         restart: always
         depends_on:
             - webserver
@@ -106,7 +105,7 @@ services:
         command: scheduler
 
     worker:
-        image: mrmaksimize/docker-airflow:1.10.2
+        image: mrmaksimize/docker-airflow:1.10.3
         restart: always
         depends_on:
             - scheduler

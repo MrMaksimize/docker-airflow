@@ -10,7 +10,7 @@ fy = general.get_FY_year()
 
 def get_traffic_counts(out_fname='traffic_counts_file'):
     """Get traffic counts file from shared drive."""
-    logging.info('Retrieving data for current FY.')
+    logging.info(f'Retrieving data for FY {fy}.')
     command = "smbclient //ad.sannet.gov/dfs " \
         + "--user={adname}%{adpass} -W ad -c " \
         + "'cd \"TSW-TEO-Shared/TEO/" \
@@ -18,13 +18,11 @@ def get_traffic_counts(out_fname='traffic_counts_file'):
         + "Traffic Data/{fy}/RECORD FINDER\";" \
         + " ls; get Machine_Count_Index.xlsx {temp_dir}/{out_f}.xlsx;'"
 
-    command = command.format(adname=conf['mrm_sannet_user'],
-                             adpass=conf['mrm_sannet_pass'],
+    command = command.format(adname=conf['svc_acct_user'],
+                             adpass=conf['svc_acct_pass'],
                              fy=fy,
                              temp_dir=conf['temp_data_dir'],
                              out_f=out_fname)
-
-    logging.info(command)
 
     p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
     output, error = p.communicate()
@@ -45,20 +43,19 @@ def clean_traffic_counts(src_fname='traffic_counts_file',
 
     names = ['street_name',
              'limits',
-             'all_count',
              'northbound_count',
              'southbound_count',
              'eastbound_count',
              'westbound_count',
              'total_count',
              'file_no',
-             'count_date']
+             'date_count']
 
     worksheet = pd.read_excel(xlsx_file,
                               sheet_name='TRAFFIC',
                               header=None,
                               skiprows=[0, 1, 2, 3],
-                              usecols=[8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+                              usecols=[8, 9, 10, 11, 12, 13, 14, 15, 16],
                               names=names)
 
     # Write temp csv
@@ -71,7 +68,7 @@ def clean_traffic_counts(src_fname='traffic_counts_file',
 
 
 def build_traffic_counts(src_fname='traffic_counts_raw_clean',
-                         out_fname='traffic_counts_datasd'):
+                         out_fname='traffic_counts_datasd_v1'):
     """Build traffic counts production data."""
     src_file = "{0}/{1}.csv"\
         .format(conf['temp_data_dir'], src_fname)
@@ -86,7 +83,7 @@ def build_traffic_counts(src_fname='traffic_counts_raw_clean',
     counts = counts[counts['street_name'] != ' ']
 
     # date type
-    counts['count_date'] = pd.to_datetime(counts['count_date'])
+    counts['date_count'] = pd.to_datetime(counts['date_count'],errors='coerce')
 
     # create id field based on file id and street
     counts['id'] = counts.street_name.str.cat(counts.file_no, sep="")\

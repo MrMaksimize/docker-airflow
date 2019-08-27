@@ -31,8 +31,12 @@ LEFT OUTER JOIN [dbo].pvevents pve ON wo.id = pve.workorder
 INNER JOIN [dbo].pvmaingeneral pvm ON pve.pvmaingeneraloid = pvm.pvmaingeneraloid
 WHERE (wo.id LIKE 'FY1%' 
 OR wo.id LIKE 'AC%'
+OR wo.id LIKE 'ACR%'
 OR wo.id LIKE 's1%'
+OR wo.id LIKE 's2%'
+OR wo.id LIKE 'SP17%'
 OR wo.id LIKE 'pcc%'
+OR wo.id = 'DMP1A'
 OR wo.id = 'TSW'
 OR wo.id = 'utly')
 AND wo.id != 'FY10-S3M'

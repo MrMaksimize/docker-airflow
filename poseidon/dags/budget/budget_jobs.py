@@ -210,13 +210,13 @@ def get_ref_sets():
     logging.info("Writing reference sets")
 
     general.pos_write_csv(funds,prod_path \
-        + "/budget_reference_funds_datasd.csv")
+        + "/budget_reference_funds_datasd_v1.csv")
     general.pos_write_csv(projects,prod_path \
-        + "/budget_reference_projects_datasd.csv")
+        + "/budget_reference_projects_datasd_v1.csv")
     general.pos_write_csv(depts,prod_path \
-        + "/budget_reference_depts_datasd.csv")
+        + "/budget_reference_depts_datasd_v1.csv")
     general.pos_write_csv(items,prod_path \
-        + "/budget_reference_accounts_datasd.csv")
+        + "/budget_reference_accounts_datasd_v1.csv")
 
     return "Successfully created reference sets"
         
@@ -234,11 +234,11 @@ def create_capital():
     budgets = adopted + proposed + todate
 
     fund_ref = pd.read_csv(prod_path \
-        + "/budget_reference_funds_datasd.csv",dtype={'fund_number':str})
+        + "/budget_reference_funds_datasd_v1.csv",dtype={'fund_number':str})
     proj_ref = pd.read_csv(prod_path \
-        + "/budget_reference_projects_datasd.csv",dtype={'project_number':str})
+        + "/budget_reference_projects_datasd_v1.csv",dtype={'project_number':str})
     accounts_ref = pd.read_csv(prod_path \
-        + "/budget_reference_accounts_datasd.csv",dtype={'account_number':str})
+        + "/budget_reference_accounts_datasd_v1.csv",dtype={'account_number':str})
 
     for count, budget in enumerate(budgets):
         fy_pattern = re.compile(r'([0-9][0-9])')
@@ -246,13 +246,13 @@ def create_capital():
 
         if "2DATE" in budget:
             out_fname = prod_path \
-                + "/budget_capital_ptd_FY{}_datasd.csv".format(this_fy[0])
+                + "/budget_capital_ptd_FY{}_datasd_v1.csv".format(this_fy[0])
         elif "PROP" in budget:
             out_fname = prod_path \
-                + "/budget_capital_FY{}_prop_datasd.csv".format(this_fy[0])
+                + "/budget_capital_FY{}_prop_datasd_v1.csv".format(this_fy[0])
         else:
             out_fname = prod_path \
-                + "/budget_capital_FY{}_datasd.csv".format(this_fy[0])
+                + "/budget_capital_FY{}_datasd_v1.csv".format(this_fy[0])
 
         df = pd.read_excel(budget)
         df = df.iloc[:, [0,1,2,3]]
@@ -307,10 +307,10 @@ def create_operating():
 
         if "PROP" in budget:
             out_fname = prod_path \
-                + "/budget_operating_FY{}_prop_datasd.csv".format(this_fy[0])
+                + "/budget_operating_FY{}_prop_datasd_v1.csv".format(this_fy[0])
         else:
             out_fname = prod_path \
-            + "/budget_operating_FY{}_datasd.csv".format(this_fy[0])
+            + "/budget_operating_FY{}_datasd_v1.csv".format(this_fy[0])
 
         df = pd.read_excel(budget)
         df = df.iloc[:, [0,1,2,3]]
@@ -320,11 +320,11 @@ def create_operating():
         df['commitment_item'] = df['commitment_item'].astype(str)
 
         fund_ref = pd.read_csv(prod_path \
-            + "/budget_reference_funds_datasd.csv",dtype={'fund_number':str})
+            + "/budget_reference_funds_datasd_v1.csv",dtype={'fund_number':str})
         depts_ref = pd.read_csv(prod_path \
-            + "/budget_reference_depts_datasd.csv",dtype={'funds_center_number':str})
+            + "/budget_reference_depts_datasd_v1.csv",dtype={'funds_center_number':str})
         accounts_ref = pd.read_csv(prod_path \
-            + "/budget_reference_accounts_datasd.csv",dtype={'account_number':str})
+            + "/budget_reference_accounts_datasd_v1.csv",dtype={'account_number':str})
 
         df = pd.merge(df,
             fund_ref[['fund_type','fund_number']],
