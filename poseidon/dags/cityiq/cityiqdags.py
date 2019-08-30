@@ -44,7 +44,7 @@ event_files = ["pkin","pkout"]
 
 for file in event_files:
     file_time = datetime.now().strftime('%Y_%m_%d_') 
-    file_name = f'{file_time}_{file}.json'
+    file_name = f'{file_time}{file}.json'
     s3_upload = S3FileTransferOperator( # creating a different upload object for each...
         task_id=f'upload_{file}',
         source_base_path=conf['prod_data_dir'],

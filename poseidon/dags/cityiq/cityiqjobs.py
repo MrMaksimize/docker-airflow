@@ -37,7 +37,6 @@ def get_token_response():
 		response = requests.request("GET", token_url, data=payload, headers=headers, params=query_string)
 		token_data = json.loads(response.text)
 		token = token_data['access_token']
-		logging.info(token)
 		return token
 
 	except Exception as e:
