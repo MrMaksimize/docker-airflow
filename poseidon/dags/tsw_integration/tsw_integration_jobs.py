@@ -132,7 +132,7 @@ def get_pts_violations():
      + "--user=$ftp_user " \
      + "--password='$ftp_pass' " \
      + "--directory-prefix=$temp_dir " \
-     + "ftp://ftp.datasd.org/uploads/dsd/stormwater/tsw_violations_pts*.csv"
+     + "ftp://ftp.datasd.org/uploads/dsd/stormwater/*Panda_Extract_STW_*.csv"
     tmpl = string.Template(wget_str)
     command = tmpl.substitute(
     ftp_user=conf['ftp_datasd_user'],
@@ -169,7 +169,11 @@ def combine_violations():
     logging.info(f"Fixing {vs.loc[(vs.ADDRESS == '') | (vs.ADDRESS == 'nan')].shape[0]} missing addresses")
 
     parcel_addresses = vs.apply(parcel_to_address,axis=1)
-    vs['ADDRESS'] = parcel_addresses
+    parcel_add_df = pd.DataFrame(parcel_addresses)
+    #parcel_addr_cols = [col for col in parcel_add_df.columns if 'addr' in col or 'stre' in col or 'suf' in col]
+    logging.info(parcel_add_df.head())
+
+    #vs['ADDRESS'] = parcel_addresses
     
     logging.info('Create geo id based on address for merging')
     
@@ -248,12 +252,26 @@ def combine_violations():
 def _clean_pts_violations():
     """ Clean data coming in from PTS """
 
-    filename = conf['temp_data_dir'] + "/tsw_violations_pts_*.csv"
+    filename = conf['temp_data_dir'] + "/*Panda_Extract_STW_*.csv"
     list_of_files = glob.glob(filename)
     latest_file = max(list_of_files, key=os.path.getmtime)
     logging.info(f"Reading in {latest_file}")
 
-    ptsv = pd.read_csv(latest_file,dtype={'LONGITUDE':np.float64,
+    ptsv = pd.read_csv(latest_file,names=['INSP_ID',
+        'ASSESSOR_PARCEL_10',
+        'LATITUDE',
+        'LONGITUDE',
+        'STREET_ADDRESS',
+        'INSP_TYPE_ID',
+        'INSP_TYPE_NM',
+        'INSP_RESULT_ID',
+        'INSP_RESULT_NM',
+        'PERFORMED_END_DT',
+        'PROJ_TITLE',
+        'SCOPE',
+        'LOCATION_NOTE',
+        'CONSTRUCTION_NOTE'
+        ],dtype={'LONGITUDE':np.float64,
         'LATITUDE':np.float64,
         'PARCEL_APN':str
         })
