@@ -26,8 +26,8 @@ def get_crb_excel():
         + " lcd \"/data/temp/\";" \
         + " mget *.xlsx'"
 
-    command = command.format(adname=conf['alb_sannet_user'],
-                             adpass=conf['alb_sannet_pass'],
+    command = command.format(adname=conf['svc_acct_user'],
+                             adpass=conf['svc_acct_pass'],
                              temp_dir=conf['temp_data_dir'])
 
     logging.info(command)
@@ -90,7 +90,7 @@ def create_crb_cases_prod():
             keys = file_read.keys()
             logging.info("Looking in Excel for fy sheets")
             for ky in keys:
-                if fy_regx.match(ky):
+                if fy_regx.match(ky) and ky != 'FY18':
                     logging.info(f"Using sheet {ky}")
                     # Reading from row 3
                     fy_crb_rows = file_read[ky].loc[3:].copy()
