@@ -13,67 +13,56 @@ import cx_Oracle
 from trident.util.geospatial import spatial_join_pt
 
 conf = general.config
-credentials = general.source['dsd_permits']
-year = datetime.now().year
-temp_permits = conf['temp_data_dir'] + '/permits_{}_extract.csv'.format(year)
-prod_permits = conf['temp_data_dir'] + '/permits_{}_clean.csv'.format(year)
-solar_permits = conf['prod_data_dir'] + '/solar_permits_{}_datasd_v1.csv'.format(year)
-bid_permits = conf['prod_data_dir'] + '/dsd_permits_{}_datasd_v1.csv'.format(year)
-
+prod_permits = f"{conf['temp_data_dir']}/permits_latest.csv"
+bid_permits = f"{conf['prod_data_dir']}/dsd_permits_2019_datasd_v1.csv" 
 
 def get_permits_files():
-    """Query DB for 'permits' and save data to temp directory."""
+    """Get permit file from ftp site."""
     logging.info('Retrieving permits data.')
     
     wget_str = "wget -np --continue " \
-     + "--user=$ftp_user " \
-     + "--password='$ftp_pass' " \
-     + "--directory-prefix=$temp_dir " \
-     + "ftp://ftp.datasd.org/uploads/dsd/permits/pts_issued_*.csv"
+        + "--user=$ftp_user " \
+        + "--password='$ftp_pass' " \
+        + "--directory-prefix=$temp_dir " \
+        + "ftp://ftp.datasd.org/uploads/dsd/" \
+        + "permits/*Panda_Extract_PermitActivities*.txt"
+
     tmpl = string.Template(wget_str)
     command = tmpl.substitute(
-    ftp_user=conf['ftp_datasd_user'],
-    ftp_pass=conf['ftp_datasd_pass'],
-    temp_dir=conf['temp_data_dir'])
+        ftp_user=conf['ftp_datasd_user'],
+        ftp_pass=conf['ftp_datasd_pass'],
+        temp_dir=conf['temp_data_dir']
+    )
 
     return command
 
 def clean_data():
     """Get the permits file from temp directory, clean it, and save it in Prod directory"""
 
-    filename = conf['temp_data_dir'] + "/pts_issued_YTD*.csv"
+    filename = conf['temp_data_dir'] + "/*Panda_Extract_PermitActivities*.txt"
     list_of_files = glob.glob(filename)
     latest_file = max(list_of_files, key=os.path.getmtime)
     logging.info(f"Reading in {latest_file}")
 
-    date_cols = ['APPROVAL_ISSUE_DT',
-    'APPROVAL_CLOSE_DT',
-    'PROJ_APPL_DATE',
-    'PROJ_DEEMED_CMPL_DATE'
-    ]
-
-    df = pd.read_csv(latest_file,encoding = "ISO-8859-1",dtype={'JOB_LNG':np.float64,
-        'JOB_LAT':np.float64,
-        'JOB_APN':str},parse_dates=date_cols)
-    
+    df = pd.read_table(latest_file,sep=",",encoding = "ISO-8859-1")
     df.columns = [x.lower() for x in df.columns]
-    
-    df = df.rename(columns={
-        'approval_issue_dt':'date_approval_issued',
-        'approval_close_dt':'date_approval_closed',
-        'proj_appl_date':'date_proj_appl',
-        'proj_deemed_cmpl_date':'date_proj_compl',
+
+    final_cols = ["approval_id","approval_type_id","short_desc","approval_type","appr_proc_code","cat_code","authority","appl_days","approval_status","date_approval_issue","date_approval_close","job_id","proj_id","devel_id","proj_title","proj_scope","proj_job_order","date_proj_appl","proj_deemed_cmpl_date","lng_job","lat_job","job_apn","address","com_plan_id","com_plan","cust_name","valuation","stories","units","floorareas","bc_group"]
+
+    df = df.rename(columns={'job_lat':'lat_job',
         'job_lng':'lng_job',
-        'job_lat':'lat_job',
-        'job_address':'address_job'
+        'job_address':'address',
+        'approval_issue_dt':'date_approval_issue',
+        'approval_close_dt':'date_approval_close',
+        'proj_appl_date':'date_proj_appl',
+        'proj_deemed_compl_date':'date_proj_comp'
         })
 
-    df = df.sort_values(by='date_approval_issued')
 
-    logging.info('Writing all permits')
+    df_final = df[final_cols]
 
     general.pos_write_csv(
-    df,
+    df_final,
     prod_permits,
     date_format=conf['date_format_ymd_hms'])
 
@@ -102,16 +91,3 @@ def join_bids():
         date_format='%Y-%m-%dT%H:%M:%S%z')
 
     return 'Successfully joined permits to BIDs'
-
-def subset_solar():
-    """ Creating subset of solar permits """
-
-    df = pd.read_csv(bid_permits)
-    solar = df[df['approval_type_id'] == 293]
-
-    general.pos_write_csv(
-    solar,
-    solar_permits,
-    date_format=conf['date_format_ymd_hms'])
-
-    return "Successfully subsetted solar permits" 
