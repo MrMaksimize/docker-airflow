@@ -138,13 +138,13 @@ def create_crb_cases_prod():
     'bwc_on/off':'bwc_on'})
 
     # Breaking out officers
-    officer_series = df['officer_name'].str.split(';').apply(pd.Series, 1).stack()
-    officer_series.index = officer_series.index.droplevel(-1)
-    officer_series.name = 'officer_name'
+    #officer_series = df['officer_name'].str.split(';').apply(pd.Series, 1).stack()
+    #officer_series.index = officer_series.index.droplevel(-1)
+    #officer_series.name = 'officer_name'
 
-    df = df.rename(columns={'officer_name':'officer_name_orig'})
-    df = df.join(officer_series)
-    df = df.reset_index(drop=True)
+    #df = df.rename(columns={'officer_name':'officer_name_orig'})
+    #df = df.join(officer_series)
+    #df = df.reset_index(drop=True)
 
     # Need to add an anonymous officer id
     officers = df.loc[:,['id',
@@ -179,7 +179,6 @@ def create_crb_cases_prod():
     # officer race, gender, or yrs of service
     df_anon = df_anon.drop(['complainant_name',
         'officer_name',
-        'officer_name_orig',
         'officer_race',
         'officer_gender',
         'incident_address',
@@ -199,11 +198,7 @@ def create_crb_cases_prod():
     prod_file2 = prod_file.drop(['bwc_on'],axis=1)
 
     general.pos_write_csv(
-        prod_file,
-        f"{prod_path}/{prod_file_name}.csv")
-
-    general.pos_write_csv(
         prod_file2,
-        f"{prod_path}/crb_cases_nobwc_datasd.csv")
+        f"{prod_path}/crb_cases_datasd.csv")
 
     return "Successfully processed CRB cases"
