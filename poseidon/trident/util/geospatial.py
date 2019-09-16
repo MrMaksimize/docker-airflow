@@ -566,11 +566,13 @@ def get_address_for_apn(apn):
         }
 
     logging.info("Get address for APN {}".format(apn))
+
     response = requests.request("POST", url, headers=headers, params=querystring)
     data = response.json()
 
+
     if response.status_code == requests.codes.ok:
         apn_info = data['features'][0]['attributes']
-        return "{} {} {}".format(apn_info['SITUS_ADDRESS'], apn_info['SITUS_STREET'], apn_info['SITUS_SUFFIX'])
+        return "{} {} {}".format(apn_info['SITUS_ADDR'], apn_info['SITUS_STRE'], apn_info['SITUS_SUFF'])
     else:
         return f"APN: {apn}"
