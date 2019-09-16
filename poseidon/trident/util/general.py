@@ -156,10 +156,7 @@ schedule = {
     'parking_meters': "@daily",
     'traffic_counts': "@weekly",
     'read': "@daily",
-    'dsd_approvals': "@daily",
-    'dsd_code_enforcement': "@daily",
-    'streets_sdif': "@daily",
-    'streets_imcat': "@daily",
+    'dsd_approvals': "0 2 * * 1", # Weekly on Monday at 2p UTC / 7a PST
     'streets':"@hourly",
     'get_it_done': "@hourly",
     'gid_potholes': "0 12 * * *",
