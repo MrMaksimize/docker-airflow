@@ -50,7 +50,7 @@ upload_fd_data = S3FileTransferOperator(
     dag=dag)
 
 
-update_fire_incidents_problems = get_seaboard_update_dag('fire-incidents-problems.md', dag)
+update_fire_incidents_problems = get_seaboard_update_dag('fire-incident-problem-agg.md', dag)
 #: Execution order
 
 #: fd_latest_only must run before get_fd_data

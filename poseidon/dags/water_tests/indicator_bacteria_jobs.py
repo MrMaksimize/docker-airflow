@@ -15,7 +15,7 @@ conf = general.config
 
 def get_indicator_bacteria_tests(date_start='01-JAN-2014', date_end='15-JUN-2017', **kwargs):
     
-    # For test mode, because F* waiting so long.
+    # For test mode
     if kwargs['test_mode'] == True:
         logging.warning("RUNNING IN TEST MODE, PULLING LAST YEAR ONLY!!!!")
         date_start = (kwargs['execution_date'] - timedelta(days=365)).strftime('%d-%b-%Y')
