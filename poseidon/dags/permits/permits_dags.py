@@ -68,7 +68,7 @@ upload_dsd_permits = S3FileTransferOperator(
 
 
 #: update permits.md file
-update_permits_md = get_seaboard_update_dag('permits.md', dag)
+update_permits_md = get_seaboard_update_dag('permits-dsd.md', dag)
 
 
 #: Execution rules
