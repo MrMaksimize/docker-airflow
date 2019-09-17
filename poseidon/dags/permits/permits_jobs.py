@@ -47,7 +47,37 @@ def clean_data():
     df = pd.read_table(latest_file,sep=",",encoding = "ISO-8859-1")
     df.columns = [x.lower() for x in df.columns]
 
-    final_cols = ["approval_id","approval_type_id","short_desc","approval_type","appr_proc_code","cat_code","authority","appl_days","approval_status","date_approval_issue","date_approval_close","job_id","proj_id","devel_id","proj_title","proj_scope","proj_job_order","date_proj_appl","proj_deemed_cmpl_date","lng_job","lat_job","job_apn","address","com_plan_id","com_plan","cust_name","valuation","stories","units","floorareas","bc_group"]
+    final_cols = ["approval_id",
+    "approval_type_id",
+    "short_desc",
+    "approval_type",
+    "appr_proc_code",
+    "cat_code",
+    "authority",
+    "appl_days",
+    "approval_status",
+    "date_approval_issue",
+    "date_approval_close",
+    "job_id",
+    "proj_id",
+    "devel_id",
+    "proj_title",
+    "proj_scope",
+    "proj_job_order",
+    "date_proj_appl",
+    "date_proj_comp",
+    "lng_job",
+    "lat_job",
+    "job_apn",
+    "address",
+    "com_plan_id",
+    "com_plan",
+    "cust_name",
+    "valuation",
+    "stories",
+    "units",
+    "floorareas",
+    "bc_group"]
 
     df = df.rename(columns={'job_lat':'lat_job',
         'job_lng':'lng_job',
@@ -55,7 +85,7 @@ def clean_data():
         'approval_issue_dt':'date_approval_issue',
         'approval_close_dt':'date_approval_close',
         'proj_appl_date':'date_proj_appl',
-        'proj_deemed_compl_date':'date_proj_comp'
+        'proj_deemed_cmpl_date':'date_proj_comp'
         })
 
 

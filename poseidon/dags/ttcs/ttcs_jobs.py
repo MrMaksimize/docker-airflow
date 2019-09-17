@@ -403,7 +403,7 @@ def make_prod_files():
         conf['prod_data_dir']+'/sd_businesses_active_since08_datasd_v1.csv',
         date_format=conf['date_format_ymd'])
 
-    df_inactive = df_prod[df_prod['account_status'] == "Inactive"].reset_index()
+    df_inactive = df_prod[df_prod['account_status'] == "Inactive"].reset_index(drop=True)
     inactive_rows = df_inactive.shape[0]
 
     logging.info('Found {} inactive businesses'.format(inactive_rows))
