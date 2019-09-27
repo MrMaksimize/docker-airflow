@@ -2,6 +2,7 @@
 from airflow.operators.python_operator import PythonOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
 from airflow.operators.latest_only_operator import LatestOnlyOperator
+from airflow.operators.bash_operator import BashOperator
 from airflow.models import DAG
 from trident.util import general
 from dags.permits.permits_jobs import *
@@ -25,9 +26,9 @@ dsd_permits_latest_only = LatestOnlyOperator(
     task_id='dsd_permits_latest_only', dag=dag)
 
 #: Get permits reports
-get_permits_files = PythonOperator(
+get_permits_files = BashOperator(
     task_id='get_permits_files',
-    python_callable=get_permits_files,
+    bash_command=get_permits_files(),
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
@@ -51,36 +52,14 @@ join_bids = PythonOperator(
     on_success_callback=notify,
     dag=dag)
 
-#: Subset solar permits
-subset_solar = PythonOperator(
-    task_id='subset_solar',
-    python_callable=subset_solar,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
-    dag=dag)
-
 #: Upload data to S3
 upload_dsd_permits = S3FileTransferOperator(
    task_id='upload_dsd_permits',
    source_base_path=conf['prod_data_dir'],
-   source_key='dsd_permits_{}_datasd.csv'.format(year),
+   source_key='dsd_permits_{}_datasd_v1.csv'.format(year),
    dest_s3_bucket=conf['dest_s3_bucket'],
    dest_s3_conn_id=conf['default_s3_conn_id'],
-   dest_s3_key='dsd/' + 'dsd_permits_{}_datasd.csv'.format(year),
-   replace=True,
-   on_failure_callback=notify,
-   on_retry_callback=notify,
-   on_success_callback=notify,
-   dag=dag)
-
-upload_solar_permits = S3FileTransferOperator(
-   task_id='upload_solar_permits',
-   source_base_path=conf['prod_data_dir'],
-   source_key='solar_permits_{}_datasd.csv'.format(year),
-   dest_s3_bucket=conf['dest_s3_bucket'],
-   dest_s3_conn_id=conf['default_s3_conn_id'],
-   dest_s3_key='dsd/' + 'solar_permits_{}_datasd.csv'.format(year),
+   dest_s3_key='dsd/' + 'dsd_permits_{}_datasd_v1.csv'.format(year),
    replace=True,
    on_failure_callback=notify,
    on_retry_callback=notify,
@@ -88,12 +67,8 @@ upload_solar_permits = S3FileTransferOperator(
    dag=dag)
 
 
-
 #: update permits.md file
-update_permits_md = get_seaboard_update_dag('permits.md', dag)
-
-#: update permits.md file
-update_solar_md = get_seaboard_update_dag('solar-permits.md', dag)
+update_permits_md = get_seaboard_update_dag('permits-dsd.md', dag)
 
 
 #: Execution rules
@@ -107,19 +82,11 @@ clean_data.set_upstream(get_permits_files)
 #: upload_dsd tasks are executed after clean_data tasks
 join_bids.set_upstream(clean_data)
 
-#: subset_solar tasks are executed after clean_data tasks
-subset_solar.set_upstream(join_bids)
-
-#: upload_dsd tasks are executed after subset_solar tasks
-upload_dsd_permits.set_upstream(subset_solar)
-
-#: upload_dsd tasks are executed after clean_data tasks
-upload_solar_permits.set_upstream(subset_solar)
+#: upload_dsd tasks are executed after join bids tasks
+upload_dsd_permits.set_upstream(join_bids)
 
 #: github updates are executed after S3 upload tasks
 update_permits_md.set_upstream(upload_dsd_permits)
 
-#: github updates are executed after S3 upload tasks
-update_solar_md.set_upstream(upload_solar_permits)
 
 

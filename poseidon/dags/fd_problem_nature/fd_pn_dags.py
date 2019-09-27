@@ -39,10 +39,10 @@ get_fd_data = PythonOperator(
 upload_fd_data = S3FileTransferOperator(
     task_id='upload_fd_data',
     source_base_path=conf['prod_data_dir'],
-    source_key='/fd_problems_{}_datasd.csv'.format(cur_yr),
+    source_key='fd_problem_nature_agg_datasd_v1.csv'.format(cur_yr),
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_bucket=conf['dest_s3_bucket'],
-    dest_s3_key='fd_cad/' + 'fd_problems_{}_datasd.csv'.format(cur_yr),
+    dest_s3_key='fd_cad/' + 'fd_problem_nature_agg_datasd_v1.csv'.format(cur_yr),
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
@@ -50,7 +50,7 @@ upload_fd_data = S3FileTransferOperator(
     dag=dag)
 
 
-update_fire_incidents_problems = get_seaboard_update_dag('fire-incidents-problems.md', dag)
+update_fire_incidents_problems = get_seaboard_update_dag('fire-incident-problem-agg.md', dag)
 #: Execution order
 
 #: fd_latest_only must run before get_fd_data

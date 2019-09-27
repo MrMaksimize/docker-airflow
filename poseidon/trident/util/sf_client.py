@@ -83,7 +83,7 @@ class Salesforce(object):
             headers=login_soap_request_headers)
 
         if response.status_code != 200:
-            raise Exception("Login Failed")
+            raise Exception(response.status_code)
 
         self.session_id = getUniqueElementValueFromXmlString(response.content,
                                                              'sessionId')

@@ -35,9 +35,34 @@ get_doc_tables = PythonOperator(
     on_success_callback=notify,
     dag=dag)
 
+div_doc_table = PythonOperator(
+    task_id='divide_doc_table',
+    python_callable=latest_res_ords,
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
+
+upload_reso_ord = S3FileTransferOperator(
+    task_id='upload_documentum_reso_ordinance_latest',
+    source_base_path=conf['prod_data_dir'],
+    source_key='documentum_scs_council_reso_ordinance_v_2016_current.csv',
+    dest_s3_conn_id=conf['default_s3_conn_id'],
+    dest_s3_bucket=conf['dest_s3_bucket'],
+    dest_s3_key='city_docs/documentum_scs_council_reso_ordinance_v_2016_current.csv',
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    replace=True,
+    dag=dag)
+
 #: Execution rules
 #: documentum_docs_latest_only must run before get_doc_tables
 get_doc_tables.set_upstream(documentum_docs_latest_only)
+#: get_doc_tables must run before div_doc_table
+div_doc_table.set_upstream(get_doc_tables)
+#: get_doc_tables must run before upload_doc_tables
+upload_reso_ord.set_upstream(div_doc_table)
 
 files = [f for f in os.listdir(conf['prod_data_dir'])]
 tables_other = dn.table_name(schedule_mode)
@@ -62,4 +87,4 @@ for f in files:
                 dag=dag)
 
             #: get_doc_tables must run before upload_doc_tables
-            upload_doc_tables.set_upstream(get_doc_tables)
+            upload_doc_tables.set_upstream(div_doc_table)

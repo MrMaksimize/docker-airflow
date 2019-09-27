@@ -11,7 +11,7 @@ from trident.util import general
 conf = general.config
 cur_yr = general.get_year()
 cur_mon = datetime.now().month
-portal_fname = conf['prod_data_dir'] +'/treas_parking_payments_{}_datasd.csv'.format(cur_yr)
+portal_fname = conf['prod_data_dir'] +'/treas_parking_payments_{}_datasd_v1.csv'.format(cur_yr)
 
 def ftp_download_wget():
  """Download parking meters data from FTP."""
@@ -67,21 +67,21 @@ def build_prod_file(**kwargs):
 
     update = update.rename(columns={
         'MeterType': 'meter_type',
-        'StartDateTime': 'trans_start',
-        'ExpiryTime': 'meter_expire',
+        'StartDateTime': 'date_trans_start',
+        'ExpiryTime': 'date_meter_expire',
         'Amount': 'trans_amt',
         'TransactionType': 'pay_method',
-        'StartDateTime': 'trans_start',
+        'StartDateTime': 'date_trans_start',
         'PoleSerNo': 'pole_id'
     })
 
     # Convert datetime columns to dt
     logging.info("Setting datetime for update file")
-    update['trans_start'] = pd.to_datetime(update['trans_start'],
+    update['date_trans_start'] = pd.to_datetime(update['date_trans_start'],
                                            format="%m/%d/%Y %I:%M:%S %p",
                                            errors='coerce')
 
-    update['meter_expire'] = pd.to_datetime(update['meter_expire'],
+    update['date_meter_expire'] = pd.to_datetime(update['date_meter_expire'],
                                             format="%m/%d/%Y %I:%M:%S %p",
                                             errors='coerce')
 
@@ -100,7 +100,7 @@ def build_prod_file(**kwargs):
     # Construct a unique id:
     logging.info("Generating UUID for update file")
     update['uuid'] = update.meter_type.str.cat(update.pole_id, sep="")\
-        .str.cat(update.trans_start.dt.strftime('%y%m%d%H%M%S'), sep="")\
+        .str.cat(update.date_trans_start.dt.strftime('%y%m%d%H%M%S'), sep="")\
         .str.cat(update.trans_amt.astype(str), sep="")\
         .str.replace("-", "")
     
@@ -112,10 +112,10 @@ def build_prod_file(**kwargs):
     update = update[cols]
 
     logging.info("Sorting by transaction start")
-    update = update.sort_values(by='trans_start')
+    update = update.sort_values(by='date_trans_start')
 
     logging.info("Removing entries from other years")
-    update = update[update['trans_start'] >= cur_yr+'-01-01 00:00:00']
+    update = update[update['date_trans_start'] >= cur_yr+'-01-01 00:00:00']
 
     # Look for an existing file for the year to add to
     logging.info("Looking for this year's file")
@@ -158,19 +158,19 @@ def build_prod_file(**kwargs):
 
 def build_aggregation(agg_type="pole_by_month", **kwargs):
     """Aggregate raw production data by month/day."""
-    out_fname = 'treas_meters_{0}_{1}_datasd.csv'.format(cur_yr,agg_type)
+    out_fname = 'treas_meters_{0}_{1}_datasd_v1.csv'.format(cur_yr,agg_type)
 
     logging.info("Reading portal data " + portal_fname)
     portal = pd.read_csv(portal_fname)
 
     logging.info("Translate start_date to dt, create agg columns")
 
-    portal['trans_start'] = pd.to_datetime(
-                                portal['trans_start'],
+    portal['date_trans_start'] = pd.to_datetime(
+                                portal['date_trans_start'],
                                 format="%Y-%m-%d %H:%M:%S",
                                 errors='coerce')
-    portal['month'] = portal.trans_start.dt.month
-    portal['day'] = portal.trans_start.dt.day
+    portal['month'] = portal.date_trans_start.dt.month
+    portal['day'] = portal.date_trans_start.dt.day
 
     logging.info("Creating " + agg_type + " aggregation")
     if agg_type == 'pole_by_month':
