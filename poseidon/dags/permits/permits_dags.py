@@ -8,12 +8,13 @@ from trident.util import general
 from dags.permits.permits_jobs import *
 from trident.util.notifications import notify
 from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag
+from trident.util.datajson_updates import update_json_date, update_datajson_dag
 
 conf = general.config
 args = general.args
 schedule = general.schedule['dsd_approvals']
 start_date = general.start_date['dsd_approvals']
-year = general.get_year()
+year = dt.datetime.now().year
 
 #: Dag spec for dsd permits
 dag = DAG(dag_id='dsd_permits',
@@ -52,14 +53,37 @@ join_bids = PythonOperator(
     on_success_callback=notify,
     dag=dag)
 
+#: Check data types and rewrite dictionary
+prod_file = PythonOperator(
+    task_id='write_prod',
+    python_callable=create_prod_file,
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
+
 #: Upload data to S3
 upload_dsd_permits = S3FileTransferOperator(
    task_id='upload_dsd_permits',
    source_base_path=conf['prod_data_dir'],
-   source_key='dsd_permits_{}_datasd_v1.csv'.format(year),
+   source_key=f"dsd_permits_{year}_datasd_v1.csv",
    dest_s3_bucket=conf['dest_s3_bucket'],
    dest_s3_conn_id=conf['default_s3_conn_id'],
-   dest_s3_key='dsd/' + 'dsd_permits_{}_datasd_v1.csv'.format(year),
+   dest_s3_key=f"dsd/dsd_permits_{year}_datasd_v1.csv",
+   replace=True,
+   on_failure_callback=notify,
+   on_retry_callback=notify,
+   on_success_callback=notify,
+   dag=dag)
+
+#: Upload dictionary to S3
+upload_dictionary = S3FileTransferOperator(
+   task_id='upload_permit_dict',
+   source_base_path=conf['prod_data_dir'],
+   source_key=f"dsd_permits_{year}_datasd_v1_dict.csv",
+   dest_s3_bucket=conf['dest_s3_bucket'],
+   dest_s3_conn_id=conf['default_s3_conn_id'],
+   dest_s3_key=f"dictionaries/dsd_permits_{year}_datasd_v1_dict.csv",
    replace=True,
    on_failure_callback=notify,
    on_retry_callback=notify,
@@ -69,6 +93,9 @@ upload_dsd_permits = S3FileTransferOperator(
 
 #: update permits.md file
 update_permits_md = get_seaboard_update_dag('permits-dsd.md', dag)
+
+#: update json file
+update_datajson = update_datajson_dag('permits_for_development',dag)
 
 
 #: Execution rules
@@ -82,11 +109,20 @@ clean_data.set_upstream(get_permits_files)
 #: upload_dsd tasks are executed after clean_data tasks
 join_bids.set_upstream(clean_data)
 
+#: upload_dsd tasks are executed after final data tasks
+prod_file.set_upstream(join_bids)
+
 #: upload_dsd tasks are executed after join bids tasks
-upload_dsd_permits.set_upstream(join_bids)
+upload_dsd_permits.set_upstream(prod_file)
+
+#: upload_dsd tasks are executed after join bids tasks
+upload_dictionary.set_upstream(prod_file)
 
 #: github updates are executed after S3 upload tasks
 update_permits_md.set_upstream(upload_dsd_permits)
+
+#: datajson updates are executed after S3 upload tasks
+update_datajson.set_upstream(upload_dsd_permits)
 
 
 
