@@ -125,7 +125,7 @@ def get_sf_violations():
         df.shape[0])
 
 def get_pts_violations():
-    """Get violations from pts, creates temp file."""
+    """ Get violations from pts, creates temp file. """
     logging.info('Downloading PTS violations.')
 
     wget_str = "wget -np --continue " \

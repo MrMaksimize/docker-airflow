@@ -9,6 +9,7 @@ from airflow.models import DAG
 
 from trident.util import general
 from trident.util.notifications import notify
+from trident.util.seaboard_updates import *
 
 from dags.streets.streets_jobs import *
 
@@ -84,6 +85,16 @@ upload_sdif_data = S3FileTransferOperator(
     replace=True,
     dag=dag)
 
+update_json_date = PythonOperator(
+    task_id='update_json_date',
+    python_callable=update_json_date,
+    provide_context=True,
+    op_kwargs={'ds_fname': 'streets_repair_projects'},
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
+
 #: send file update email to interested parties
 #send_last_file_updated_email = PoseidonEmailFileUpdatedOperator(
     #task_id='send_last_file_updated',
@@ -95,6 +106,9 @@ upload_sdif_data = S3FileTransferOperator(
     #on_retry_callback=notify,
     #on_success_callback=notify,
     #dag=dag)
+
+#: Update portal modified date
+update_streets_md = get_seaboard_update_dag('streets-repair-projects.md', dag)
 
 for i in ['total', 'overlay', 'slurry']:
 
@@ -130,6 +144,12 @@ upload_sdif_data.set_upstream(process_data_sdif)
 
 #: Upload data is dependent on successful run of process_data_imcat
 upload_imcat_data.set_upstream(process_data_imcat)
+
+#: upload data must succeed before updating json
+update_json_date.set_upstream(upload_sdif_data)
+
+#: update github modified date after S3 upload
+update_streets_md.set_upstream(upload_sdif_data)
 
 #: email notification is sent after the data was uploaded to S3
 #send_last_file_updated_email.set_upstream(upload_imcat_data)

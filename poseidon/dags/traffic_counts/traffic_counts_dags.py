@@ -6,7 +6,7 @@ from airflow.operators.latest_only_operator import LatestOnlyOperator
 from dags.traffic_counts.traffic_counts_jobs import *
 from trident.util import general
 from trident.util.notifications import notify
-from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag
+from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag, update_json_date
 
 
 args = general.args
@@ -70,6 +70,16 @@ upload_traffic_counts = S3FileTransferOperator(
     on_success_callback=notify,
     dag=dag)
 
+update_json_date = PythonOperator(
+    task_id='update_json_date',
+    python_callable=update_json_date,
+    provide_context=True,
+    op_kwargs={'ds_fname': 'traffic_volumes'},
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
+
 #: Update portal modified date
 update_traffic_md = get_seaboard_update_dag('traffic-volumes.md', dag)
 
@@ -85,3 +95,5 @@ build_traffic_counts.set_upstream(clean_traffic_counts)
 upload_traffic_counts.set_upstream(build_traffic_counts)
 #: Update .md file after S3 upload
 update_traffic_md.set_upstream(upload_traffic_counts)
+#: upload data must succeed before updating json
+update_json_date.set_upstream(upload_traffic_counts)

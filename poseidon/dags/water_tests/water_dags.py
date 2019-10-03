@@ -10,7 +10,7 @@ from airflow.operators.latest_only_operator import LatestOnlyOperator
 
 from dags.water_tests.indicator_bacteria_jobs import get_indicator_bacteria_tests
 from dags.water_tests.indicator_bacteria_jobs import get_latest_bac_tests
-from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag
+from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag, update_json_date
 
 args = general.args
 conf = general.config
@@ -79,6 +79,16 @@ upload_latest_indicator_bac_tests = S3FileTransferOperator(
     replace=True,
     dag=dag)
 
+update_json_date = PythonOperator(
+    task_id='update_json_date',
+    python_callable=update_json_date,
+    provide_context=True,
+    op_kwargs={'ds_fname': 'indicator_bacteria_monitoring'},
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
+
 #: Update portal modified date
 update_water_md = get_seaboard_update_dag(
     'monitoring-of-indicator-bacteria-in-drinking-water.md',
@@ -99,3 +109,7 @@ upload_latest_indicator_bac_tests.set_upstream(get_latest_bac_tests)
 
 #: update .md file after S3 upload
 update_water_md.set_upstream(upload_latest_indicator_bac_tests)
+
+#: upload data must succeed before updating json
+update_json_date.set_upstream(upload_latest_indicator_bac_tests)
+

@@ -17,7 +17,7 @@ prod_permits = f"{conf['temp_data_dir']}/permits_latest.csv"
 bid_permits = f"{conf['prod_data_dir']}/dsd_permits_2019_datasd_v1.csv" 
 
 def get_permits_files():
-    """Get permit file from ftp site."""
+    """ Get permit file from ftp site. """
     logging.info('Retrieving permits data.')
     
     wget_str = "wget -np --continue " \
