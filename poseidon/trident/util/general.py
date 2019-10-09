@@ -182,13 +182,13 @@ schedule = {
     'gis_tree_canopy': None
 }
 
-default_date = datetime(2019, 6, 21)
+default_date = datetime(2019, 10, 8)
 
 start_date = {
     'fd_incidents' : default_date,
     'pd_cfs': default_date,
     'pd_col': default_date,
-    'claims_stat': datetime(2019, 7, 8),
+    'claims_stat': default_date,
     'ttcs': default_date,
     'indicator_bacteria_tests': default_date,
     'parking_meters': default_date,
@@ -198,7 +198,7 @@ start_date = {
     'dsd_code_enforcement': default_date,
     'streets_sdif': default_date,
     'streets_imcat': default_date,
-    'streets':datetime(2019, 7, 8),
+    'streets': default_date,
     'get_it_done': default_date,
     'gid_potholes': default_date,
     'gid_ava': default_date,
@@ -218,9 +218,9 @@ start_date = {
     'documentum_others' : default_date,
     'tsw_integration': default_date,
     'cip': default_date,
-    'cityiq': datetime(2019, 8, 25),
-    'onbase_test': datetime(2019, 7, 28),
-    'gis_tree_canopy': datetime(2019, 6, 30)
+    'cityiq': default_date,
+    'onbase_test': default_date,
+    'gis_tree_canopy': default_date
 }
 
 
