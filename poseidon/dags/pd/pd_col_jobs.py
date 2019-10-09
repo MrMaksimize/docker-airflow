@@ -20,6 +20,8 @@ def get_collisions_data():
     ftp.login(user=conf['ftp_datasd_user'], passwd=conf['ftp_datasd_pass'])
     ftp.cwd('uploads/sdpd/collisions')
     ls = []
+    # this is a nonstandard way to list files by time,
+    # or modification date, using the proprietary t flag
     ftp.dir('-t', ls.append)
     name = ls[0].split()[8]
 
