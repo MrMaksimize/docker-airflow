@@ -1,6 +1,7 @@
 """PD hate crimes _jobs file."""
-import ftplib
-import operator
+import glob
+import os
+import csv
 import string
 import logging
 import pandas as pd
@@ -38,42 +39,26 @@ def process_data():
     latest_file = max(list_of_files, key=os.path.getmtime)
     logging.info(f"Reading in {latest_file}")
 
-    df = pd.read_excel(latest_file,sheet='hate_crimes_datasd')
+    df = pd.read_excel(latest_file,sheet_name='hate_crimes_datasd')
 
-    final_df = df[['case_number',
-                         'date',
-                         'year',
-                         'month',
-                         'time',
-                         'date_time',
-                         'crime_code',
-                         'crime',
-                         'beat',
-                         'command',
-                         'weapon',
-                         'motivation',
-                         'number_of_suspects',
-                         'suspect',
-                         'victim_count',
-                         'victim_other',
-                         'injury',
-                         'suspect_race_0',
-                         'suspect_race_1',
-                         'suspect_race_2',
-                         'suspect_sex_0',
-                         'suspect_sex_1',
-                         'suspect_sex_2',
-                         'victim_race_0',
-                         'victim_race_1',
-                         'victim_race_2',
-                         'victim_sex_0',
-                         'victim_sex_1',
-                         'victim_sex_2'
-                        ]]
+    df['date'] = pd.to_datetime(df['date'],errors='coerce')
+    df['date'] = df['date'].dt.date
 
-    general.pos_write_csv(
-        final_df,
-        prod_file,
-        date_format='%Y-%m-%d')
+    cols = df.columns.to_list()
+
+    # Move datetime column from position 19 to position 5
+
+    new_cols = cols[0:5] + cols[19:20] + cols[5:19] + cols[20:]
+
+    logging.info(len(cols) == len(new_cols))
+
+    final_df = df[new_cols]
+
+    final_df.to_csv(prod_file,
+        encoding='utf-8',
+        index=False,
+        doublequote=True,
+        quoting=csv.QUOTE_ALL
+        )
     
     return 'Successfully processed hate crimes data.'
