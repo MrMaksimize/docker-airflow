@@ -1,11 +1,17 @@
 import os
 import pandas as pd
+import geopandas as gpd
+import fiona
+from fiona import crs
+from shapely.geometry import mapping
 import requests
 import numpy as np
 from datetime import datetime, timedelta
 import logging
 from airflow.hooks.mssql_hook import MsSqlHook
 from trident.util import general
+from trident.util.geospatial import shp2zip
+from collections import OrderedDict
 
 conf = general.config
 
@@ -193,6 +199,7 @@ def process_paving_data(mode='sdif', **kwargs):
     logging.info(f"Starting with {df.shape[0]} rows before removing records")
 
     start_no = df.shape[0]
+    logging.info(df.iloc[0])
 
     # UTLY jobs where job end date is missing
     df = df[~((df.wo_id == "UTLY") & (df.job_end_dt.isnull()))]
@@ -208,17 +215,19 @@ def process_paving_data(mode='sdif', **kwargs):
 
     five_yrs_ago = today.replace(year=(today.year - 5))
     three_yrs_ago = today.replace(year=(today.year - 3))
-
-    # Older than 5 years for both datasets
-    df = df[(df.job_end_dt > five_yrs_ago) | (df.job_end_dt.isnull())]
-    logging.info(f"Removed {start_no - df.shape[0]} records older than 5 years")
+    
     start_no = df.shape[0]
 
-    # Plus slurry records older than 3 years for imcat
+    # All older than 5 years plus slurry records older than 3 years for imcat
     if mode == 'imcat':
+        df = df[(df.job_end_dt > five_yrs_ago) | (df.job_end_dt.isnull())]
+        logging.info(f"Removed {start_no - df.shape[0]} records older than 5 years")
         df = df[~((df.wo_proj_type == 'Slurry') &
                  (df.job_end_dt < three_yrs_ago))]
         logging.info(f"Removed {start_no - df.shape[0]} Slurry records older than 3 years")
+    else:
+        df = df[(df.job_end_dt >= '07/01/2013') | (df.job_end_dt.isnull())]
+        logging.info(f"Removed {start_no - df.shape[0]} records older than July 1, 2013")
 
     # Records with no activity, type or status
     mask = (df.job_activity.isnull()) | (df.job_activity == None) | (df.job_activity == 'None') | (df.job_activity == '')\
@@ -289,8 +298,10 @@ def process_paving_data(mode='sdif', **kwargs):
     else:
 
         # Remove duplicates
-        df = df.sort_values(by='job_end_dt', na_position='last', ascending=False)
-        df = df.drop_duplicates('seg_id', keep='first')
+        #df = df.sort_values(by='job_end_dt', na_position='last', ascending=False)
+        #df = df.drop_duplicates('seg_id', keep='first')
+
+        df = df.sort_values(by=['seg_id','job_end_dt'], na_position='last', ascending=[True,False])
 
         # Drop additional columns for public dataset
 
@@ -334,6 +345,135 @@ def process_paving_data(mode='sdif', **kwargs):
         df_final, prod_file[mode], date_format=conf['date_format_ymd'])
     
     return "Successfully wrote prod file at " + prod_file[mode]
+
+def send_arcgis():
+    """ Create GIS file and send to ArcGIS online """
+
+    dtypes = OrderedDict([
+        ('roadsegid', 'str'),
+        ('rd20full','str'),
+        ('xstrt1','str'),
+        ('xstrt2','str'),
+        ('llowaddr','str'),
+        ('lhighaddr','str'),
+        ('rlowaddr','str'),
+        ('rhighaddr','str'),
+        ('zip','str'),
+        ('pve_id', 'str'),
+        ('seg_id', 'str'),
+        ('project_id', 'str'),
+        ('title','str'),
+        ('status','str'),
+        ('type','str'),
+        ('date_start','str'),
+        ('date_end','str'),
+        ('pav_mi','float'),
+        ('date_cy','str'),
+        ('date_fy','str'),
+        ('oci_11','float'),
+        ('oci11_des','str'),
+        ('oci_15','float'),
+        ('oci15_des','str')
+    ])
+
+    logging.info("Reading geojson")
+    geojson = gpd.read_file(f"{conf['prod_data_dir']}/sd_paving_segs_datasd.geojson")
+    geojson = geojson.rename(columns={'geometry':'geom'})
+    
+    logging.info("Reading repair data")
+    df = pd.read_csv(prod_file['sdif'],low_memory=False,parse_dates=['date_end','date_start'])
+
+    df['date_end'] = df['date_end'].dt.date
+
+    df['date_cy'] = df['date_end'].apply(lambda x: x.year)
+    df['date_fy'] = df['date_end'].apply(lambda x: x.year+1 if x.month > 6 else x.year )
+
+    df['date_cy'] = number_str_cols(df['date_cy'])
+    df['date_fy'] = number_str_cols(df['date_fy'])
+    
+    df = df.rename(columns={'address_street':'addr_st',
+        'street_from':'street_fr',
+        'street_to':'street_to',
+        'paving_miles':'pav_mi'})
+
+    df_sub = df[['pve_id',
+    'seg_id',
+    'project_id',
+    'title',
+    'status',
+    'type',
+    'date_start',
+    'date_end',
+    'pav_mi',
+    'date_cy',
+    'date_fy'
+    ]]
+
+    logging.info("Merging data")
+
+
+    df_merge = pd.merge(geojson,
+        df_sub,
+        how='outer',
+        right_on='seg_id',
+        left_on='sapid')
+
+    df_merge.loc[df_merge['sapid'].isnull(),
+    'sapid'] = df_merge.loc[df_merge['sapid'].isnull(),
+    'seg_id'] 
+
+
+    df_gis = df_merge.drop(columns={'seg_id'})
+    df_gis = df_gis.rename(columns={'sapid':'seg_id'})
+
+    date_cols = ['date_end','date_cy','date_fy', 'date_start']
+    for dc in date_cols:
+        logging.info(f"Converting {dc} from date to string")
+        df_gis[dc] = df_gis[dc].fillna('')
+        df_gis[dc] = df_gis[dc].astype(str)
+
+    df_gis['type'] = df_gis['type'].fillna('None')
+
+    na_cols = ['pve_id','seg_id','project_id','title','status']
+    for nc in na_cols:
+        df_gis[nc] = df_gis[nc].fillna('')
+
+    logging.info("Reading in OCI data")
+
+    oci_11 = pd.read_csv(f"{conf['prod_data_dir']}/oci_2011_datasd.csv")
+    oci_15 = pd.read_csv(f"{conf['prod_data_dir']}/oci_2015_datasd.csv")
+
+    merge_oci11 = pd.merge(df_gis,oci_11[['seg_id','oci','oci_desc']],how='left',on='seg_id')
+    merge_oci11 = merge_oci11.rename(columns={'oci':'oci_11','oci_desc':'oci11_des'})
+    merge_oci15 = pd.merge(merge_oci11,oci_15[['seg_id','oci','oci_desc']],how='left',on='seg_id')
+    merge_oci15 = merge_oci15.rename(columns={'oci':'oci_15','oci_desc':'oci15_des'})
+
+    #df_gis = gpd.GeoDataFrame(df_merge,geometry='geom')
+
+    schema = {'geometry': 'LineString', 'properties': dtypes}
+
+    logging.info("Writing shapefile")
+
+    with fiona.collection(
+        f"{conf['prod_data_dir']}/sd_paving_gis_datasd.shp",
+        'w',
+        driver='ESRI Shapefile',
+        crs=crs.from_epsg(2230),
+        schema=schema
+    ) as shpfile:
+        for index, row in merge_oci15.iterrows():
+            try:
+                geometry = row['geom']
+                props = {}
+                for prop in dtypes:
+                    props[prop] = row[prop]
+                shpfile.write({'properties': props, 'geometry': mapping(geometry)})
+            except Exception as e:
+                logging.info(f"Problem with {index} because {e}")
+
+    shp2zip('sd_paving_gis_datasd')
+
+    return "Successfully sent GIS version to ESRI"
 
 
 def build_sonar_miles_aggs(mode='sdif', pav_type='total', **kwargs):

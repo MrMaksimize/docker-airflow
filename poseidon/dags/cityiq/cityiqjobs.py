@@ -72,8 +72,12 @@ def get_events(**kwargs):
 			"eventType": et,
 			"startTime": str(int(start.timestamp() * 1000)),
 			"endTime": str(int(end.timestamp() * 1000)),
-			"pageSize": "100"
+			"pageSize": "100",
+			"page": "1"
 		}
+
+		logging.info(query_string['startTime'])
+		logging.info(query_string['endTime'])
 
 		try:
 			response = requests.request("GET", event_url, headers=headers, params=query_string)
@@ -86,7 +90,7 @@ def get_events(**kwargs):
 				logging.info("Got events")
 				assets = response.json()
 				file_date = datetime.now().strftime('%Y_%m_%d')
-				file_path = f"{conf['prod_data_dir']}/{file_date}_{et.lower()}.json"
+				file_path = f"{conf['prod_data_dir']}/{file_date}_{et.lower()}_2.json"
 				logging.info("Writing events")
 				with open(file_path, 'w') as f:
 					json.dump(assets, f)
