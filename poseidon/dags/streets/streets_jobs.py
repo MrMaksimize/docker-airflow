@@ -368,6 +368,8 @@ def send_arcgis():
         ('date_start','str'),
         ('date_end','str'),
         ('pav_mi','float'),
+        ('mi_comp','float'),
+        ('mi_plan','float'),
         ('date_cy','str'),
         ('date_fy','str'),
         ('oci_11','float'),
@@ -396,6 +398,9 @@ def send_arcgis():
         'street_to':'street_to',
         'paving_miles':'pav_mi'})
 
+    df.loc[df['status'] == 'post construction','mi_comp'] = df.loc[df['status'] == 'post construction','pav_mi']
+    df.loc[df['status'] != 'post construction','mi_plan'] = df.loc[df['status'] != 'post construction','pav_mi']
+
     df_sub = df[['pve_id',
     'seg_id',
     'project_id',
@@ -406,7 +411,9 @@ def send_arcgis():
     'date_end',
     'pav_mi',
     'date_cy',
-    'date_fy'
+    'date_fy',
+    'mi_comp',
+    'mi_plan'
     ]]
 
     logging.info("Merging data")
@@ -443,14 +450,15 @@ def send_arcgis():
     oci_11 = pd.read_csv(f"{conf['prod_data_dir']}/oci_2011_datasd.csv")
     oci_15 = pd.read_csv(f"{conf['prod_data_dir']}/oci_2015_datasd.csv")
 
-    merge_oci11 = pd.merge(df_gis,oci_11[['seg_id','oci','oci_desc']],how='left',on='seg_id')
-    merge_oci11 = merge_oci11.rename(columns={'oci':'oci_11','oci_desc':'oci11_des'})
-    merge_oci15 = pd.merge(merge_oci11,oci_15[['seg_id','oci','oci_desc']],how='left',on='seg_id')
-    merge_oci15 = merge_oci15.rename(columns={'oci':'oci_15','oci_desc':'oci15_des'})
+    merge_oci = pd.merge(df_gis,oci_11[['seg_id','oci','oci_desc']],how='left',on='seg_id')
+    merge_oci = merge_oci.rename(columns={'oci':'oci_11','oci_desc':'oci11_des'})
+    
+    final_pave_gis = pd.merge(merge_oci,oci_15[['seg_id','oci','oci_desc']],how='left',on='seg_id')
+    final_pave_gis = final_pave_gis.rename(columns={'oci':'oci_15','oci_desc':'oci15_des'})
+
+    
 
     #df_gis = gpd.GeoDataFrame(df_merge,geometry='geom')
-
-    schema = {'geometry': 'LineString', 'properties': dtypes}
 
     logging.info("Writing shapefile")
 
@@ -459,9 +467,9 @@ def send_arcgis():
         'w',
         driver='ESRI Shapefile',
         crs=crs.from_epsg(2230),
-        schema=schema
+        schema={'geometry': 'LineString', 'properties': dtypes}
     ) as shpfile:
-        for index, row in merge_oci15.iterrows():
+        for index, row in final_pave_gis.iterrows():
             try:
                 geometry = row['geom']
                 props = {}
