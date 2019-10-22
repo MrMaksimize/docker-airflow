@@ -1,0 +1,1 @@
+SELECT *, [Shape].STAsText() as geom FROM SDW.CITY.SIDEWALK
