@@ -605,6 +605,13 @@ def create_prod_files():
         services_file,
         date_format='%Y-%m-%dT%H:%M:%S%z')
 
+    logging.info("Creating new compressed json")
+    #json_subset = final_reports.drop(['public_description'],axis=1)
+    final_json = final_reports.to_json(f'{conf["prod_data_dir"]}/get_it_done_reports.json',
+        orient='records',
+        compression='gzip'
+        )
+
     min_report = final_reports['date_requested'].min().year
     max_report = final_reports['date_requested'].max().year
 
