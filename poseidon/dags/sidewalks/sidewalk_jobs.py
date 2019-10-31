@@ -70,14 +70,18 @@ def get_sidewalk_data(**kwargs):
 def get_sidewalk_gis(**kwargs):
     """ Get sidewalk geodatabase from shared drive"""
 
-    sde_server = conf['sde_server']
-    sde_user = conf['sde_user']
-    sde_pw = conf['sde_pw']
+    sde_query = general.file_to_string('./sql/sidewalk_sde.sql', __file__)
+    sde_conn = MsSqlHook(mssql_conn_id='atlas_sde')
 
-    sde_conn = pymssql.connect(sde_server, sde_user, sde_pw, 'sdw')
-    query = "SELECT *, [Shape].STAsText() as geom FROM SDW.IAMSD.SIDEWALK"
+    #sde_server = conf['sde_server']
+    #sde_user = conf['sde_user']
+    #sde_pw = conf['sde_pw']
+
+    #sde_conn = pymssql.connect(sde_server, sde_user, sde_pw, 'sdw')
+    #query = "SELECT *, [Shape].STAsText() as geom FROM SDW.IAMSD.SIDEWALK"
+
+    df = sde_conn.get_pandas_df(sde_query)
     
-    df = pd.read_sql(query, sde_conn)
     
     df.columns = [x.lower() for x in df.columns]
     

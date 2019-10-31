@@ -172,10 +172,11 @@ schedule = {
     'budget': "@weekly",
     'campaign_fin': "@daily",
     'public_art': '@daily',
-    'sire': "0 7 * * *",
-    'onbase': "*/5 * * * *",
-    'documentum_24' : "0 7 * * *",
-    'documentum_others' : "30 * * * *",
+    'sire': "0 7 * * 1-5", # 7am every Mon-Fri
+    'onbase': "*/5 7-18 * * 1-5", # every 5 mins, 7am to 6pm, Mon-Fri
+    'documentum_daily' : "0 7 * * 1-5", # 7am every Mon-Fri
+    'documentum_hr_30' : "30 7-18 * * 1-5", # 30 mins past the hour, 7am to 6pm, Mon-Fri
+    'documentum_hr_15': "15 7-18 * * 1-5", # 15 mins past the hour, 7am to 6pm, Mon-Fri
     'tsw_integration': '0 6 * * *',  # daily at 6am UTC / 10pm PST
     'cip': '@daily',
 	'cityiq': '@daily',
@@ -216,8 +217,9 @@ start_date = {
     'public_art': default_date,
     'sire': default_date,
     'onbase': default_date,
-    'documentum_24' : default_date,
-    'documentum_others' : default_date,
+    'documentum_daily' : datetime(2019, 10, 29),
+    'documentum_hr_30' : datetime(2019, 10, 29),
+    'documentum_hr_15': datetime(2019, 10, 29),
     'tsw_integration': default_date,
     'cip': default_date,
     'cityiq': default_date,
