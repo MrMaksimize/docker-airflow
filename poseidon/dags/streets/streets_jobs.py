@@ -456,7 +456,7 @@ def send_arcgis():
     final_pave_gis = pd.merge(merge_oci,oci_15[['seg_id','oci','oci_desc']],how='left',on='seg_id')
     final_pave_gis = final_pave_gis.rename(columns={'oci':'oci_15','oci_desc':'oci15_des'})
 
-    
+    final_pave_gis.to_csv(f"{conf['prod_data_dir']}/streets_map_data.csv",index=False)
 
     #df_gis = gpd.GeoDataFrame(df_merge,geometry='geom')
 
