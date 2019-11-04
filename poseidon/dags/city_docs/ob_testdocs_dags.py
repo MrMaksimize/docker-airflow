@@ -18,9 +18,7 @@ schedule = general.schedule['onbase_test']
 start_date = general.start_date['onbase_test']
 
 #: Dag spec
-dag = DAG(dag_id='obdocs_test', default_args=args, start_date=start_date, schedule_interval=schedule)
-
-onbase_docs_latest_only = LatestOnlyOperator(task_id='onbase_docs_latest_only', dag=dag)
+dag = DAG(dag_id='obdocs_test', catchup=False, default_args=args, start_date=start_date, schedule_interval=schedule)
 
 #: Get onbase tables
 get_doc_tables = PythonOperator(
@@ -30,10 +28,6 @@ get_doc_tables = PythonOperator(
     on_retry_callback=notify,
     on_success_callback=notify,
     dag=dag)
-
-#: Execution rules
-#: onbase_docs_latest_only must run before get_doc_tables
-get_doc_tables.set_upstream(onbase_docs_latest_only)
 
 files = [f for f in os.listdir(conf['prod_data_dir'])]
 for f in files:
