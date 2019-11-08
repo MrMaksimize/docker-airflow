@@ -172,11 +172,11 @@ schedule = {
     'budget': "@weekly",
     'campaign_fin': "@daily",
     'public_art': '@daily',
-    'sire': "0 14 * * 1-5", # 3pm UTC / 7am PST every Mon-Fri
-    'onbase': "*/5 0,1,2,3,13,14,15,16,17,18,19,20,21,22,23 * * 1-6", # every 5 mins, 7am to 6pm, Mon-Fri PST
-    'documentum_daily' : "0 14 * * 1-5", # 3pm UTC / 7am PST every Mon-Fri
-    'documentum_hr_30' : "30 0,1,2,3,13,14,15,16,17,18,19,20,21,22,23 * * 1-6", # 30 mins past the hour, 7am to 6pm, Mon-Fri PST
-    'documentum_hr_15': "15 0,1,2,3,13,14,15,16,17,18,19,20,21,22,23 * * 1-6", # 15 mins past the hour, 7am to 6pm, Mon-Fri PST
+    'sire': "0 8 * * 1-5", # 8am UTC / 12am PST every Mon-Fri
+    'onbase': "*/5 0,1,2,3,4,13,14,15,16,17,18,19,20,21,22,23 * * 1-6", # every 5 mins, 7am to 7pm, Mon-Fri PST
+    'documentum_daily' : "0 8 * * 1-5", # 8am UTC / 12am PST every Mon-Fri
+    'documentum_hr_30' : "30 0,1,2,3,4,13,14,15,16,17,18,19,20,21,22,23 * * 1-6", # 30 mins past the hour, 7am to 7pm, Mon-Fri PST
+    'documentum_hr_15': "15 0,1,2,3,4,13,14,15,16,17,18,19,20,21,22,23 * * 1-6", # 15 mins past the hour, 7am to 7pm, Mon-Fri PST
     'tsw_integration': '0 6 * * *',  # daily at 6am UTC / 10pm PST
     'cip': '@daily',
 	'cityiq': '@daily',
