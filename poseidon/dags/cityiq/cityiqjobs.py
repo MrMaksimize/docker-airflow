@@ -53,8 +53,8 @@ def get_events(**kwargs):
 	token = ti.xcom_pull(task_ids='get_token_response')
 	
 	logging.info("Calculating start and end dates")
-	end = datetime.now()
-	start = end - timedelta(days=1)
+	end = kwargs['execution_date']
+	start = end - timedelta(hours=1)
 
 	logging.info(f"Starting at {start} and ending at {end}")
 
@@ -64,8 +64,10 @@ def get_events(**kwargs):
 	'cache-control': "no-cache"
 	}
 
+	files = {'pkin':None,'pkout':None}
+
 	for et in event_types:
-		logging.info(f"Retrieving metadata for {et}")
+		logging.info(f"Retrieving events for {et}")
 
 		query_string = {
 			"bbox": bbox,
@@ -73,48 +75,27 @@ def get_events(**kwargs):
 			"eventType": et,
 			"startTime": str(int(start.timestamp() * 1000)),
 			"endTime": str(int(end.timestamp() * 1000)),
-			"pageSize": 10
+			"pageSize": 100000
 		}
 
 		try:
-			response_md = requests.request("GET", event_url, headers=headers, params=query_string)
-
-			if response_md.status_code != 200:
-				
-				raise Exception(response_md.status_code)
-			
+			response = requests.request("GET", event_url, headers=headers, params=query_string)
+			if response.status_code != 200:
+				raise Exception(response.status_code)
 			else:
-				logging.info("Got metadata")
-				md = response_md.json()
-				records = md['metaData']['totalRecords']
-				query_string['pageSize'] = records
-				pages = math.ceil(records/1000)
-				for page in range(0,1):
-					logging.info(query_string)
-					#query_string['page'] = page
-					logging.info(f"Requesting {query_string['pageSize']} records")
-					try:
-						response = requests.request("GET", event_url, headers=headers, params=query_string)
-						if response.status_code != 200:
-							raise Exception(response.status_code)
-						else:
-							assets = response_md.json()
-							logging.info("Got assets")
-							file_date = datetime.now().strftime('%Y_%m_%d')
-							file_path = f"{conf['prod_data_dir']}/{file_date}_{et.lower()}_{page}.json"
-							logging.info("Writing events")
-							with open(file_path, 'w') as f:
-								json.dump(assets, f)
+				assets = response.json()
+				logging.info("Got assets")
+				file_date = start.strftime('%Y%m%d%H')
+				file_name = f"{et.lower()}_{file_date}"
+				file_path = f"{conf['prod_data_dir']}/{file_name}.json"
+				logging.info("Writing events")
+				with open(file_path, 'w') as f:
+					json.dump(assets, f)
 
-							logging.info(f"Successfully requested events for {et}")
-
-					except Exception as e:
-
-						logging.error(e)
+				logging.info(f"Successfully requested events for {et}")
 
 		except Exception as e:
 
 			logging.error(e)
-		
 	
-	return "Successfully requested events for all event types"
+	return "Successfully pulled event data"

@@ -6,22 +6,20 @@ from trident.util.notifications import notify
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
 from airflow.operators.latest_only_operator import LatestOnlyOperator
 from datetime import datetime
+import glob
+import os
 
 
 # All times in Airflow UTC.  Set Start Time in PST?
 args = general.args
 conf = general.config
-start_date = general.start_date['cityiq'] 
+start_date = general.start_date['pk_events'] 
 #: Dag spec
 dag = DAG(
-    dag_id='cityiq',
+    dag_id='pk_events',
     default_args=args, 
     start_date=start_date, 
-    schedule_interval=general.schedule['cityiq'])
-
-#: Latest Only Operator for cityiq
-cityiq_latest_only = LatestOnlyOperator(
-    task_id='cityiq_latest_only', dag=dag)
+    schedule_interval=general.schedule['pk_events'])
 
 get_token_response = PythonOperator(
     task_id = 'get_token_response',
@@ -40,12 +38,19 @@ get_parking_bbox = PythonOperator(
     on_success_callback=notify,
     dag=dag)
 
-event_files = ["pkin","pkout"]
+event_files = ['pkin','pkout']
+#file_date = {{ execution_date }}
+
 
 for file in event_files:
-    file_time = datetime.now().strftime('%Y_%m_%d_') 
-    file_name = f'{file_time}{file}.json'
-    s3_upload = S3FileTransferOperator( # creating a different upload object for each...
+    file_pattern = f"{conf['prod_data_dir']}/{file}_*.json"
+    list_of_files = glob.glob(file_pattern)
+    if len(list_of_files) > 0:
+        latest_file = max(list_of_files, key=os.path.getmtime)
+    else:
+        latest_file = None
+    file_name = os.path.basename(latest_file)
+    s3_upload = S3FileTransferOperator(
         task_id=f'upload_{file}',
         source_base_path=conf['prod_data_dir'],
         source_key=file_name,
@@ -59,15 +64,12 @@ for file in event_files:
         dag=dag)
 
     #: Upload after getting events
-    s3_upload.set_upstream(get_parking_bbox)
+    s3_upload << get_parking_bbox
     
 
 #: Execution Rules
 
-#: Must get token after latest only operator
-get_token_response.set_upstream(cityiq_latest_only)
-#: Get events after getting token
-get_parking_bbox.set_upstream(get_token_response)
+get_token_response >> get_parking_bbox
 
 
     

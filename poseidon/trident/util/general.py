@@ -14,6 +14,13 @@ import json
 
 from airflow.models import Variable
 
+def get_last_dag_run(dag):
+    last_dag_run = dag.get_last_dagrun()
+    if last_dag_run is None:
+        return None
+    else:
+        return last_dag_run.execution_date
+
 def seven_days_ago():
     """Return the date seven days ago."""
     return datetime.combine(datetime.today() - timedelta(7),
@@ -179,9 +186,10 @@ schedule = {
     'documentum_hr_15': "15 0,1,2,3,4,13,14,15,16,17,18,19,20,21,22,23 * * 1-6", # 15 mins past the hour, 7am to 7pm, Mon-Fri PST
     'tsw_integration': '0 6 * * *',  # daily at 6am UTC / 10pm PST
     'cip': '@daily',
-	'cityiq': '@daily',
+	'cityiq': '@hourly',
     'onbase_test': '*/15 * * * *',
-    'gis_tree_canopy': None
+    'gis_tree_canopy': None,
+    'pk_events': '@hourly'
 }
 
 default_date = datetime(2019, 10, 8)
@@ -224,7 +232,8 @@ start_date = {
     'cip': default_date,
     'cityiq': default_date,
     'onbase_test': default_date,
-    'gis_tree_canopy': default_date
+    'gis_tree_canopy': default_date,
+    'pk_events': datetime(2019, 12, 8)
 }
 
 
