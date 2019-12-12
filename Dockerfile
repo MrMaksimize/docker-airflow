@@ -27,7 +27,7 @@ ENV LC_CTYPE en_US.UTF-8
 ENV LC_MESSAGES en_US.UTF-8
 
 # GDAL ENV
-ENV GDAL_DATA /usr/share/gdal/2.1
+ENV GDAL_DATA /usr/share/gdal
 ENV GDAL_VERSION $GDAL_VERSION
 ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
 ENV C_INCLUDE_PATH=/usr/include/gdal
