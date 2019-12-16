@@ -9,6 +9,7 @@ from airflow.models import DAG
 
 from trident.util import general
 from trident.util.notifications import notify
+from trident.util.seaboard_updates import *
 
 from dags.streets.streets_jobs import *
 
@@ -84,6 +85,24 @@ upload_sdif_data = S3FileTransferOperator(
     replace=True,
     dag=dag)
 
+update_json_date = PythonOperator(
+    task_id='update_json_date',
+    python_callable=update_json_date,
+    provide_context=True,
+    op_kwargs={'ds_fname': 'streets_repair_projects'},
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
+
+send_esri_file = PythonOperator(
+    task_id='upload_streets_gis',
+    python_callable=send_arcgis,
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
+
 #: send file update email to interested parties
 #send_last_file_updated_email = PoseidonEmailFileUpdatedOperator(
     #task_id='send_last_file_updated',
@@ -96,40 +115,33 @@ upload_sdif_data = S3FileTransferOperator(
     #on_success_callback=notify,
     #dag=dag)
 
-for i in ['total', 'overlay', 'slurry']:
+#: Update portal modified date
+update_streets_md = get_seaboard_update_dag('streets-repair-projects.md', dag)
 
-    sonar_task = PoseidonSonarCreator(
-        task_id='create_sdif_{}_miles_paved_sonar'.format(i),
-        range_id='days_30',
-        value_key='sdif_{}_miles'.format(i),
-        value_desc='Miles Paved {}'.format(i),
-        python_callable=build_sonar_miles_aggs,
-        op_kwargs={'mode': 'sdif',
-                   'pav_type': i},
-        on_failure_callback=notify,
-        on_retry_callback=notify,
-        on_success_callback=notify,
-        dag=dag)
+#for i in ['total', 'overlay', 'slurry']:
+
+    #sonar_task = PoseidonSonarCreator(
+        #task_id='create_sdif_{}_miles_paved_sonar'.format(i),
+        #range_id='days_30',
+        #value_key='sdif_{}_miles'.format(i),
+        #value_desc='Miles Paved {}'.format(i),
+        #python_callable=build_sonar_miles_aggs,
+        #op_kwargs={'mode': 'sdif',
+                   #'pav_type': i},
+        #on_failure_callback=notify,
+        #on_retry_callback=notify,
+        #on_success_callback=notify,
+        #dag=dag)
 
     #: Depends on successful run of get_streets_data
-    sonar_task.set_upstream(process_data_sdif)
+    #sonar_task.set_upstream(process_data_sdif)
 
 #: Execution order
 
-#: streets_latest_only must run before get_streets_data
-get_streets_data.set_upstream(streets_latest_only)
-
-#: Process data is dependent on successful run of get_streets_data
-process_data_sdif.set_upstream(get_streets_data)
-
-#: Process data is dependent on successful run of get_streets_data
-process_data_imcat.set_upstream(get_streets_data)
-
-#: Upload data is dependent on successful run of process_data_sdif
-upload_sdif_data.set_upstream(process_data_sdif)
-
-#: Upload data is dependent on successful run of process_data_imcat
-upload_imcat_data.set_upstream(process_data_imcat)
+streets_latest_only >> get_streets_data >> [process_data_sdif,process_data_imcat] 
+process_data_sdif >> [upload_sdif_data,send_esri_file]
+process_data_imcat >> upload_imcat_data
+[update_json_date,update_streets_md] << upload_sdif_data 
 
 #: email notification is sent after the data was uploaded to S3
 #send_last_file_updated_email.set_upstream(upload_imcat_data)

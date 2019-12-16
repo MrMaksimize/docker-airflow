@@ -1,5 +1,6 @@
 """Utilities for Updating Github Dates."""
 import re, base64, os
+import json
 import logging
 import random
 from datetime import datetime
@@ -13,6 +14,45 @@ from trident.util.notifications import notify
 
 
 conf = general.config
+
+def update_json_date(ds_fname, **kwargs):
+    """ Take the dataset file name and update json date modified """
+
+    repo_name = "DataSD/data-inventory"
+    commit_branch = "master"
+    exec_date = kwargs['execution_date'].strftime("%Y-%m-%d")
+
+    #: Auth to github
+    tokens = conf["gh_tokens"]
+    op_token = random.choice(tokens)
+    gh = Github(login_or_token=op_token)
+
+    #: Get repo and file
+    repo = gh.get_repo(repo_name)
+    inventory = repo.get_contents("data.json", commit_branch)
+    file_contents = base64.b64decode(inventory.content).decode('utf-8')
+    json_file = json.loads(file_contents)
+    #: Find dataset and update date modified
+    for ds in json_file['dataset']:
+        if ds['identifier'] == ds_fname:
+            modified = ds['modified']
+            if modified == exec_date:
+                return f"Date is already correct for {ds_fname}"
+            else:
+                ds['modified'] = exec_date
+
+                new_json = json.dumps(json_file, indent=4)
+                commit_msg = f"Date modified from {modified} to {exec_date} for {ds_fname}"
+
+                outcome = repo.update_file(
+                        path=inventory.path,
+                        message=commit_msg,
+                        content=new_json,
+                        sha=inventory.sha,
+                        branch=commit_branch)
+
+                return outcome
+
 
 def update_seaboard_date(ds_fname, **kwargs):
     repo_name = "cityofsandiego/seaboard"
@@ -33,7 +73,7 @@ def update_seaboard_date(ds_fname, **kwargs):
     logging.info('Looking for {}'.format(ds_fname))
 
     # Get file contents
-    ds_file = repo.get_file_contents(fpath_pre + ds_fname, commit_branch)
+    ds_file = repo.get_contents(fpath_pre + ds_fname, commit_branch)
     ds_file_content = base64.b64decode(ds_file.content)
     ds_file_decoded = ds_file_content.decode('utf-8')
     

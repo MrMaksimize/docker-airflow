@@ -22,7 +22,7 @@ final_permits = f"{conf['prod_data_dir']}/dsd_permits_{cur_year}_datasd_v1.csv"
 dict_url = f"{conf['prod_data_dir']}/dsd_permits_{cur_year}_datasd_v1_dict.csv"
 
 def get_permits_files():
-    """Get permit file from ftp site."""
+    """ Get permit file from ftp site. """
     logging.info('Retrieving permits data.')
     
     wget_str = "wget -np --continue " \

@@ -1,11 +1,11 @@
-# VERSION 1.10.2
-# AUTHOR: Maksim Pecherskiy
-# DESCRIPTION: Airflow container for running City of San Diego Airflow Instances.  Original work by Puckel_
-# BUILD: docker build --rm -t mrmaksimize/docker-airflow .
-# SOURCE: https://github.com/mrmaksimize/docker-airflow
+# VERSION 1.10.3
+# AUTHOR: Andrell Bower
+# DESCRIPTION: Airflow container for running City of San Diego Airflow Instances.  Original work by Puckel_ & mrmaksimize
+# BUILD: docker build --rm -t andrell81/docker-airflow .
+# SOURCE: https://github.com/DataSD/poseidon-airflow
 
 FROM python:3.6
-LABEL maintainer="mrmaksimize"
+LABEL maintainer="andrell81"
 
 
 # Never prompts the user for choices on installation/configuration of packages
@@ -101,6 +101,7 @@ RUN curl -sL https://deb.nodesource.com/setup_10.x | bash - \
 
 RUN pip install -U pip setuptools wheel \
     && pip install apache-airflow[crypto,celery,postgres,slack,s3,jdbc,mysql,mssql,ssh,password,rabbitmq,samba]==${AIRFLOW_VERSION} \
+    && pip install arcgis \
     && pip install boto3 \
     && pip install bs4 \
     && pip install fiona \
@@ -120,6 +121,7 @@ RUN pip install -U pip setuptools wheel \
     && pip install geojson \
     && pip install geopandas \
     && pip install geomet \
+    && pip install google-api-python-client \
     && pip install lxml \
     && pip install keen \
     && pip install ndg-httpsclient \

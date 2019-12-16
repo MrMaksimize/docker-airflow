@@ -114,6 +114,17 @@ create_potholes_sonar = PoseidonSonarCreator(
     on_success_callback=notify,
     dag=dag)
 
+#: Update data inventory json
+update_json_date = PythonOperator(
+    task_id='update_json_date',
+    python_callable=update_json_date,
+    provide_context=True,
+    op_kwargs={'ds_fname': 'get_it_done_reports'},
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
+
 services = [
     'graffiti_removal', 'illegal_dumping', 'pothole',
     '72_hour_violation'
@@ -180,7 +191,7 @@ for index, file_ in enumerate(files):
                 if task_name == service:
                     #: Github .md update
                     service_update_task = get_seaboard_update_dag('gid-' + md_name + '.md', dag)
-                    #: upload task must run after the get task
+                    #: update json must run after the get task
                     upload_task.set_upstream(service_tasks[service_index])
                     #: update md task must run after the upload task
                     service_update_task.set_upstream(upload_task)
@@ -191,6 +202,8 @@ for index, file_ in enumerate(files):
         if index == len(files)-1:
             #: Github .md update
             md_update_task = get_seaboard_update_dag('get-it-done-311.md', dag)
+            #: update json must run after the upload task
+            update_json_date.set_upstream(upload_task)
             #: update md task must run after the upload task
             md_update_task.set_upstream(upload_task)
 

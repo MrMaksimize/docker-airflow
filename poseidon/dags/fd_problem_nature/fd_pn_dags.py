@@ -49,6 +49,16 @@ upload_fd_data = S3FileTransferOperator(
     replace=True,
     dag=dag)
 
+#: Update data inventory json
+update_json_date = PythonOperator(
+    task_id='update_json_date',
+    python_callable=update_json_date,
+    provide_context=True,
+    op_kwargs={'ds_fname': 'fire_ems_problem_counts'},
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
 
 update_fire_incidents_problems = get_seaboard_update_dag('fire-incident-problem-agg.md', dag)
 #: Execution order
@@ -61,3 +71,6 @@ upload_fd_data.set_upstream(get_fd_data)
 
 #: upload_fd_data must succeed before updating github
 update_fire_incidents_problems.set_upstream(upload_fd_data)
+
+#: upload data must succeed before updating json
+update_json_date.set_upstream(upload_fd_data)

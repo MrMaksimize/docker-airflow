@@ -17,9 +17,7 @@ schedule = general.schedule['sire']
 start_date = general.start_date['sire']
 
 #: Dag spec
-dag = DAG(dag_id='sire_docs', default_args=args, start_date=start_date, schedule_interval=schedule)
-
-sire_docs_latest_only = LatestOnlyOperator(task_id='sire_docs_latest_only', dag=dag)
+dag = DAG(dag_id='sire_docs', catchup=False, default_args=args, start_date=start_date, schedule_interval=schedule)
 
 #: Get sire tables
 get_doc_tables = PythonOperator(
@@ -29,10 +27,6 @@ get_doc_tables = PythonOperator(
     on_retry_callback=notify,
     on_success_callback=notify,
     dag=dag)
-
-#: Execution rules
-#: sire_docs_latest_only must run before get_doc_tables
-get_doc_tables.set_upstream(sire_docs_latest_only)
 
 files = [f for f in os.listdir(conf['prod_data_dir'])]
 for f in files:

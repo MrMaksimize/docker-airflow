@@ -104,12 +104,34 @@ def get_documentum(mode, **kwargs):
         
         df['TITLE'] = fix_title(df[['TITLE','OBJECT_NAME']])
 
-        if mode == 'schedule_24':
-            save_path =  conf['prod_data_dir'] + '/documentum_{0}.csv'.format(name.lower())
-        else:
-            save_path =  conf['prod_data_dir'] + '/documentum_{0}.csv'.format(name.lower())
+        save_path =  conf['prod_data_dir'] + '/documentum_{0}.csv'.format(name.lower())
         logging.info('Writing Production file')
         general.pos_write_csv(df, save_path)
+
+    return "Successfully retrieved Documentum tables"
+
+def get_documentum_test():
+    """Get tables from Documentum test database."""
+    logging.info('Getting files for documentum test')
+    table_name = dn.table_name('schedule_daily')+dn.table_name('schedule_hourly_15')+dn.table_name('schedule_hourly_30')
+    logging.info(table_name)
+    for name in table_name:
+        logging.info('Querying for {0} table'.format(name))
+        query_string = 'SELECT * FROM SCSLEGIS.dbo.{0};'.format(name)
+        logging.info('Connecting to MS Database')
+        documentum_conn = MsSqlHook(mssql_conn_id='docm_test_sql')
+        logging.info('Reading data to Pandas DataFrame')
+        try:
+            df = documentum_conn.get_pandas_df(query_string)
+            logging.info('Correcting title column')
+        
+            df['TITLE'] = fix_title(df[['TITLE','OBJECT_NAME']])
+
+            save_path =  conf['prod_data_dir'] + '/documentum_{0}_test.csv'.format(name.lower())
+            general.pos_write_csv(df, save_path)
+
+        except Exception as e:
+            logging.info(f'Could not read {0} because {e}')
 
     return "Successfully retrieved Documentum tables"
 
