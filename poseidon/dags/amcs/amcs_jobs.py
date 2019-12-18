@@ -1,6 +1,8 @@
 """AMCS _jobs file."""
 import pandas as pd
 import logging
+import os.path
+
 from subprocess import Popen, PIPE
 from trident.util import general
 from trident.util.sf_client import Salesforce
@@ -10,23 +12,20 @@ fy = general.get_FY_year()
 
 temp_file1 = conf['temp_data_dir'] + '/amcs_sites_temp.csv'
 temp_file2 = conf['temp_data_dir'] + '/cleaned_amcs_sites.csv'
-temp_file3 = conf['temp_data_dir'] + '/final_amcs_sites.csv'
+temp_file3 = conf['temp_data_dir'] + '/all_columns_amcs_sites.csv'
+final_file = conf['temp_data_dir'] + '/final_amcs_sites.csv'
 
 def write_to_shared_drive():
     """Write the file to the share location"""
     logging.info('Retrieving data for current FY.')
     command = "smbclient //ad.sannet.gov/dfs " \
-        + "--user={adname}%{adpass} -W ad -c " \
-        + "'cd \"TSW-TEO-Shared/TEO/" \
-        + "TEO-Transportation-Systems-and-Safety-Programs/" \
-        + "Traffic Data/{fy}/RECORD FINDER\";" \
-        + " ls; get Machine_Count_Index.xlsx {temp_dir}/{out_f}.xlsx;'"
+        + "--user={adname}%{adpass} -W ad " \
+        + "--directory='TOWER7/Tower7Train/EPACS Import' -c " \
+        + " put {out_f};"
 
-    command = command.format(adname=conf['mrm_sannet_user'],
-                             adpass=conf['mrm_sannet_pass'],
-                             fy=fy,
-                             temp_dir=conf['temp_data_dir'],
-                             out_f=out_fname)
+    command = command.format(adname=conf['svc_acct_user'],
+                             adpass=conf['svc_acct_pass'],
+                             out_f=final_file)
 
     logging.info(command)
 
@@ -40,9 +39,9 @@ def write_to_shared_drive():
 
 def get_sites():
     """Get requests from sf, creates prod file."""
-    username = conf['mrm_sf_user']
-    password = conf['mrm_sf_pass']
-    security_token = conf['mrm_sf_token']
+    username = conf['dpint_sf_user']
+    password = conf['dpint_sf_pass']
+    security_token = conf['dpint_sf_token']
 
     report_id = "00Ot0000000KBxu"
 
@@ -61,7 +60,7 @@ def get_sites():
 
 def group_site_containers():
 
-    df = pd.read_csv(temp_file1,
+    df = pd.read_csv(temp_file2,
                      encoding='ISO-8859-1',
                      low_memory=False,
                      error_bad_lines=False,
@@ -93,7 +92,7 @@ def group_site_containers():
 
     general.pos_write_csv(
         unique_sites,
-        temp_file2,
+        temp_file3,
         date_format='%Y-%m-%dT%H:%M:%S%z')
 
     return "Counted containers"
@@ -214,7 +213,7 @@ def add_all_columns():
 
     general.pos_write_csv(
         final,
-        temp_file3,
+        final_file,
         date_format='%Y-%m-%dT%H:%M:%S%z')
 
 
@@ -222,23 +221,43 @@ def add_all_columns():
 
 def get_updates_only():
 
-    df = pd.read_csv(temp_file2,
+    df = pd.read_csv(temp_file1,
             encoding='ISO-8859-1',
             low_memory=False,
             error_bad_lines=False,
             )
 
-    # if previous file exists
-    #  load previous file and diff with current
-    #  overwrite previous file with current
-    #  return df of diff
-    # else
-    #  overwrite previous file with current
-    #  return file
+    last_run = last_dag_run_execution_date(dag)
+    if last_run != "no prev run":
 
+        df['Site Modified Date'] = pd.to_datetime(df['Site: Last Modified Date'])
+        df['Container Modified Date'] = pd.to_datetime(df['Container: Last Modified Date'])
+        df = df.drop(columns=['Site: Last Modified Date', 'Container: Last Modified Date'])
 
-    #merged = df1.merge(df2, indicator=True, how='outer')
-    #merged[merged['_merge'] == 'right_only']
+        previous_modified = datetime.datetime.strptime(last_run, '%Y-%m-%d %H:%M:%S')
+        # recent_modified_sites = get a list of site records modified after previous_modified
+        recent_modified_sites = df[df['Site Modified Date'] >= previous_modified]['Site: Site ID']
+        # recent_modified_containers = get a list of container records modified after previous_modified
+        recent_modified_containers = df[df['Container Modified Date'] >= previous_modified]['Site: Site ID']
+        # recent_modified_sites = add to list the sites in recent_modified_containers
+        recent_modified_sites.append(recent_modified_containers)
+        recent_modified_sites.drop_duplicates()
+        # df = reduce the main list to just the sites in recent_modified
+        df = df[df['Site: Site ID'].isin(recent_modified_sites)]
+
+        general.pos_write_csv(
+            diff,
+            temp_file2,
+            date_format='%Y-%m-%dT%H:%M:%S%z')
+
+    else:
+        # no previous run, send the whole thing
+
+        general.pos_write_csv(
+            df,
+            temp_file2,
+            date_format='%Y-%m-%dT%H:%M:%S%z')
+
 
     return "Removed records that haven't changed"
 

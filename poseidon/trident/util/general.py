@@ -303,3 +303,13 @@ def merge_dicts(orig, update):
     new_dict = orig.copy()
     new_dict.update(update)
     return new_dict
+
+# custom macro function
+def get_last_dag_run(dag):
+    last_dag_run = dag.get_last_dagrun()
+    if last_dag_run is None:
+        return "no prev run"
+    else:
+        return last_dag_run.execution_date.strftime("%Y-%m-%d 00:00:00")
+
+
