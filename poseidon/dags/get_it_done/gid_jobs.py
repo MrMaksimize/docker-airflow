@@ -113,8 +113,12 @@ def update_service_name():
 
     case_types_72hr = df.loc[df['case_record_type'] == '72 Hour Report',:]
 
+    case_types_npd = df.loc[df['case_record_type'] == 'Neighborhood Policing',:]
+
     logging.info('Assigning case types for simple cases')
 
+    npd_types = case_types_npd.assign(case_type_new=case_types_npd['case_type'],
+        case_sub_type_new='')
     correct_types = case_types_correct.assign(
         case_type_new=case_types_correct['case_type'],
         case_sub_type_new='')
@@ -145,6 +149,7 @@ def update_service_name():
                        sap_types,
                        dsd_types,
                        parking_types,
+                       npd_types,
                        parking_72hr_types],ignore_index=True)
 
     logging.info('Updating illegal dumping case record type')
