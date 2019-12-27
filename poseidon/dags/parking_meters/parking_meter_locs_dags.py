@@ -18,8 +18,7 @@ dag = DAG(
     dag_id='parking_meter_locs',
     default_args=args,
     start_date=start_date,
-    schedule_interval=schedule,
-    catchup=False
+    schedule_interval=schedule
     )
 
 #: Downloads all parking files from FTP
