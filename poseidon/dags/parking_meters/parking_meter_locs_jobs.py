@@ -1,92 +1,184 @@
 """Parking meters locs _jobs file."""
-import string
-import os
+from subprocess import Popen, PIPE
+import subprocess
 import pandas as pd
-import glob
 import logging
 import numpy as np
-from datetime import datetime, timedelta, date
+import pendulum
 from trident.util import general
-
+from airflow.models import DAG
 
 conf = general.config
-cur_yr = general.get_year()
-cur_mon = datetime.now().month
 portal_fname = conf['prod_data_dir'] +'/treas_parking_meters_loc_datasd_v1.csv'
 
-def ftp_download_wget():
- """Download parking meters data from FTP."""
- 
- wget_str = "wget -np --continue " \
- + "--user=$ftp_user " \
- + "--password='$ftp_pass' " \
- + "--directory-prefix=$temp_dir " \
- + "ftp://ftp.datasd.org/uploads/IPS/SanDiegoInventoryData_{0}{1}*.csv".format(cur_yr, cur_mon)
- tmpl = string.Template(wget_str)
- command = tmpl.substitute(
- ftp_user=conf['ftp_datasd_user'],
- ftp_pass=conf['ftp_datasd_pass'],
- temp_dir=conf['temp_data_dir'])
- 
- return command
+def ftp_download(**context):
+    """Download parking meters data from FTP."""
 
-def build_prod_file(**kwargs):
+    exec_date = context['execution_date']
+    # Exec date returns a Pendulum object
+    file_date = exec_date.subtract(days=1)
+
+    # Need zero-padded month and date
+    filename = f"{file_date.year}" \
+    f"{file_date.strftime('%m')}" \
+    f"{file_date.strftime('%d')}"
+
+    fpath = f"SanDiegoInventoryData_{filename}.csv"
+
+    logging.info(f"Checking FTP for {filename}")
+
+    command = f"cd {conf['temp_data_dir']} && " \
+    f"curl --user {conf['ftp_datasd_user']}:{conf['ftp_datasd_pass']} " \
+    f"-o {fpath} " \
+    f"ftp://ftp.datasd.org/uploads/IPS/" \
+    f"{fpath} -sk"
+
+    p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
+    output, error = p.communicate()
+    
+    if p.returncode != 0:
+        raise Exception(p.returncode)
+    else:
+        logging.info("Found file")
+        return filename
+ 
+def build_prod_file(**context):
     """Process parking meters data."""
 
-    # Look for files for the past week
-    # Inventory files have two digit days
-    # Transaction files only have two digits past 9
-    logging.info("Reading in files from previous week")
-    logging.info(f"Starting from {datetime.now()}")
-    list_ = []
-
-    for i in range(0,7):
-        date = (datetime.now() - timedelta(days=i)).strftime('%Y%m%d')
-        filename = f"SanDiegoInventoryData_{date}.csv"
-        logging.info(f"Looking for {filename}")
-        files = glob.glob(f"{conf['temp_data_dir']}/{filename}")
-        for file_ in files:
-            try:
-                df = pd.read_csv(file_, dtype={'Pole':str,
-                    'Latitude':np.float,
-                    'Longitude':np.float
-                    })
-                df.loc[:,'date_inventory'] = date
-                df.loc[:,'Latitude'] = df['Latitude'].apply(lambda x: "{0:.6f}".format(x))
-                df.loc[:,'Longitude'] = df['Longitude'].apply(lambda x: "{0:.6f}".format(x))
-                list_.append(df)
-                logging.info(f"Read {filename}")
-            except:
-                logging.info(f"{filename} is not available") 
-
-    logging.info(f"Concatting files")
+    logging.info("Reading new inventory file")
+    filename = context['task_instance'].xcom_pull(task_ids='get_meter_loc_files')
+    fpath = f"SanDiegoInventoryData_{filename}.csv"
     
-    frame = pd.concat(list_, ignore_index=True)
-    frame.columns = ['zone','area','sub_area','pole','lat','lng','config_id','config_name','date_inventory']
-    frame.loc[:,'date_inventory'] = frame['date_inventory'].apply(
+    logging.info(f"Looking for {fpath}")
+
+    df = pd.read_csv(f"{conf['temp_data_dir']}/{fpath}",
+        dtype={'Pole':str,
+        'Latitude':np.float,
+        'Longitude':np.float
+        })
+
+    logging.info("Found, and successfully read file")
+    logging.info("Setting date inventory and formatting lat/lng")
+
+    df.loc[:,'date_inventory'] = filename
+    df.loc[:,'Latitude'] = df['Latitude'].apply(lambda x: "{0:.6f}".format(x))
+    df.loc[:,'Longitude'] = df['Longitude'].apply(lambda x: "{0:.6f}".format(x))
+    df.columns = ['zone','area','sub_area','pole','lat','lng','config_id','config_name','date_inventory']
+    
+    logging.info("Converting date inventory col")
+    df.loc[:,'date_inventory'] = df.loc[:,'date_inventory'].apply(
         lambda x: pd.to_datetime(
             x,
             errors='coerce',
             format='%Y%m%d'))
 
-    logging.info(f"Concat has {frame.shape[0]} rows")
-
     logging.info("Reading in production file")
+    
     prod_file = pd.read_csv(portal_fname,
         parse_dates=['date_inventory'],
         dtype={'lat':str,'lng':str}
         )
-    final_temp = pd.concat([prod_file,frame],ignore_index=True)
-    final_temp = final_temp.sort_values(by=['pole','date_inventory'])
-    logging.info(f"Temp file has {final_temp.shape[0]} rows")
-    final = final_temp.drop_duplicates(['pole','lat','lng','config_id'],keep='first')
-    final.loc[:,'config_name'] = final['config_name'].apply(lambda x: x.replace('"',''))
-    logging.info(f"Final file has {final.shape[0]} rows")
+    logging.info(f"Prod file has {prod_file.shape[0]} rows")
+    logging.info(f"New file has {df.shape[0]} rows")
 
+    logging.info("Concat new inventory rows with existing")
+    final_temp = pd.concat([prod_file,df],ignore_index=True,sort=False)
+
+    logging.info(f"Concat has {final_temp.shape[0]} rows")
+    
+    logging.info("Sort by pole ID and descending date of inventory")
+    final_temp = final_temp.sort_values(by=['pole','date_inventory'],
+        ascending=[True,False])
+
+    logging.info("Separate latitude and longitude")
+    temp_ll = final_temp[['pole','lat','lng']]
+
+    logging.info("Keep only the most recent lat and lng")
+    temp_ll_dedupe = temp_ll.drop_duplicates(['pole'],keep='first')
+
+    logging.info("Dedupe full dataset on Pole and Config, keeping oldest")
+    final_temp_dedupe = final_temp[['zone',
+        'area',
+        'sub_area',
+        'pole',
+        'config_id',
+        'config_name',
+        'date_inventory']].drop_duplicates(['pole','config_id'],keep='last')
+
+    logging.info("Merge deduped datasets")
+    final = pd.merge(final_temp_dedupe,
+        temp_ll_dedupe,
+        how='left',
+        on='pole'
+        )
+
+    logging.info('Reading in crosswalk')
+
+    crosswalk = pd.read_csv('https://datasd-reference.s3.amazonaws.com/crosswalk_meters.csv')
+
+    logging.info("Merging crosswalk for SAP ID")
+
+    final_sapid = pd.merge(final,crosswalk[['sub_area','sapid']],how='inner',on='sub_area',indicator=True)
+
+    need_segments = final_sapid[final_sapid['_merge'] == 'left_only']
+
+    if need_segments.empty:
+        
+        logging.info('All sub areas have SAP IDs')
+
+    else:
+
+        logging.info(f"Need to get segments for {new_segments.shape[0]} rows")
+
+
+    final_sapid = final_sapid.drop(columns='_merge')
+
+    logging.info(f"Final has {final_sapid.shape} shape")
 
     general.pos_write_csv(
-        final,
+        final_sapid,
         portal_fname,
-        date_format=conf['date_format_ymd'])  
+        date_format=conf['date_format_ymd'])
 
-    return "Updated prod file"
+    return filename
+
+def clean_files(**context):
+    """ Delete files that were processed """
+
+    filename = context['task_instance'].xcom_pull(task_ids='build_prod_file')
+    
+    logging.info("Deleting files from FTP")
+
+    fpath = f"SanDiegoInventoryData_{filename}.csv"
+
+    # Available ftp commands
+    """ ABOR ACCT ALLO APPE CDUP CWD  DELE EPRT EPSV FEAT HELP LIST MDTM MKD
+    MODE NLST NOOP OPTS PASS PASV PORT PWD  QUIT REIN REST RETR RMD  RNFR
+    RNTO SITE SIZE SMNT STAT STOR STOU STRU SYST TYPE USER XCUP XCWD XMKD
+    XPWD XRMD """
+
+    ftp_command = f'curl --user {conf["ftp_datasd_user"]}:{conf["ftp_datasd_pass"]} ' \
+    f'ftp://ftp.datasd.org/uploads/IPS ' \
+    f'-Q "DELE {fpath}"'
+
+    try:
+        p = subprocess.check_output(ftp_command, shell=True, stderr=subprocess.STDOUT)
+        logging.info('Deleted file from ftp')
+    except subprocess.CalledProcessError as e:
+        logging.info("Did not delete file from ftp")
+        logging.info(e.output)
+
+    logging.info("Deleting files from temp")
+
+    temp_command = f"cd {conf['temp_data_dir']} && " \
+        f"rm {fpath}"
+
+    try:
+        p = subprocess.check_output(temp_command, shell=True, stderr=subprocess.STDOUT)
+        logging.info("Deleted file from temp folder")
+    except subprocess.CalledProcessError as e:
+        logging.info("Did not delete file from temp")
+        logging.info(e.output)
+
+
+    return "Attempted to delete files"

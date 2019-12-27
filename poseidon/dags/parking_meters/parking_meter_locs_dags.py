@@ -14,7 +14,6 @@ schedule = general.schedule['parking_meter_locs']
 start_date = general.start_date['parking_meter_locs']
 conf = general.config
 
-
 dag = DAG(
     dag_id='parking_meter_locs',
     default_args=args,
@@ -24,9 +23,10 @@ dag = DAG(
     )
 
 #: Downloads all parking files from FTP
-get_parking_files = BashOperator(
+get_parking_files = PythonOperator(
     task_id='get_meter_loc_files',
-    bash_command=ftp_download_wget(),
+    provide_context=True,
+    python_callable=ftp_download,
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
@@ -35,13 +35,22 @@ get_parking_files = BashOperator(
 #: Joins downloaded files from ftp to production
 build_prod_file = PythonOperator(
     task_id='build_prod_file',
-    python_callable=build_prod_file,
     provide_context=True,
+    python_callable=build_prod_file,
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
     dag=dag)
 
+clean_daily_files = PythonOperator(
+    task_id='clean_files',
+    provide_context=True,
+    python_callable=clean_files,
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag
+    )
 
 #: Uploads the generated production file
 upload_prod_file = S3FileTransferOperator(
@@ -73,4 +82,4 @@ update_parking_trans_md = get_seaboard_update_dag('parking_meters_locations.md',
 
 #: Execution Rules
 
-get_parking_files >> build_prod_file >> upload_prod_file >> [update_parking_trans_md, update_json_date]
+get_parking_files >> build_prod_file >> clean_daily_files >> upload_prod_file >> [update_parking_trans_md, update_json_date]
