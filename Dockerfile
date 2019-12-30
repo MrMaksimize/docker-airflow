@@ -1,4 +1,4 @@
-# VERSION 1.10.3
+# VERSION 1.2.0
 # AUTHOR: Andrell Bower
 # DESCRIPTION: Airflow container for running City of San Diego Airflow Instances.  Original work by Puckel_ & mrmaksimize
 # BUILD: docker build --rm -t andrell81/docker-airflow .
@@ -13,7 +13,7 @@ ENV DEBIAN_FRONTEND noninteractive
 ENV TERM linux
 
 # Airflow
-ARG AIRFLOW_VERSION=1.10.3
+ARG AIRFLOW_VERSION=1.10.7
 ARG AIRFLOW_HOME=/usr/local/airflow
 ARG GDAL_VERSION=2.1.0
 
@@ -126,7 +126,6 @@ RUN pip install -U pip setuptools wheel \
     && pip install keen \
     && pip install ndg-httpsclient \
     && pip install pandas \
-    && pip install pymssql \
     && pip install psycopg2-binary \
     && pip install pyasn1 \
     && pip install PyGithub \
