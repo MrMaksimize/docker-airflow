@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timedelta
 import json
 from trident.util import general
-from keen.client import KeenClient
+#from keen.client import KeenClient
 from trident.util.notifications import notify_keen
 
 conf = general.config
@@ -20,12 +20,12 @@ def get_sonar_json(**kwargs):
     return template_data
 
 
-def get_keen_sonar(collection, timeframe, filters = [], timezone="US/Pacific"):
-    client = KeenClient(
-        project_id=conf['keen_project_id'], read_key=conf['keen_read_key'])
+#def get_keen_sonar(collection, timeframe, filters = [], timezone="US/Pacific"):
+    #client = KeenClient(
+        #project_id=conf['keen_project_id'], read_key=conf['keen_read_key'])
 
-    return client.extraction(
-        collection, timeframe=timeframe, filters=filters, timezone=timezone)
+    #return client.extraction(
+        #collection, timeframe=timeframe, filters=filters, timezone=timezone)
 
 
 

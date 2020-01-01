@@ -82,14 +82,22 @@ upload_addresses_to_S3 = S3FileTransferOperator(
 
 
 #: Deploy Dashboard
-deploy_dashboard = RShinyDeployOperator(
-    task_id='claims_stat_deploy_dashboard',
-    shiny_appname="claims_{}".format(conf['env'].lower()),
-    shiny_path="{}/claims_stat/claims.Rmd".format(conf['dags_dir']),
-    shiny_acct_name=conf['shiny_acct_name'],
-    shiny_token=conf['shiny_token'],
-    shiny_secret=conf['shiny_secret'],
-    force= "TRUE",
+#deploy_dashboard = RShinyDeployOperator(
+    #task_id='claims_stat_deploy_dashboard',
+    #shiny_appname="claims_{}".format(conf['env'].lower()),
+    #shiny_path="{}/claims_stat/claims.Rmd".format(conf['dags_dir']),
+    #shiny_acct_name=conf['shiny_acct_name'],
+    #shiny_token=conf['shiny_token'],
+    #shiny_secret=conf['shiny_secret'],
+    #force= "TRUE",
+    #on_failure_callback=notify,
+    #on_retry_callback=notify,
+    #on_success_callback=notify,
+    #dag=dag)
+
+deploy_dashboard = BashOperator(
+    task_id='deploy_dashboard',
+    bash_command=deploy_dashboard(),
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
