@@ -164,3 +164,15 @@ def clean_geocode_claims():
         "{}/claim_stat_datasd.csv".format(prod))
 
     return "Successfully generated claims stat prod file"
+
+def deploy_dashboard():
+    """Deploy Claims Stat dashboard"""
+    command = "Rscript /usr/local/airflow/poseidon/trident/util/shiny_deploy.R " \
+    + f"--appname=claims_{conf['env'].lower()} " \
+    + "--path=/usr/local/airflow/poseidon/dags/claims_stat/claims.Rmd " \
+    + f"--name={conf['shiny_acct_name']} " \
+    + f"--token={conf['shiny_token']} " \
+    + f"--secret={conf['shiny_secret']} " \
+    + "--force=TRUE "
+
+    return command

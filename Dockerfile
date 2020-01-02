@@ -1,4 +1,4 @@
-# VERSION 1.10.3
+# VERSION 1.2.0
 # AUTHOR: Andrell Bower
 # DESCRIPTION: Airflow container for running City of San Diego Airflow Instances.  Original work by Puckel_ & mrmaksimize
 # BUILD: docker build --rm -t andrell81/docker-airflow .
@@ -13,7 +13,7 @@ ENV DEBIAN_FRONTEND noninteractive
 ENV TERM linux
 
 # Airflow
-ARG AIRFLOW_VERSION=1.10.3
+ARG AIRFLOW_VERSION=1.10.7
 ARG AIRFLOW_HOME=/usr/local/airflow
 ARG GDAL_VERSION=2.1.0
 
@@ -105,9 +105,9 @@ RUN pip install -U pip setuptools wheel \
     && pip install boto3 \
     && pip install bs4 \
     && pip install fiona \
-    && pip install "Flask==0.12.4" \
-    && pip install "Flask-Admin==1.5.2" \
-    && pip install "Flask-AppBuilder==1.12.1" \
+    && pip install "Flask<2.0,>=1.1.0" \
+    && pip install "Flask-Admin==1.5.4" \
+    && pip install "Flask-AppBuilder~=2.2" \
     && pip install "Flask-Babel==0.12.2" \
     && pip install "Flask-Bcrypt==0.7.1" \
     && pip install "Flask-Caching==1.3.3" \
@@ -123,10 +123,8 @@ RUN pip install -U pip setuptools wheel \
     && pip install geomet \
     && pip install google-api-python-client \
     && pip install lxml \
-    && pip install keen \
     && pip install ndg-httpsclient \
     && pip install pandas \
-    && pip install pymssql \
     && pip install psycopg2-binary \
     && pip install pyasn1 \
     && pip install PyGithub \
@@ -137,7 +135,7 @@ RUN pip install -U pip setuptools wheel \
     && pip install rtree \
     && pip install shapely \
     && pip install "tornado>=4.2.0,<6.0.0" \
-    && pip install "Werkzeug==0.14.1" \
+    && pip install "Werkzeug>=0.15" \
     && pip install xlrd \
     && apt-get autoremove -yqq --purge \
     && apt-get clean \
@@ -149,49 +147,50 @@ RUN pip install -U pip setuptools wheel \
         /usr/share/doc \
         /usr/share/doc-base
 
-
-
 # R Installs
-## Use Debian unstable via pinning -- new style via APT::Default-Release
-RUN echo "deb http://http.debian.net/debian sid main" > /etc/apt/sources.list.d/debian-unstable.list \
-    && echo 'APT::Default-Release "testing";' > /etc/apt/apt.conf.d/default
 
-## Now install R and littler, and create a link for littler in /usr/local/bin
+## Install R
 RUN apt-get update \
-    && apt-get install -t unstable -y --no-install-recommends \
-      littler \
-      r-cran-littler \
-      r-base \
-      r-base-dev \
-      r-recommended \
-      && ln -s /usr/lib/R/site-library/littler/examples/install.r /usr/local/bin/install.r \
-      && ln -s /usr/lib/R/site-library/littler/examples/install2.r /usr/local/bin/install2.r \
-      && ln -s /usr/lib/R/site-library/littler/examples/installGithub.r /usr/local/bin/installGithub.r \
-      && ln -s /usr/lib/R/site-library/littler/examples/testInstalled.r /usr/local/bin/testInstalled.r \
-      && install.r docopt \
-      && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
-      #&& rm -rf /var/lib/apt/lists/*
+    && apt-get install -y --no-install-recommends \
+      build-essential r-base r-cran-hexbin r-cran-plotly
+      #&& rm -rf /tmp/downloaded_packages/ /tmp/*.rds
 
+RUN Rscript -e "install.packages(c('data.table', \
+    'docopt', \
+    'dplyr', \
+    'ggplot2', \
+    'crosstalk', \
+    'DT', \
+    'dygraphs', \
+    'flexdashboard', \
+    'leaflet', \
+    'mgcv', \
+    'rmarkdown', \
+    'rsconnect', \
+    'shiny', \
+    'tidyr', \
+    'viridis' \
+))"
 
-RUN install.r dplyr \
-    crosstalk \
-    data.table \
-    DT \
-    dygraphs \
-    flexdashboard \
-    ggplot2 \
-    leaflet \
-    mgcv \
-    plotly \
-    rmarkdown \
-    rsconnect \
-    shiny \
-    tidyr \
-    viridis
+#RUN install.r dplyr \
+    #docopt \
+    #crosstalk \
+    #data.table \
+    #DT \
+    #dygraphs \
+    #flexdashboard \
+    #ggplot2 \
+    #hexbin \
+    #leaflet \
+    #mgcv \
+    #plotly \
+    #rmarkdown \
+    #rsconnect \
+    #shiny \
+    #tidyr \
+    #viridis
 
 RUN chown -R airflow /usr/local/lib/R/site-library* /usr/local/lib/R/site-library/*
-
-
 
 
 # Get Oracle Client
