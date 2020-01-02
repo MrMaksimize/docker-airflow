@@ -18,15 +18,3 @@ opt <- docopt(doc)
 
 rsconnect::setAccountInfo(name=opt$name, token=opt$token, secret=opt$secret)
 deployApp(opt$path, launch.browser=FALSE, forceUpdate = opt$force, appName = opt$appname)
-
-#library(rsconnect)
-#deployApp("/usr/local/airflow/poseidon/dags/claims_stat/claims.Rmd",
-	#account = '',
-	#launch.browser = getOption("rsconnect.force.update.apps", FALSE),
-	#appName = "claims_local",
-	#forceUpdate = getOption("rsconnect.force.update.apps", TRUE),
-
-	#upload = TRUE,
-	#appFileManifest = "manifest.txt",
-	#account = "myaccountname",
-	#server = "shinyapps.io")
