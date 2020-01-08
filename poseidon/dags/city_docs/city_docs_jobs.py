@@ -104,12 +104,34 @@ def get_documentum(mode, **kwargs):
         
         df['TITLE'] = fix_title(df[['TITLE','OBJECT_NAME']])
 
-        if mode == 'schedule_24':
-            save_path =  conf['prod_data_dir'] + '/documentum_{0}.csv'.format(name.lower())
-        else:
-            save_path =  conf['prod_data_dir'] + '/documentum_{0}.csv'.format(name.lower())
+        save_path =  conf['prod_data_dir'] + '/documentum_{0}.csv'.format(name.lower())
         logging.info('Writing Production file')
         general.pos_write_csv(df, save_path)
+
+    return "Successfully retrieved Documentum tables"
+
+def get_documentum_test():
+    """Get tables from Documentum test database."""
+    logging.info('Getting files for documentum test')
+    table_name = dn.table_name('schedule_daily')+dn.table_name('schedule_hourly_15')+dn.table_name('schedule_hourly_30')
+    logging.info(table_name)
+    for name in table_name:
+        logging.info('Querying for {0} table'.format(name))
+        query_string = 'SELECT * FROM SCSLEGIS.dbo.{0};'.format(name)
+        logging.info('Connecting to MS Database')
+        documentum_conn = MsSqlHook(mssql_conn_id='docm_test_sql')
+        logging.info('Reading data to Pandas DataFrame')
+        try:
+            df = documentum_conn.get_pandas_df(query_string)
+            logging.info('Correcting title column')
+        
+            df['TITLE'] = fix_title(df[['TITLE','OBJECT_NAME']])
+
+            save_path =  conf['prod_data_dir'] + '/documentum_{0}_test.csv'.format(name.lower())
+            general.pos_write_csv(df, save_path)
+
+        except Exception as e:
+            logging.info(f'Could not read {0} because {e}')
 
     return "Successfully retrieved Documentum tables"
 
@@ -141,14 +163,25 @@ def split_reso_ords():
             logging.info(f"Wrote {div_years[i-1]}_{year-1}")
             record_count += sub_div.shape[0]
 
-    df_current = df.loc[df['DOC_DATE'] >= f"01/01/{div_years[-1]}"]
-    general.pos_write_csv(df_current, f"{save_path}_{div_years[-1]}_current.csv")
-    logging.info(f"Wrote {year}_current")
-    record_count += df_current.shape[0]
-
     df_invalid = df.loc[df['DOC_DATE'].isnull()]
     general.pos_write_csv(df_invalid, f"{save_path}_invalid.csv")
     logging.info("Wrote records with invalid date")
     record_count += df_invalid.shape[0]
 
     return f"Successfully divided {record_count} from {filename}"
+
+def latest_res_ords():
+    """Get last decade from reso and ords table"""
+
+    filename = 'documentum_scs_council_reso_ordinance_v.csv'
+    save_path = f"{conf['prod_data_dir']}/documentum_scs_council_reso_ordinance_v"
+    df = pd.read_csv(f"{conf['prod_data_dir']}/{filename}",
+        low_memory=False)
+
+    df['DOC_DATE'] = pd.to_datetime(df['DOC_DATE'],errors='coerce')
+
+    df_current = df.loc[df['DOC_DATE'] >= f"01/01/2016"]
+    general.pos_write_csv(df_current, f"{save_path}_2016_current.csv")
+    logging.info(f"Wrote 2016_current")
+
+    return f"Successfully extracted this decade of resos and ords"

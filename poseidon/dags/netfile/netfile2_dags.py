@@ -111,6 +111,17 @@ upload_fin_support = S3FileTransferOperator(
     replace=True,
     dag=dag)
 
+#: Update data inventory json
+update_json_date = PythonOperator(
+    task_id='update_json_date',
+    python_callable=update_json_date,
+    provide_context=True,
+    op_kwargs={'ds_fname': 'financial_trans_election_comms'},
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
+
 #: Update portal modified date
 update_fin_support_md = get_seaboard_update_dag('financial-support-candidates-and-ballot-measures-election.md', dag)
 
@@ -148,5 +159,7 @@ combine_schedules.set_upstream(schedule_496)
 upload_fin_support.set_upstream(combine_schedules)
 #: file upload must run before github updated
 update_fin_support_md.set_upstream(upload_fin_support)
+#: upload data must succeed before updating json
+update_json_date.set_upstream(upload_fin_support)
 #: update file must run before starting job 2
 send_committee_report.set_upstream(update_fin_support_md)

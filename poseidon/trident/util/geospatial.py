@@ -370,7 +370,12 @@ def extract_sde_data(table, where=''):
     sde_user = conf['sde_user']
     sde_pw = conf['sde_pw']
 
-    sde_conn = pymssql.connect(sde_server, sde_user, sde_pw, 'sdw')
+    sde_conn = pymssql.connect(
+        server=sde_server,
+        port=1433,
+        user=sde_user,
+        password=sde_pw,
+        database='sdw')
 
     if where == '':
         query = "SELECT *, [Shape].STAsText() as geom FROM SDW.CITY.{table}"
@@ -566,11 +571,13 @@ def get_address_for_apn(apn):
         }
 
     logging.info("Get address for APN {}".format(apn))
+
     response = requests.request("POST", url, headers=headers, params=querystring)
     data = response.json()
 
+
     if response.status_code == requests.codes.ok:
         apn_info = data['features'][0]['attributes']
-        return "{} {} {}".format(apn_info['SITUS_ADDRESS'], apn_info['SITUS_STREET'], apn_info['SITUS_SUFFIX'])
+        return "{} {} {}".format(apn_info['SITUS_ADDR'], apn_info['SITUS_STRE'], apn_info['SITUS_SUFF'])
     else:
         return f"APN: {apn}"

@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from dags.pd.pd_col_jobs import *
 from trident.util import general
 from trident.util.notifications import notify
-from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag
+from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag, update_json_date
 
 args = general.args
 conf = general.config
@@ -53,6 +53,17 @@ collisions_to_S3 = S3FileTransferOperator(
     on_success_callback=notify,
     dag=dag)
 
+#: Update data inventory json
+update_json_date = PythonOperator(
+    task_id='update_json_date',
+    python_callable=update_json_date,
+    provide_context=True,
+    op_kwargs={'ds_fname': 'traffic_collisions'},
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
+
 #: Update portal modified date
 update_pd_cls_md = get_seaboard_update_dag('police-collisions.md', dag)
 
@@ -69,3 +80,6 @@ collisions_to_S3.set_upstream(process_collisions_data)
 
 #: Github update depends on S3 upload success.
 update_pd_cls_md.set_upstream(collisions_to_S3)
+
+#: upload data must succeed before updating json
+update_json_date.set_upstream(collisions_to_S3)

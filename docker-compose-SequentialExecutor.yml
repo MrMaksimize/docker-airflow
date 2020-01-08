@@ -1,7 +1,7 @@
 version: '2.1'
 services:
     webserver:
-        image: mrmaksimize/docker-airflow:1.10.3
+        image: andrell81/docker-airflow:1.2.0
         restart: always
         volumes:
             - ./poseidon:/usr/local/airflow/poseidon

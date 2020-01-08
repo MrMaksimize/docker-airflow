@@ -11,7 +11,7 @@ from trident.util.notifications import notify
 
 #from dags.public_art.public_art_jobs import *
 from dags.public_art.public_art_jobs import *
-from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag
+from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag, update_json_date
 
 # All times in Airflow UTC.  Set Start Time in PST?
 args = general.args
@@ -55,6 +55,17 @@ upload_public_art = S3FileTransferOperator(
     replace=True,
     dag=dag)
 
+#: Update data inventory json
+update_json_date = PythonOperator(
+    task_id='update_json_date',
+    python_callable=update_json_date,
+    provide_context=True,
+    op_kwargs={'ds_fname': 'civic_art_collection'},
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
+
 #: Update portal modified date
 update_public_art_md = get_seaboard_update_dag('public-art.md', dag)
 
@@ -68,3 +79,5 @@ process_public_art.set_upstream(get_public_art)
 upload_public_art.set_upstream(process_public_art)
 #: upload_gid_requests must succeed before updating github
 update_public_art_md.set_upstream(upload_public_art)
+#: upload data must succeed before updating json
+update_json_date.set_upstream(upload_public_art)

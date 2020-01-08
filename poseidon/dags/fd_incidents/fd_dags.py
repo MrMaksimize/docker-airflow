@@ -49,7 +49,16 @@ upload_fd_data = S3FileTransferOperator(
     replace=True,
     dag=dag)
 
-
+#: Update data inventory json
+update_json_date = PythonOperator(
+    task_id='update_json_date',
+    python_callable=update_json_date,
+    provide_context=True,
+    op_kwargs={'ds_fname': 'fire_ems_incidents'},
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
 
 
 #: Update portal modified date
@@ -63,6 +72,8 @@ get_fd_data.set_upstream(fd_latest_only)
 #: upload_fd_data is dependent on successful run of get_fd_data
 upload_fd_data.set_upstream(get_fd_data)
 
-
 #: upload_fd_data must succeed before updating github
 update_fire_department_incidents_md.set_upstream(upload_fd_data)
+
+#: upload_fd_data must succeed before updating json
+update_json_date.set_upstream(upload_fd_data)

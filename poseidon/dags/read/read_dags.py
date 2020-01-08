@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from trident.util import general
 from dags.read.read_jobs import *
 from trident.util.notifications import notify
-from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag
+from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag, update_json_date
 
 args = general.args
 conf = general.config
@@ -145,6 +145,23 @@ properties_details_to_S3 = S3FileTransferOperator(
     on_retry_callback=notify,
     on_success_callback=notify,
     dag=dag)
+
+datasets = ['city_owned_properties','leases_city_owned_properties','city_owned_property_parcels']
+s3_uploaders = [properties_details_to_S3,leases_to_S3,parcels_to_S3]
+
+for index, dataset in enumerate(datasets):
+    update_date_mod_json = PythonOperator(
+        task_id=f"update_json_date_{dataset}",
+        python_callable=update_json_date,
+        provide_context=True,
+        op_kwargs={'ds_fname': dataset},
+        on_failure_callback=notify,
+        on_retry_callback=notify,
+        on_success_callback=notify,
+        dag=dag)
+
+    #: upload data must succeed before updating json
+    update_date_mod_json.set_upstream(s3_uploaders[index])
 
 #: Update leases portal modified date
 update_leases_md = get_seaboard_update_dag('city-owned-properties-leases.md', dag)
