@@ -370,7 +370,12 @@ def extract_sde_data(table, where=''):
     sde_user = conf['sde_user']
     sde_pw = conf['sde_pw']
 
-    sde_conn = pymssql.connect(sde_server, sde_user, sde_pw, 'sdw')
+    sde_conn = pymssql.connect(
+        server=sde_server,
+        port=1433,
+        user=sde_user,
+        password=sde_pw,
+        database='sdw')
 
     if where == '':
         query = "SELECT *, [Shape].STAsText() as geom FROM SDW.CITY.{table}"

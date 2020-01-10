@@ -29,10 +29,9 @@ def update_json_date(ds_fname, **kwargs):
 
     #: Get repo and file
     repo = gh.get_repo(repo_name)
-    inventory = repo.get_file_contents("data.json", commit_branch)
+    inventory = repo.get_contents("data.json", commit_branch)
     file_contents = base64.b64decode(inventory.content).decode('utf-8')
     json_file = json.loads(file_contents)
-
     #: Find dataset and update date modified
     for ds in json_file['dataset']:
         if ds['identifier'] == ds_fname:
@@ -43,14 +42,12 @@ def update_json_date(ds_fname, **kwargs):
                 ds['modified'] = exec_date
 
                 new_json = json.dumps(json_file, indent=4)
-                new_utf = new_json.encode('utf-8')
-
                 commit_msg = f"Date modified from {modified} to {exec_date} for {ds_fname}"
 
                 outcome = repo.update_file(
                         path=inventory.path,
                         message=commit_msg,
-                        content=new_utf,
+                        content=new_json,
                         sha=inventory.sha,
                         branch=commit_branch)
 
@@ -76,7 +73,7 @@ def update_seaboard_date(ds_fname, **kwargs):
     logging.info('Looking for {}'.format(ds_fname))
 
     # Get file contents
-    ds_file = repo.get_file_contents(fpath_pre + ds_fname, commit_branch)
+    ds_file = repo.get_contents(fpath_pre + ds_fname, commit_branch)
     ds_file_content = base64.b64decode(ds_file.content)
     ds_file_decoded = ds_file_content.decode('utf-8')
     
