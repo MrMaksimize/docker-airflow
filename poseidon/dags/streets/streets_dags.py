@@ -95,6 +95,14 @@ update_json_date = PythonOperator(
     on_success_callback=notify,
     dag=dag)
 
+create_esri_file = PythonOperator(
+    task_id='create_streets_gis',
+    python_callable=create_arcgis,
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
+
 send_esri_file = PythonOperator(
     task_id='upload_streets_gis',
     python_callable=send_arcgis,
@@ -139,9 +147,10 @@ update_streets_md = get_seaboard_update_dag('streets-repair-projects.md', dag)
 #: Execution order
 
 streets_latest_only >> get_streets_data >> [process_data_sdif,process_data_imcat] 
-process_data_sdif >> [upload_sdif_data,send_esri_file]
+process_data_sdif >> [upload_sdif_data, create_esri_file]
 process_data_imcat >> upload_imcat_data
-[update_json_date,update_streets_md] << upload_sdif_data 
+[update_json_date,update_streets_md] << upload_sdif_data
+create_esri_file >> send_esri_file
 
 #: email notification is sent after the data was uploaded to S3
 #send_last_file_updated_email.set_upstream(upload_imcat_data)

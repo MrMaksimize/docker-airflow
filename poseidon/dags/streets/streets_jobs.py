@@ -348,7 +348,7 @@ def process_paving_data(mode='sdif', **kwargs):
     
     return "Successfully wrote prod file at " + prod_file[mode]
 
-def send_arcgis():
+def create_arcgis():
     """ Create GIS file and send to ArcGIS online """
 
     dtypes = OrderedDict([
@@ -458,7 +458,7 @@ def send_arcgis():
     final_pave_gis = pd.merge(merge_oci,oci_15[['seg_id','oci','oci_desc']],how='left',on='seg_id')
     final_pave_gis = final_pave_gis.rename(columns={'oci':'oci_15','oci_desc':'oci15_des'})
 
-    final_pave_gis.to_csv(f"{conf['prod_data_dir']}/streets_map_data.csv",index=False)
+    final_pave_gis.drop(columns=['geom']).to_csv(f"{conf['prod_data_dir']}/streets_map_data.csv",index=False)
 
     #df_gis = gpd.GeoDataFrame(df_merge,geometry='geom')
 
@@ -485,16 +485,16 @@ def send_arcgis():
 
     return "Successfully created GIS version for ESRI"
 
-def send_to_arcgis():
+def send_arcgis():
     """ Update ArcGIS online feature layer """
     street_source = f"{conf['prod_data_dir']}/sd_paving_gis_datasd.zip"
     arc_gis = GIS("https://SanDiego.maps.arcgis.com",conf["arc_online_user"],conf["arc_online_pass"])
     shape_file = arc_gis.content.get('1d4a99e263784467b33c42dfc26b6b9d')
     streets_flayer_collection = FeatureLayerCollection.fromitem(shape_file)
-    streets_flayer_collection.manager.overwrite(street_source)
+    logging.info("Overwriting streets feature layer collection")
+    overwrite = streets_flayer_collection.manager.overwrite(street_source)
 
-    return "Successfully sent GIS version to ESRI"
-
+    return overwrite
 
 def build_sonar_miles_aggs(mode='sdif', pav_type='total', **kwargs):
     pav_csv = prod_file[mode]
