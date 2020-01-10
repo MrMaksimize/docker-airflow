@@ -12,6 +12,8 @@ from airflow.hooks.mssql_hook import MsSqlHook
 from trident.util import general
 from trident.util.geospatial import shp2zip
 from collections import OrderedDict
+from arcgis import GIS
+from arcgis.features import FeatureLayerCollection
 
 conf = general.config
 
@@ -480,6 +482,16 @@ def send_arcgis():
                 logging.info(f"Problem with {index} because {e}")
 
     shp2zip('sd_paving_gis_datasd')
+
+    return "Successfully created GIS version for ESRI"
+
+def send_to_arcgis():
+    """ Update ArcGIS online feature layer """
+    street_source = f"{conf['prod_data_dir']}/sd_paving_gis_datasd.zip"
+    arc_gis = GIS("https://SanDiego.maps.arcgis.com",conf["arc_online_user"],conf["arc_online_pass"])
+    shape_file = arc_gis.content.get('1d4a99e263784467b33c42dfc26b6b9d')
+    streets_flayer_collection = FeatureLayerCollection.fromitem(shape_file)
+    streets_flayer_collection.manager.overwrite(street_source)
 
     return "Successfully sent GIS version to ESRI"
 
