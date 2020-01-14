@@ -2,6 +2,7 @@
 import pandas as pd
 import logging
 import os.path
+import datetime
 
 from subprocess import Popen, PIPE
 from trident.util import general
@@ -99,7 +100,7 @@ def group_site_containers():
 
 def add_all_columns():
 
-    df = pd.read_csv(temp_file2,
+    df = pd.read_csv(temp_file3,
                      encoding='ISO-8859-1',
                      low_memory=False,
                      error_bad_lines=False,
@@ -227,30 +228,40 @@ def get_updates_only():
             error_bad_lines=False,
             )
 
-    last_run = last_dag_run_execution_date(dag)
-    if last_run != "no prev run":
+    last_run = 0
+    try:
+        last_run = os.path.getmtime(temp_file2)
+    except:
+        last_run = 0
 
+    if last_run != 0:
+
+        previous_modified = datetime.datetime.fromtimestamp(last_run)
+
+        # create datetime columns from string dates
         df['Site Modified Date'] = pd.to_datetime(df['Site: Last Modified Date'])
         df['Container Modified Date'] = pd.to_datetime(df['Container: Last Modified Date'])
-        df = df.drop(columns=['Site: Last Modified Date', 'Container: Last Modified Date'])
 
-        previous_modified = datetime.datetime.strptime(last_run, '%Y-%m-%d %H:%M:%S')
-        # recent_modified_sites = get a list of site records modified after previous_modified
+        # get a list of site records modified after previous_modified
         recent_modified_sites = df[df['Site Modified Date'] >= previous_modified]['Site: Site ID']
-        # recent_modified_containers = get a list of container records modified after previous_modified
+
+        # get a list of container records modified after previous_modified
         recent_modified_containers = df[df['Container Modified Date'] >= previous_modified]['Site: Site ID']
-        # recent_modified_sites = add to list the sites in recent_modified_containers
-        recent_modified_sites.append(recent_modified_containers)
-        recent_modified_sites.drop_duplicates()
+
+        # add container site ids to site ids
+        recent_modified_sites = recent_modified_sites.append(recent_modified_containers)
+
+        recent_modified_sites = recent_modified_sites.drop_duplicates()
         # df = reduce the main list to just the sites in recent_modified
         df = df[df['Site: Site ID'].isin(recent_modified_sites)]
 
         general.pos_write_csv(
-            diff,
+            df,
             temp_file2,
             date_format='%Y-%m-%dT%H:%M:%S%z')
 
     else:
+
         # no previous run, send the whole thing
 
         general.pos_write_csv(

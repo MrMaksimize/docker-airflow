@@ -20,10 +20,7 @@ dag = DAG(
     dag_id='amcs',
     default_args=args,
     start_date=start_date,
-    schedule_interval=schedule,
-    user_defined_macros={
-        'last_dag_run_execution_date': get_last_dag_run
-    }
+    schedule_interval=schedule
 )
 
 
