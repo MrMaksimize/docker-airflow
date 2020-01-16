@@ -85,6 +85,8 @@ def update_service_name():
 
     logging.info('Prepped dataframe, fixing simple case record types')
 
+    # If the Case Record Type needs to be corrected, it is corrected in this block
+
     df.loc[(df['problem_category'] == 'Abandoned Vehicle'),'case_record_type'] = '72 Hour Report'
     
     df.loc[(df['case_record_type'] == 'Street Division Closed Case') |
@@ -96,11 +98,16 @@ def update_service_name():
     df.loc[df['case_record_type'] == 'Traffic Engineering Closed Case'
         , 'case_record_type'] = 'Traffic Engineering'
 
+    # Next, we are creating two new fields: case_type_new and case_sub_type_new
+    # These two fields join with the crosswalk to get the final service_name field
+    # We start by creating subsets according to top-level case record type
+
     logging.info('Subsetting records to be able to fix more case types')
     
     case_types_correct = df.loc[(df['case_record_type'] == 'ESD Complaint/Report') |
         (df['case_record_type'] == 'Storm Water Code Enforcement') |
-        (df['case_record_type'] == 'TSW ROW')
+        (df['case_record_type'] == 'TSW ROW') |
+        (df['case_record_type'] == 'Neighborhood Policing')
         ,:]
 
     case_types_sap = df.loc[(df['case_record_type'] == 'TSW') |
@@ -113,12 +120,10 @@ def update_service_name():
 
     case_types_72hr = df.loc[df['case_record_type'] == '72 Hour Report',:]
 
-    case_types_npd = df.loc[df['case_record_type'] == 'Neighborhood Policing',:]
+    # If it's easy to assign case type and case sub type, that's done here
 
     logging.info('Assigning case types for simple cases')
 
-    npd_types = case_types_npd.assign(case_type_new=case_types_npd['case_type'],
-        case_sub_type_new='')
     correct_types = case_types_correct.assign(
         case_type_new=case_types_correct['case_type'],
         case_sub_type_new='')
@@ -130,6 +135,8 @@ def update_service_name():
         case_sub_type_new='')
     parking_72hr_types = case_types_72hr.assign(case_type_new='72 Hour Violation',
         case_sub_type_new='')
+
+    # 72 hour parking stuff and sap stuff is done here
 
     logging.info('Correcting case record type for 72 hour violation')
 
@@ -149,7 +156,6 @@ def update_service_name():
                        sap_types,
                        dsd_types,
                        parking_types,
-                       npd_types,
                        parking_72hr_types],ignore_index=True)
 
     logging.info('Updating illegal dumping case record type')
