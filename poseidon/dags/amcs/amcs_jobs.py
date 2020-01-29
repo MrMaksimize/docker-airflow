@@ -3,18 +3,23 @@ import pandas as pd
 import logging
 import os.path
 import datetime
+import hashlib
+import shutil
 
-from subprocess import Popen, PIPE
+import subprocess
 from trident.util import general
 from trident.util.sf_client import Salesforce
 
 conf = general.config
 fy = general.get_FY_year()
 
+previous_run_temp_file1 = conf['temp_data_dir'] + '/amcs_previous_run.csv'
 temp_file1 = conf['temp_data_dir'] + '/amcs_sites_temp.csv'
 temp_file2 = conf['temp_data_dir'] + '/cleaned_amcs_sites.csv'
+
 temp_file3 = conf['temp_data_dir'] + '/all_columns_amcs_sites.csv'
 final_file = conf['temp_data_dir'] + '/final_amcs_sites.csv'
+
 
 def write_to_shared_drive():
     """Write the file to the share location"""
@@ -30,7 +35,7 @@ def write_to_shared_drive():
 
     logging.info(command)
 
-    p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
+    p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, error = p.communicate()
     
     if p.returncode != 0:
@@ -38,13 +43,14 @@ def write_to_shared_drive():
     else:
         return 'Successfully retrieved {} data.'.format(fy)
 
+
 def get_sites():
     """Get requests from sf, creates prod file."""
     username = conf['dpint_sf_user']
     password = conf['dpint_sf_pass']
     security_token = conf['dpint_sf_token']
 
-    report_id = "00Ot0000000KBxu"
+    report_id = "00Ot0000000X6gP"
 
     # Init salesforce client
     sf = Salesforce(username, password, security_token)
@@ -57,6 +63,25 @@ def get_sites():
     logging.info('Process report {} data.'.format(report_id))
 
     return "Pulled Salesforce report"
+
+
+def get_updates_only():
+
+    last_run = 0
+    try:
+        last_run = os.path.getmtime(previous_run_temp_file1)
+    except:
+        last_run = 0
+
+    if last_run != 0:
+        get_diff(previous_file=previous_run_temp_file1, current_file=temp_file1, output_file=temp_file2)
+    else:
+        # no previous run, send the whole thing
+        shutil.copyfile(temp_file1, temp_file2)
+
+    shutil.copyfile(temp_file1, previous_run_temp_file1)
+
+    return "Removed records that have not changed"
 
 
 def group_site_containers():
@@ -97,6 +122,7 @@ def group_site_containers():
         date_format='%Y-%m-%dT%H:%M:%S%z')
 
     return "Counted containers"
+
 
 def add_all_columns():
 
@@ -155,11 +181,11 @@ def add_all_columns():
     final['RefuseWeekCode'] = 'W'
     final['RefuseRate'] = '0'
 
-    final['RefuseMonday'] = df.apply(lambda x: '' if x['Site: Refuse Day Of Week'] != 'Mon' else x['Site: Refuse Route'], axis = 1)
-    final['RefuseTuesday'] = df.apply(lambda x: '' if x['Site: Refuse Day Of Week'] != 'Tue' else x['Site: Refuse Route'], axis = 1)
-    final['RefuseWednesday'] = df.apply(lambda x: '' if x['Site: Refuse Day Of Week'] != 'Wed' else x['Site: Refuse Route'], axis = 1)
-    final['RefuseThursday'] = df.apply(lambda x: '' if x['Site: Refuse Day Of Week'] != 'Thu' else x['Site: Refuse Route'], axis = 1)
-    final['RefuseFriday'] = df.apply(lambda x: '' if x['Site: Refuse Day Of Week'] != 'Fri' else x['Site: Refuse Route'], axis = 1)
+    final['RefuseMonday'] = df.apply(lambda x: '' if (x['Site: Refuse Day Of Week'] != 'Mon' and x['Site: Refuse Day Of Week'] != 1) else x['Site: Refuse Route'], axis = 1)
+    final['RefuseTuesday'] = df.apply(lambda x: '' if (x['Site: Refuse Day Of Week'] != 'Tue' and x['Site: Refuse Day Of Week'] != 2) else x['Site: Refuse Route'], axis = 1)
+    final['RefuseWednesday'] = df.apply(lambda x: '' if (x['Site: Refuse Day Of Week'] != 'Wed' and x['Site: Refuse Day Of Week'] != 3) else x['Site: Refuse Route'], axis = 1)
+    final['RefuseThursday'] = df.apply(lambda x: '' if (x['Site: Refuse Day Of Week'] != 'Thu' and x['Site: Refuse Day Of Week'] != 4) else x['Site: Refuse Route'], axis = 1)
+    final['RefuseFriday'] = df.apply(lambda x: '' if (x['Site: Refuse Day Of Week'] != 'Fri' and x['Site: Refuse Day Of Week'] != 1) else x['Site: Refuse Route'], axis = 1)
 
     final['RefuseSharedIndicator'] = df['Site: Refuse Shared Indicator']
 
@@ -175,11 +201,11 @@ def add_all_columns():
     final['RecycleWeekCode'] = df['Site: Recycle Week']
     final['RecycleRate'] = '0'
 
-    final['RecycleMonday'] = df.apply(lambda x: '' if x['Site: Recycle Day Of Week'] != 'Mon' else x['Site: Recycle Route'], axis = 1)
-    final['RecycleTuesday'] = df.apply(lambda x: '' if x['Site: Recycle Day Of Week'] != 'Tue' else x['Site: Recycle Route'], axis = 1)
-    final['RecycleWednesday'] = df.apply(lambda x: '' if x['Site: Recycle Day Of Week'] != 'Wed' else x['Site: Recycle Route'], axis = 1)
-    final['RecycleThursday'] = df.apply(lambda x: '' if x['Site: Recycle Day Of Week'] != 'Thu' else x['Site: Recycle Route'], axis = 1)
-    final['RecycleFriday'] = df.apply(lambda x: '' if x['Site: Recycle Day Of Week'] != 'Fri' else x['Site: Recycle Route'], axis = 1)
+    final['RecycleMonday'] = df.apply(lambda x: '' if (x['Site: Recycle Day Of Week'] != 'Mon' and x['Site: Recycle Day Of Week'] != 1) else x['Site: Recycle Route'], axis = 1)
+    final['RecycleTuesday'] = df.apply(lambda x: '' if (x['Site: Recycle Day Of Week'] != 'Tue' and x['Site: Recycle Day Of Week'] != 2) else x['Site: Recycle Route'], axis = 1)
+    final['RecycleWednesday'] = df.apply(lambda x: '' if (x['Site: Recycle Day Of Week'] != 'Wed' and x['Site: Recycle Day Of Week'] != 3) else x['Site: Recycle Route'], axis = 1)
+    final['RecycleThursday'] = df.apply(lambda x: '' if (x['Site: Recycle Day Of Week'] != 'Thu' and x['Site: Recycle Day Of Week'] != 4) else x['Site: Recycle Route'], axis = 1)
+    final['RecycleFriday'] = df.apply(lambda x: '' if (x['Site: Recycle Day Of Week'] != 'Fri' and x['Site: Recycle Day Of Week'] != 5) else x['Site: Recycle Route'], axis = 1)
 
     final['RecycleSharedIndicator'] = df['Site: Recycle Shared Indicator']
 
@@ -194,11 +220,11 @@ def add_all_columns():
     final['GreenWeekCode'] = df['Site: Greens Week']
     final['GreenRate'] = '0'
 
-    final['GreenMonday'] = df.apply(lambda x: '' if x['Site: Greens Day Of Week'] != 'Mon' else x['Site: Greens Route'], axis = 1)
-    final['GreenTuesday'] = df.apply(lambda x: '' if x['Site: Greens Day Of Week'] != 'Tue' else x['Site: Greens Route'], axis = 1)
-    final['GreenWednesday'] = df.apply(lambda x: '' if x['Site: Greens Day Of Week'] != 'Wed' else x['Site: Greens Route'], axis = 1)
-    final['GreenThursday'] = df.apply(lambda x: '' if x['Site: Greens Day Of Week'] != 'Thu' else x['Site: Greens Route'], axis = 1)
-    final['GreenFriday'] = df.apply(lambda x: '' if x['Site: Greens Day Of Week'] != 'Fri' else x['Site: Greens Route'], axis = 1)
+    final['GreenMonday'] = df.apply(lambda x: '' if (x['Site: Greens Day Of Week'] != 'Mon' and x['Site: Greens Day Of Week'] != 1) else x['Site: Greens Route'], axis = 1)
+    final['GreenTuesday'] = df.apply(lambda x: '' if (x['Site: Greens Day Of Week'] != 'Tue' and x['Site: Greens Day Of Week'] != 2) else x['Site: Greens Route'], axis = 1)
+    final['GreenWednesday'] = df.apply(lambda x: '' if (x['Site: Greens Day Of Week'] != 'Wed' and x['Site: Greens Day Of Week'] != 3) else x['Site: Greens Route'], axis = 1)
+    final['GreenThursday'] = df.apply(lambda x: '' if (x['Site: Greens Day Of Week'] != 'Thu' and x['Site: Greens Day Of Week'] != 4) else x['Site: Greens Route'], axis = 1)
+    final['GreenFriday'] = df.apply(lambda x: '' if (x['Site: Greens Day Of Week'] != 'Fri' and x['Site: Greens Day Of Week'] != 5) else x['Site: Greens Route'], axis = 1)
 
     final['GreenSharedIndicator'] = df['Site: Greens Shared Indicator']
 
@@ -220,57 +246,8 @@ def add_all_columns():
 
     return "Populated all columns for AMCS sites file."
 
-def get_updates_only():
-
-    df = pd.read_csv(temp_file1,
-            encoding='ISO-8859-1',
-            low_memory=False,
-            error_bad_lines=False,
-            )
-
-    last_run = 0
-    try:
-        last_run = os.path.getmtime(temp_file2)
-    except:
-        last_run = 0
-
-    if last_run != 0:
-
-        previous_modified = datetime.datetime.fromtimestamp(last_run)
-
-        # create datetime columns from string dates
-        df['Site Modified Date'] = pd.to_datetime(df['Site: Last Modified Date'])
-        df['Container Modified Date'] = pd.to_datetime(df['Container: Last Modified Date'])
-
-        # get a list of site records modified after previous_modified
-        recent_modified_sites = df[df['Site Modified Date'] >= previous_modified]['Site: Site ID']
-
-        # get a list of container records modified after previous_modified
-        recent_modified_containers = df[df['Container Modified Date'] >= previous_modified]['Site: Site ID']
-
-        # add container site ids to site ids
-        recent_modified_sites = recent_modified_sites.append(recent_modified_containers)
-
-        recent_modified_sites = recent_modified_sites.drop_duplicates()
-        # df = reduce the main list to just the sites in recent_modified
-        df = df[df['Site: Site ID'].isin(recent_modified_sites)]
-
-        general.pos_write_csv(
-            df,
-            temp_file2,
-            date_format='%Y-%m-%dT%H:%M:%S%z')
-
-    else:
-
-        # no previous run, send the whole thing
-
-        general.pos_write_csv(
-            df,
-            temp_file2,
-            date_format='%Y-%m-%dT%H:%M:%S%z')
 
 
-    return "Removed records that haven't changed"
 
 def format_address(row):
 
@@ -282,5 +259,43 @@ def format_address(row):
         + ('' if pd.isnull(row['Site: Post Direction']) else ' ' + str(row['Site: Post Direction']))
     )
 
+
+    
+def get_diff(previous_file, current_file, output_file):
+    """Use diff command to find changes"""
+
+    # put the header in the output file
+    command = "head -n +1 {} > {}".format(current_file, output_file)
+    return_code = subprocess.call(command, shell=True)
+    logging.info(command)
+
+    if return_code != 0:
+        raise Exception('Could not add headers to output file')
+
+    # skip the header and sort the previous file
+    previous_file_sorted = '{}.sorted'.format(previous_file)
+
+    command = "tail -n +2 {} | sort > {}".format(previous_file, previous_file_sorted)
+    return_code = subprocess.call(command, shell=True)
+    logging.info(command)
+    if return_code != 0:
+        raise Exception('Could not sort {}'.format(previous_file))
+
+    # skip the header and sort the current file
+    current_file_sorted = '{}.sorted'.format(current_file)
+    command = "tail -n +2 {} | sort > {}".format(current_file, current_file_sorted)
+    return_code = subprocess.call(command, shell=True)
+    logging.info(command)
+    if return_code != 0:
+        raise Exception('Could sort {}'.format(current_file))
+
+    # diff the files and save the changes and new additions in the output file
+    command = "diff {} {} | grep '> ' | awk '{{print substr($0,3)}}' >> {}".format(previous_file_sorted, current_file_sorted, output_file)
+    logging.info(command)
+
+    return_code = subprocess.call(command, shell=True)
+    
+    if return_code != 0:
+        raise Exception('Count not write changes to output file')
 
 
