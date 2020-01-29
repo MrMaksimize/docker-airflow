@@ -40,19 +40,6 @@ process_cfs_data = PythonOperator(
     on_success_callback=notify,
     dag=dag)
 
-#: Upload prod file to S3
-cfs_to_S3 = S3FileTransferOperator(
-    task_id='cfs_to_S3',
-    source_base_path=conf['prod_data_dir'],
-    source_key='pd_calls_for_service_2020_datasd.csv',
-    dest_s3_bucket=conf['dest_s3_bucket'],
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_key='pd/pd_calls_for_service_2020_datasd.csv',
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
-    dag=dag)
-
 #: Update data inventory json
 update_json_date = PythonOperator(
     task_id='update_json_date',
@@ -67,6 +54,38 @@ update_json_date = PythonOperator(
 #: Update portal modified date
 update_pd_cfs_md = get_seaboard_update_dag('police-calls-for-service.md', dag)
 
-#: Execution rules:
+get_cfs_data >> process_cfs_data
 
-get_cfs_data >> process_cfs_data >> cfs_to_S3 >> [update_pd_cfs_md,update_json_date]
+#run_date = general.get_last_run(dag)
+run_date = pendulum.parse('2020-01-20T23:00:00+00:00')
+
+filename = f"{conf['prod_data_dir']}/pd_calls_for_service_*_datasd.csv"
+files = [x for x in glob.glob(filename)]
+updated = [u for u in files if pendulum.from_timestamp(os.path.getmtime(u)) >= run_date]
+
+
+for index, file in enumerate(updated):
+
+    file_year = [int(s) for s in file.split('_') if s.isdigit()]
+
+    #: Upload prod file to S3
+    cfs_to_S3 = S3FileTransferOperator(
+        task_id=f'cfs_{file_year[0]}_to_S3',
+        source_base_path=conf['prod_data_dir'],
+        source_key=f'pd_calls_for_service_{file_year[0]}_datasd.csv',
+        dest_s3_bucket=conf['dest_s3_bucket'],
+        dest_s3_conn_id=conf['default_s3_conn_id'],
+        dest_s3_key=f'pd/pd_calls_for_service_{file_year[0]}_datasd.csv',
+        on_failure_callback=notify,
+        on_retry_callback=notify,
+        on_success_callback=notify,
+        dag=dag)
+
+    cfs_to_S3 << process_cfs_data
+
+    if index == len(files_updated)-1:
+
+        [update_pd_cfs_md,update_json_date] << cfs_to_S3
+
+
+ 

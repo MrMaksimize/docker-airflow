@@ -134,11 +134,4 @@ def process_cfs_data(**context):
             yr_file,
             date_format=conf['date_format_ymd_hms'])
 
-
-
-    os_path = conf['prod_data_dir'] + "/pd_calls_for_service_*.csv"
-    files = [os.path.basename(x) for x in glob.glob(filename)]
-    for file in files:
-        logging.info(os.path.getmtime(file))
-
     return 'Successfully processed CFS data.'
