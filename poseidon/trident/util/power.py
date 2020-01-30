@@ -16,15 +16,13 @@ class Power():
         response = r.json()
         return response
 
-
     def initializeIDS(self, plantResponse):
         """Returns a dictionary mapping plant IDs to plant names"""
         plants = self.getPlants()
         nameDictionary = {}
         for response in plants:
             nameDictionary[response['id']] = response['name']
-        return nameDictionary
-    
+        return nameDictionary    
     
     def getAttributes(self):
         """
@@ -39,7 +37,6 @@ class Power():
             attr_names.append(attr['name'])
             
         return attr_names
-
     
     def getDateRanges(self, start_date, end_date):
         """
@@ -73,9 +70,15 @@ class Power():
 
         dates.append(((end-remainder).strftime(rfc3339_format), (end+a_day).strftime(rfc3339_format)))
         return dates 
+
+    def getTimeFrame(self):
+        
+        startTime = (datetime.datetime.now() - datetime.timedelta(minutes=120)).strftime("%Y-%m-%d %H:%M:00")
+        endTime = (datetime.datetime.now() - datetime.timedelta(minutes=20)).strftime("%Y-%m-%d %H:%M:00")
+
+        return [(startTime,endTime)]    
     
-    
-    def get_data(self, start_date, end_date, elem_paths, attr, resolution="raw", fp=None):
+    def get_data(self, start_date, end_date, elem_paths, attr, two_hours=False, resolution="raw", fp=None):
         """
         Retrieve attribute data for the specified assets (plant) from the specified time period by 
         querying inincrements of 1 week or less.
@@ -90,7 +93,10 @@ class Power():
         """
         dataURL = self.baseurl + '/drive/v2/data'
         results = {path: [] for path in elem_paths} # To store values for each element
-        dates = self.getDateRanges(start_date, end_date)
+        if two_hours == False:
+            dates = self.getDateRanges(start_date, end_date)
+        else:
+            dates = self.getTimeFrame()
         # Results needs to store a dict for each attribute--in format_reults, merge the dicts with index of timestamps 
         # to form a dataframe (a column of readings for each attribute)
         # For making the daterange for the index

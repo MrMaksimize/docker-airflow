@@ -182,6 +182,7 @@ schedule = {
 	'cityiq': '@daily',
     'onbase_test': '*/15 * * * *',
     'gis_tree_canopy': None,
+    'pv_prod':'@hourly',
     'parking_meter_locs': '0 19 * * *' # daily at 7pm UTC
 }
 
@@ -226,7 +227,8 @@ start_date = {
     'cityiq': default_date,
     'onbase_test': default_date,
     'gis_tree_canopy': default_date,
-    'parking_meter_locs': datetime(2019, 12, 25)
+    'parking_meter_locs': datetime(2019, 12, 25),
+    'pv_prod': datetime(2020, 02, 01)
 }
 
 
