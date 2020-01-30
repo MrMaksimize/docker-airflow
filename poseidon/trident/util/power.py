@@ -1,3 +1,10 @@
+import requests
+import json
+import datetime as dt # the datetime module, which has date, time, datetime, and timedelta objects
+    # Subtracting two datetime objects results in a timedelta object    
+import numpy as np
+import pandas as pd
+
 class Power():
     def __init__(self, subscriptionKey):
         self.subscriptionKey = subscriptionKey
@@ -71,10 +78,7 @@ class Power():
         dates.append(((end-remainder).strftime(rfc3339_format), (end+a_day).strftime(rfc3339_format)))
         return dates 
 
-    def getTimeFrame(self):
-        
-        startTime = (datetime.datetime.now() - datetime.timedelta(minutes=120)).strftime("%Y-%m-%d %H:%M:00")
-        endTime = (datetime.datetime.now() - datetime.timedelta(minutes=20)).strftime("%Y-%m-%d %H:%M:00")
+    def getTimeFrame(self, startTime, endTime):
 
         return [(startTime,endTime)]    
     
@@ -96,7 +100,7 @@ class Power():
         if two_hours == False:
             dates = self.getDateRanges(start_date, end_date)
         else:
-            dates = self.getTimeFrame()
+            dates = self.getTimeFrame(start_date, end_date)
         # Results needs to store a dict for each attribute--in format_reults, merge the dicts with index of timestamps 
         # to form a dataframe (a column of readings for each attribute)
         # For making the daterange for the index
