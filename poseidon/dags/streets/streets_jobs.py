@@ -34,6 +34,8 @@ def number_str_cols(col):
 
 def get_paving_miles(row):
     """ Calculate paving miles """
+
+    seg_ft_rounded = math.ceil(row['seg_length_ft'])
     
     if row['seg_width_ft'] >= 50:
         return (row['seg_length_ft'] * 2)/5280
