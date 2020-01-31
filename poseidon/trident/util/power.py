@@ -115,6 +115,7 @@ class Power():
                         "attributes": attr,
                         "ids": path}
                 r = requests.post(dataURL, headers=self.headers, data=body).json() # Use POST to avoid hitting max URL length w/ many params
+                print("THE RESULT OF THE POST REQUEST IS ",r)
                 results[path] += r['assets'][0]['attributes'][0]['values'][1:] # Append readings for this time period to list of readings for this element
                 if start_tstamp is None: # Get the start timestamp of the entire time period
                     start_tstamp = pd.to_datetime(r['assets'][0]['startTime'][:19])+dt.timedelta(minutes=5)  
