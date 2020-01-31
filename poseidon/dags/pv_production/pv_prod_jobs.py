@@ -25,8 +25,7 @@ endDate = general.utc_to_pst(endDate,"%Y-%m-%d %H:%M:00","%Y-%m-%d %H:%M:00")
 #API Call
 def get_pv_data_write_temp(**context):
 	# 2000.05.088 = Sierra/Kearney Mesa Library, 2000.05.073 = Malcolm X Library, 2000.06.006 = Pt. Loma Library
-	p = power.Power(PRIMARY_KEY)
-	print('PRIMARY_KEY IS: ',PRIMARY_KEY)
+	p = power.Power(PRIMARY_KEY)	
 	elem_paths = ['2000.05.088.SWG01.MTR01']
 	attr = 'AC_POWER'
 	df_5min, df_15min = p.get_data(startDate, endDate, elem_paths, attr, True)
