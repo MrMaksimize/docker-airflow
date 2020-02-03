@@ -56,8 +56,8 @@ update_pd_cfs_md = get_seaboard_update_dag('police-calls-for-service.md', dag)
 
 get_cfs_data >> process_cfs_data
 
-#run_date = general.get_last_run(dag)
-run_date = pendulum.parse('2020-01-20T23:00:00+00:00')
+run_date = general.get_last_run(dag)
+#run_date = pendulum.parse('2020-01-20T23:00:00+00:00')
 
 filename = f"{conf['prod_data_dir']}/pd_calls_for_service_*_datasd.csv"
 files = [x for x in glob.glob(filename)]
@@ -83,7 +83,7 @@ for index, file in enumerate(updated):
 
     cfs_to_S3 << process_cfs_data
 
-    if index == len(files_updated)-1:
+    if index == len(updated)-1:
 
         [update_pd_cfs_md,update_json_date] << cfs_to_S3
 
