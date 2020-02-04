@@ -16,10 +16,7 @@ PRIMARY_KEY = general.config['pf_api_key']
 temp_file = conf['temp_data_dir'] + '/pv_hourly_results.csv'
 prod_file = conf['prod_data_dir'] + '/pv_production.csv'
 
-#startDate = (datetime.datetime.now() - datetime.timedelta(minutes=120)).strftime("%Y-%m-%d %H:%M:00")
-#endDate = (datetime.datetime.now() - datetime.timedelta(minutes=20)).strftime("%Y-%m-%d %H:%M:00")
-
-startDate = (datetime.datetime.now() - datetime.timedelta(days=6)).strftime("%Y-%m-%d %H:%M:00")
+startDate = (datetime.datetime.now() - datetime.timedelta(days=3)).strftime("%Y-%m-%d %H:%M:00")
 endDate = (datetime.datetime.now() - datetime.timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:00")
 
 startDate = general.utc_to_pst(startDate,"%Y-%m-%d %H:%M:00","%Y-%m-%d %H:%M:00")
