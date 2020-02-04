@@ -16,8 +16,11 @@ PRIMARY_KEY = general.config['pf_api_key']
 temp_file = conf['temp_data_dir'] + '/pv_hourly_results.csv'
 prod_file = conf['prod_data_dir'] + '/pv_production.csv'
 
-startDate = (datetime.datetime.now() - datetime.timedelta(minutes=120)).strftime("%Y-%m-%d %H:%M:00")
-endDate = (datetime.datetime.now() - datetime.timedelta(minutes=20)).strftime("%Y-%m-%d %H:%M:00")
+#startDate = (datetime.datetime.now() - datetime.timedelta(minutes=120)).strftime("%Y-%m-%d %H:%M:00")
+#endDate = (datetime.datetime.now() - datetime.timedelta(minutes=20)).strftime("%Y-%m-%d %H:%M:00")
+
+startDate = (datetime.datetime.now() - datetime.timedelta(days=6)).strftime("%Y-%m-%d %H:%M:00")
+endDate = (datetime.datetime.now() - datetime.timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:00")
 
 startDate = general.utc_to_pst(startDate,"%Y-%m-%d %H:%M:00","%Y-%m-%d %H:%M:00")
 endDate = general.utc_to_pst(endDate,"%Y-%m-%d %H:%M:00","%Y-%m-%d %H:%M:00")
@@ -29,7 +32,6 @@ def get_pv_data_write_temp(**context):
 
 	print('THE PRIMARY KEY IS ',PRIMARY_KEY)
 
-	'''
 	elem_paths = ['2000.05.066.SWG01.MTR01', 
 					'2000.05.088.SWG01.MTR01', 
 					'2000.05.100.SWG01.MTR01', 
@@ -44,11 +46,10 @@ def get_pv_data_write_temp(**context):
 					'2000.06.029.SWG01.MTR01', 
 					'2000.06.046.SWG01.MTR01', 
 					'2000.06.047.SWG01.MTR01', 
-					'2000.06.053.SWG01.MTR01']'''
+					'2000.06.053.SWG01.MTR01']
 
-	elem_paths = ['2000.05.066.SWG01.MTR01', '2000.05.088.SWG01.MTR01', '2000.05.100.SWG01.MTR01', '2000.05.114.SWG01.MTR01', '2000.05.117.SWG01.MTR01', '2000.05.120.SWG01.MTR01', '2000.06.005.SWG01.MTR01', '2000.06.007.SWG01.MTR01', '2000.06.010.SWG01.MTR01', '2000.06.021.SWG01.MTR01', '2000.06.027.SWG01.MTR01', '2000.06.029.SWG01.MTR01', '2000.06.046.SWG01.MTR01', '2000.06.047.SWG01.MTR01', '2000.06.053.SWG01.MTR01']
 
-	'''pv_sites = {'2000.05.066.SWG01.MTR01': 'Carmel Valley Rec Center', 
+	pv_sites = {'2000.05.066.SWG01.MTR01': 'Carmel Valley Rec Center', 
 					'2000.05.088.SWG01.MTR01': 'Serra Mesa-Kearny Mesa Library', 
 					'2000.05.100.SWG01.MTR01': 'Fire Repair Facility', 
 					'2000.05.114.SWG01.MTR01': 'Rancho Bernardo Senior Center', 
@@ -62,9 +63,7 @@ def get_pv_data_write_temp(**context):
 					'2000.06.029.SWG01.MTR01': 'Police Station Central Division', 
 					'2000.06.046.SWG01.MTR01': 'Mission Trails Regional Park', 
 					'2000.06.047.SWG01.MTR01': 'Balboa Park Inspiration Point', 
-					'2000.06.053.SWG01.MTR01': 'Park De La Cruz Rec Center'}'''
-
-	pv_sites = {'2000.05.066.SWG01.MTR01': 'Carmel Valley Rec Center', '2000.05.088.SWG01.MTR01': 'Serra Mesa-Kearny Mesa Library', '2000.05.100.SWG01.MTR01': 'Fire Repair Facility', '2000.05.114.SWG01.MTR01': 'Rancho Bernardo Senior Center', '2000.05.117.SWG01.MTR01': 'Police Station Eastern Division', '2000.05.120.SWG01.MTR01': 'Police Station Southern Division', '2000.06.005.SWG01.MTR01': 'Mountain View Rec Center', '2000.06.007.SWG01.MTR01': 'Police Station Northern Division', '2000.06.010.SWG01.MTR01': 'Tierrasanta Rec Center & Pool', '2000.06.021.SWG01.MTR01': 'Police Station Western Division ', '2000.06.027.SWG01.MTR01': 'Mission Valley Library', '2000.06.029.SWG01.MTR01': 'Police Station Central Division', '2000.06.046.SWG01.MTR01': 'Mission Trails Regional Park', '2000.06.047.SWG01.MTR01': 'Balboa Park Inspiration Point', '2000.06.053.SWG01.MTR01': 'Park De La Cruz Rec Center'}
+					'2000.06.053.SWG01.MTR01': 'Park De La Cruz Rec Center'}
 
 	attr = 'AC_POWER'
 	df_5min, df_15min = p.get_data(startDate, endDate, elem_paths, attr, True)

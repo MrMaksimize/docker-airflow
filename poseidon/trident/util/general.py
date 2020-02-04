@@ -183,7 +183,7 @@ schedule = {
 	'cityiq': '@daily',
     'onbase_test': '*/15 * * * *',
     'gis_tree_canopy': None,
-    'pv_prod':'@hourly',
+    'pv_prod':'@daily',
     'parking_meter_locs': '0 19 * * *' # daily at 7pm UTC
 }
 
