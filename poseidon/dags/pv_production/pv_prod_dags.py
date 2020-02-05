@@ -15,8 +15,6 @@ schedule = general.schedule['pv_prod']
 start_date = general.start_date['pv_prod']
 conf = general.config
 
-#
-
 dag = DAG(
     dag_id='pv_prod',
     default_args=args,
