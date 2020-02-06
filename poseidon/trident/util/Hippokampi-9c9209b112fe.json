@@ -1,0 +1,12 @@
+{
+  "type": "service_account",
+  "project_id": "hippokampi",
+  "private_key_id": "9c9209b112fe658d6cb1b70506c4a38b378ebf37",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCOgGuGVCtSV9G+\neVyhz5u/SihiV8xyXuxWeXAY3+YMGsHNq3fGMIAYW7XTw3cRPaX6Ba4glqEjfB1G\nZNmtyL4hP/d/FwN1K9BxFXG6BC2177huyc84GvxfKmgAPofqdQswA0Yr3M7vN1Re\ntEp3XcYjTp393ycDJvujhyokEov/6Pu3hGffNMoxcmt6o09DQJudmHfVqwsnFBrG\n/hL6hpT70yaFKU8xmKgE+CIS35CfwKldUQT2xAsngf77RzgG5jnNscPpTLkOyCaj\nXR6HXJQOjE0oddnPq34q2h/9gYLzDim/SYfIa5OOVDmMb2FRYnkle1pxLD7ppaUA\n+JVmpn9HAgMBAAECggEADGzpM0jSkDcFHHEzoQ5bu8XJGK4kLxLU08N6AUlAo2yP\n2pGpe3gOK1GP3Lut/axc9Ryars/DlDcFzHYNvwgCgB62Q3grvoNIBRxEEt67Z6JT\n+CETtwYvXFLzx5WsP0beZ1zZuQhjaNtvuWRKG/dqx/hacWEMY0t6ZKtsAsI1P+ac\n/gniBd6Bh78zH1OjWqDp3ho3KhOoNpW0cJZWYwWOJwwy0+QIeoHbxHCgFWzPNztm\ndq1HvvPjkTy0ksUs1QZmEp9hmojjkOuc8L9GoK5xSqDt3T93quPLRMpCq1noQru6\nXRV68uUZXbZcCzjHUHkQjiWz71U9zDJcFViCSGbtGQKBgQDETeRGr4Ggbd8B6qJ2\nxEXswY4s0MTuIVA7ucBSQkAulyOnZTZ7YN7qTzxSN41TC2P6K064rdMwR0VWrK9r\ndyCYg4Fj3FUD1zH221E0PEoxeU9k23g+HAl6Ky7r5OPV/7vV6xb+2OmHjRbiiTyN\n2skAYhtwKxiugsY/y0F4g8s2CQKBgQC51gsEAuZ2M3MHbjxxFuxTSoJXMPGRmWyO\n6rYxutp+04A3sJvKRX/qoRYf0ci0EbmWWenRtM8ksqoypTMLBh5qemTeYrv8uUrM\nHIbHu7bLz59ll/2W7+NqAC7Bbgr6fXUtG/LreZ57bTz+D9E1eIJD0xCeUQtK/VfY\ncb2rhyrezwKBgCjb8ZzI4RlMZTOX6/L+jXNnIjmvxp2uL24PDrnQcl2ANfqctYde\ntWdd0LdoOrFDWK70nrEP9TpCS2tsDCM5K36zOJZZgRSIkSzJn5BY0DSWBHGAwPlk\nipB0NpMBFG8xiJ5RDXtEGO+O7Wl/mSwJkvbSdNWXEs8YBz22B82W2RBJAoGAPmoI\nGxnKQ2q2OImqnSTgzHya2CPlDkykLD/iX0NtfOkWCB41xLKg6rGdl6RCr0/AsCGU\nqUz7wUyMYyQex5YPgx2GYTZyAshMuc7e6Zg/Jaae12U704TQMVrMWUTXRRf70eGw\nLawUMUoYERBI6JeH0LXDwBhiHZaG+XgCBukH2fsCgYAjxiBrqfZ8w0gGvsp7/7Er\nAwtKquOaqsjwfRV5JWWvwGkIis/ePgGE1Wm6h8C0Vykzusb5Aw3EFxx8/JTiXUzX\nVnmPGdPdXj50253JvzjQmIae9NU69J6GtgCZUrkLwQDf+Y5OasDYUeOTXvZLVudQ\n2Nv9kpZvdI+bfcExqK0uMA==\n-----END PRIVATE KEY-----\n",
+  "client_email": "poseidon@hippokampi.iam.gserviceaccount.com",
+  "client_id": "114027666320184912839",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/poseidon%40hippokampi.iam.gserviceaccount.com"
+}

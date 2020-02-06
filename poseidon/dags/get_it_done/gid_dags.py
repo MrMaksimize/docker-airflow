@@ -39,6 +39,16 @@ get_gid_requests = PythonOperator(
     on_success_callback=notify,
     dag=dag)
 
+#: Get GID sidewalk SONAR
+
+GID_sidewalk_sonar = PythonOperator(
+    task_id='GID_sidewalk_sonar',
+    python_callable=GID_sidewalk_sonar,
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
+
 #: Create mapped case record type and service name cols
 update_service_name = PythonOperator(
     task_id='update_service_name',
@@ -223,5 +233,4 @@ join_community_plan.set_upstream(join_council_districts)
 #: get_gid_requests must run before join_council_district
 join_parks.set_upstream(join_community_plan)
 #: join_community_plan must run before creating prod files
-create_prod_files.set_upstream(join_parks)
-
+create_prod_files.set_upstream([join_parks,GID_sidewalk_sonar])
