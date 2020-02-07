@@ -18,6 +18,11 @@ prod_file = conf['prod_data_dir'] + '/pv_production.csv'
 hourly_file = conf['temp_data_dir'] + '/pv_hourly_results.csv'
 prod_hourly_file = conf['prod_data_dir'] + '/pv_hourly_production.csv'
 
+print(PRIMARY_KEY)
+
+def asdf():
+	print(PRIMARY_KEY)
+
 #API Call
 def get_pv_data_write_temp(**context):
 	# 2000.05.088 = Sierra/Kearney Mesa Library, 2000.05.073 = Malcolm X Library, 2000.06.006 = Pt. Loma Library
@@ -121,7 +126,7 @@ def update_pv_prod(**context):
 #Push to Lucid
 
 #Helper Functions
-
+'''
 #TODO (THIS HAS NOT BEEN TESTED)
 def API_call(start_date, end_date, elem_paths, attr, two_hours=False, resolution="raw", fp=None):
 	    baseurl = 'https://api.powerfactorscorp.com' 
@@ -177,3 +182,4 @@ def API_to_csv():
 	df_15min.index.name = 'Timestamp'
 
 	general.pos_write_csv(df_15min, hourly_file, index=True, date_format=conf['date_format_ymd_hms'])
+'''
