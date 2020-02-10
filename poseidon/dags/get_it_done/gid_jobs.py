@@ -5,7 +5,7 @@ import pandas as pd
 import logging
 import datetime as dt
 import numpy as np
-from trident.util import general
+from trident.util import general, performSD
 from trident.util.sf_client import Salesforce
 from trident.util.geospatial import spatial_join_pt
 
@@ -714,3 +714,7 @@ def build_gid_sonar_ph_closed(**kwargs):
 
     # Return expected dict
     return {'value': potholes_closed}
+    
+def GID_sidewalk_sonar():
+    performSD.sonar()
+    return "Successfully triggered sonar sidewalks backlog monitoring"
