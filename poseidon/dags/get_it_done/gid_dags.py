@@ -26,14 +26,23 @@ start_date = general.start_date['get_it_done']
 dag = DAG(dag_id='get_it_done',
         default_args=args,
         schedule_interval=schedule,
-        start_date=start_date)
-
-gid_latest_only = LatestOnlyOperator(task_id='gid_latest_only', dag=dag)
+        start_date=start_date,
+        catchup=False
+        )
 
 #: Get GID requests from Salesforce
-get_gid_requests = PythonOperator(
-    task_id='get_gid_requests',
-    python_callable=get_gid_requests,
+get_streets_requests = PythonOperator(
+    task_id='get_gid_streets',
+    python_callable=get_gid_streets,
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
+
+#: Get GID requests from Salesforce
+get_other_requests = PythonOperator(
+    task_id='get_gid_other',
+    python_callable=get_gid_other,
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
@@ -151,11 +160,11 @@ for i in services:
     service_tasks.append(get_task)
 
     #: join_council_districts must run before get_task
-    get_task.set_upstream(create_prod_files)
+    create_prod_files >> get_task
 
     if i == 'pothole':
         #: get_task must run before sonar potholes
-        get_task.set_downstream(create_potholes_sonar)
+        get_task >> create_potholes_sonar
 
 filename = conf['prod_data_dir'] + "/get_it_done_*_v1.csv"
 files = [os.path.basename(x) for x in glob.glob(filename)]
@@ -189,39 +198,17 @@ for index, file_ in enumerate(files):
         if task_name in services:
             for service_index, service in enumerate(services):
                 if task_name == service:
-                    #: Github .md update
                     service_update_task = get_seaboard_update_dag('gid-' + md_name + '.md', dag)
-                    #: update json must run after the get task
-                    upload_task.set_upstream(service_tasks[service_index])
-                    #: update md task must run after the upload task
-                    service_update_task.set_upstream(upload_task)
+                    upload_task >> service_tasks[service_index]
+                    service_update_task >> upload_task
         else:
-            #: upload task must run after the get task
-            upload_task.set_upstream(create_prod_files)
+            upload_task << create_prod_files
 
         if index == len(files)-1:
-            #: Github .md update
             md_update_task = get_seaboard_update_dag('get-it-done-311.md', dag)
-            #: update json must run after the upload task
-            update_json_date.set_upstream(upload_task)
-            #: update md task must run after the upload task
-            md_update_task.set_upstream(upload_task)
-
+            [update_json_date, md_update_task] << upload_task
+            
 #: Execution rules
-#: gid_latest_only must run before get_gid_requests
-get_gid_requests.set_upstream(gid_latest_only)
-#: gid_latest_only must run before get_gid_requests
-update_service_name.set_upstream(get_gid_requests)
-#: gid_latest_only must run before get_gid_requests
-update_close_dates.set_upstream(update_service_name)
-#: get_gid_requests must run before join_council_district
-update_referral_col.set_upstream(update_close_dates)
-#: get_gid_requests must run before join_council_district
-join_council_districts.set_upstream(update_referral_col)
-#: get_gid_requests must run before join_council_district
-join_community_plan.set_upstream(join_council_districts)
-#: get_gid_requests must run before join_council_district
-join_parks.set_upstream(join_community_plan)
-#: join_community_plan must run before creating prod files
-create_prod_files.set_upstream(join_parks)
+[get_streets_requests, get_other_requests] >> update_service_name >> update_close_dates >> update_referral_col
+update_referral_col >> join_council_districts >> join_community_plan >> join_parks >> create_prod_files
 

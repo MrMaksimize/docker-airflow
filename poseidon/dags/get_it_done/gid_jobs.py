@@ -11,7 +11,8 @@ from trident.util.geospatial import spatial_join_pt
 
 conf = general.config
 
-temp_file_gid = conf['temp_data_dir'] + '/gid_temp.csv'
+temp_streets_gid = conf['temp_data_dir'] + '/gid_temp_streetdiv.csv'
+temp_other_gid = conf['temp_data_dir'] + '/gid_temp_other.csv'
 sname_file_gid = conf['temp_data_dir'] + '/gid_sname.csv'
 dates_file_gid = conf['temp_data_dir'] + '/gid_dates.csv'
 ref_file_gid = conf['temp_data_dir'] + '/gid_ref.csv'
@@ -48,7 +49,27 @@ def sap_case_sub_type(row):
     else:
         return None
 
-def get_gid_requests():
+def get_gid_streets():
+    """Get requests from sf, creates prod file."""
+    username = conf['dpint_sf_user']
+    password = conf['dpint_sf_pass']
+    security_token = conf['dpint_sf_token']
+
+    report_id = "00Ot0000000ogtBEAQ"
+
+    # Init salesforce client
+    sf = Salesforce(username, password, security_token)
+
+    # Pull dataframe
+    logging.info('Pull report {} from SF'.format(report_id))
+
+    sf.get_report_csv(report_id, temp_streets_gid)
+
+    logging.info('Process report {} data.'.format(report_id))
+
+    return "Successfully pulled Salesforce report"
+
+def get_gid_other():
     """Get requests from sf, creates prod file."""
     username = conf['dpint_sf_user']
     password = conf['dpint_sf_pass']
@@ -62,7 +83,7 @@ def get_gid_requests():
     # Pull dataframe
     logging.info('Pull report {} from SF'.format(report_id))
 
-    sf.get_report_csv(report_id, temp_file_gid)
+    sf.get_report_csv(report_id, temp_other_gid)
 
     logging.info('Process report {} data.'.format(report_id))
 
@@ -70,16 +91,26 @@ def get_gid_requests():
 
 def update_service_name():
     """ Take various columns and merge for consistent case types"""
-    df = pd.read_csv(temp_file_gid,
+    df_streets = pd.read_csv(temp_streets_gid,
                      encoding='ISO-8859-1',
                      low_memory=False,
                      error_bad_lines=False,
                      )
 
+    df_other = pd.read_csv(temp_other_gid,
+                     encoding='ISO-8859-1',
+                     low_memory=False,
+                     error_bad_lines=False,
+                     )
+
+    df = pd.concat([df_streets,df_other],ignore_index=True)
+
     logging.info("Read {} records from Salesforce report".format(df.shape[0]))
 
     df.columns = [x.lower().replace(' ','_').replace('/','_') 
         for x in df.columns]
+
+    logging.info(df.columns)
 
     df = df.fillna('')
 
