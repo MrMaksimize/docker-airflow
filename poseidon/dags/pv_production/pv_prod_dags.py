@@ -1,9 +1,7 @@
 from airflow.operators.python_operator import PythonOperator
-from airflow.operators.bash_operator import BashOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
-from airflow.operators.latest_only_operator import LatestOnlyOperator
 from airflow.models import DAG
-from trident.util import general, power
+from trident.util import general
 from trident.util.notifications import notify
 
 from dags.pv_production.pv_prod_jobs import *

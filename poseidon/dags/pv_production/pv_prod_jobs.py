@@ -103,8 +103,6 @@ def API_to_csv(elem_paths, interval, execution_date):
 	
 	attr = 'AC_POWER'
 
-	print("CALLING API WITH {} {} {} {}".format(startDate, endDate, elem_paths, attr))
-
 	df_5min, df_15min = get_data(startDate, endDate, elem_paths, attr, True)
 
 	df_5min = df_5min.rename(columns=rename_cols)
