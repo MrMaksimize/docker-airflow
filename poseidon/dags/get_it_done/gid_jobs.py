@@ -110,8 +110,6 @@ def update_service_name():
     df.columns = [x.lower().replace(' ','_').replace('/','_') 
         for x in df.columns]
 
-    logging.info(df.columns)
-
     df = df.fillna('')
 
     logging.info('Prepped dataframe, fixing simple case record types')
@@ -641,7 +639,7 @@ def create_prod_files():
     ]]
 
     final_reports = final_reports.sort_values(by=['service_request_id','date_requested','date_updated'])
-
+    logging.info("Full dataset contains {final_reports.shape[0]} records")
     general.pos_write_csv(
         final_reports,
         services_file,
@@ -698,50 +696,3 @@ def get_requests_service_name(service_name, machine_service_name):
 
     return "Successfully wrote {} records for gid {} prod file".format(
         data.shape[0], machine_service_name)
-
-
-def prepare_sonar_gid_data():
-    """Prepare GID Sonar data."""
-    potholes_file = prod_file_base + "pothole_" + prod_file_end
-
-    # Read CSV
-    gid = pd.read_csv(potholes_file)
-
-    # Set accepted fields
-    fields = ['service_request_id', 'date_requested', 'date_updated',
-              'case_origin', 'service_name', 'status', 'lat', 'lng']
-
-    # Filter on field
-    gid = gid[fields]
-
-    # Convert datetime columns
-    gid['date_requested'] = pd.to_datetime(gid['date_requested'])
-    gid['date_updated'] = pd.to_datetime(gid['date_updated'])
-
-    return gid
-
-def build_gid_sonar_ph_closed(**kwargs):
-    """Todo use filters for dynamic filtering from this data."""
-    range_start = kwargs['range_start']
-    gid = prepare_sonar_gid_data()
-
-    # Get only closed potholes
-    mask = (gid.service_name == 'Pothole') & \
-           (gid.status == 'Closed')
-
-    gid_ph_closed = gid[mask]
-    gid_ph_closed = gid_ph_closed.copy()
-
-    range_start_year = range_start.year
-    range_start_month = range_start.month
-    range_start_day = range_start.day
-
-    range_start_naive = dt.datetime(range_start_year,range_start_month,range_start_day)
-
-    # Get closed potholes, last x days
-    potholes_sub = gid_ph_closed.loc[gid_ph_closed['date_requested'] >= range_start_naive]
-
-    potholes_closed = potholes_sub.shape[0]
-
-    # Return expected dict
-    return {'value': potholes_closed}

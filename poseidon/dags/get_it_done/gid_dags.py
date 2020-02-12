@@ -2,7 +2,6 @@
 import re
 import glob
 from airflow.operators.python_operator import PythonOperator
-from airflow.operators.latest_only_operator import LatestOnlyOperator
 from airflow.models import DAG
 
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
@@ -111,18 +110,6 @@ create_prod_files = PythonOperator(
     on_success_callback=notify,
     dag=dag)
 
-#: Send Sonar Potholes report
-create_potholes_sonar = PoseidonSonarCreator(
-    task_id='create_gid_potholes_closed_sonar',
-    range_id='days_30',
-    value_key='gid_potholes_closed',
-    value_desc='Potholes Closed',
-    python_callable=build_gid_sonar_ph_closed,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
-    dag=dag)
-
 #: Update data inventory json
 update_json_date = PythonOperator(
     task_id='update_json_date',
@@ -161,10 +148,6 @@ for i in services:
 
     #: join_council_districts must run before get_task
     create_prod_files >> get_task
-
-    if i == 'pothole':
-        #: get_task must run before sonar potholes
-        get_task >> create_potholes_sonar
 
 filename = conf['prod_data_dir'] + "/get_it_done_*_v1.csv"
 files = [os.path.basename(x) for x in glob.glob(filename)]
