@@ -161,7 +161,7 @@ schedule = {
     'pd_cfs': "@daily",
     'pd_col': "@daily",
     'pd_hc': None,
-    'ttcs': "@daily",
+    'ttcs': '0 8 * * *',
     'indicator_bacteria_tests': "@daily",
     'parking_meters': "@daily",
     'traffic_counts': "@weekly",
