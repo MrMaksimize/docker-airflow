@@ -35,7 +35,7 @@ class Salesforce(object):
                  password=None,
                  security_token=None,
                  client_id='DataSD_Poseidon',
-                 sf_version='39.0',
+                 sf_version='47.0',
                  domain='sdgov.my'):
 
         self.sf_version = sf_version

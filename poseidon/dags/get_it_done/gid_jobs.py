@@ -11,7 +11,8 @@ from trident.util.geospatial import spatial_join_pt
 
 conf = general.config
 
-temp_file_gid = conf['temp_data_dir'] + '/gid_temp.csv'
+temp_streets_gid = conf['temp_data_dir'] + '/gid_temp_streetdiv.csv'
+temp_other_gid = conf['temp_data_dir'] + '/gid_temp_other.csv'
 sname_file_gid = conf['temp_data_dir'] + '/gid_sname.csv'
 dates_file_gid = conf['temp_data_dir'] + '/gid_dates.csv'
 ref_file_gid = conf['temp_data_dir'] + '/gid_ref.csv'
@@ -48,7 +49,27 @@ def sap_case_sub_type(row):
     else:
         return None
 
-def get_gid_requests():
+def get_gid_streets():
+    """Get requests from sf, creates prod file."""
+    username = conf['dpint_sf_user']
+    password = conf['dpint_sf_pass']
+    security_token = conf['dpint_sf_token']
+
+    report_id = "00Ot0000000ogtBEAQ"
+
+    # Init salesforce client
+    sf = Salesforce(username, password, security_token)
+
+    # Pull dataframe
+    logging.info('Pull report {} from SF'.format(report_id))
+
+    sf.get_report_csv(report_id, temp_streets_gid)
+
+    logging.info('Process report {} data.'.format(report_id))
+
+    return "Successfully pulled Salesforce report"
+
+def get_gid_other():
     """Get requests from sf, creates prod file."""
     username = conf['dpint_sf_user']
     password = conf['dpint_sf_pass']
@@ -62,7 +83,7 @@ def get_gid_requests():
     # Pull dataframe
     logging.info('Pull report {} from SF'.format(report_id))
 
-    sf.get_report_csv(report_id, temp_file_gid)
+    sf.get_report_csv(report_id, temp_other_gid)
 
     logging.info('Process report {} data.'.format(report_id))
 
@@ -70,11 +91,19 @@ def get_gid_requests():
 
 def update_service_name():
     """ Take various columns and merge for consistent case types"""
-    df = pd.read_csv(temp_file_gid,
+    df_streets = pd.read_csv(temp_streets_gid,
                      encoding='ISO-8859-1',
                      low_memory=False,
                      error_bad_lines=False,
                      )
+
+    df_other = pd.read_csv(temp_other_gid,
+                     encoding='ISO-8859-1',
+                     low_memory=False,
+                     error_bad_lines=False,
+                     )
+
+    df = pd.concat([df_streets,df_other],ignore_index=True)
 
     logging.info("Read {} records from Salesforce report".format(df.shape[0]))
 
@@ -610,7 +639,7 @@ def create_prod_files():
     ]]
 
     final_reports = final_reports.sort_values(by=['service_request_id','date_requested','date_updated'])
-
+    logging.info("Full dataset contains {final_reports.shape[0]} records")
     general.pos_write_csv(
         final_reports,
         services_file,
@@ -667,50 +696,3 @@ def get_requests_service_name(service_name, machine_service_name):
 
     return "Successfully wrote {} records for gid {} prod file".format(
         data.shape[0], machine_service_name)
-
-
-def prepare_sonar_gid_data():
-    """Prepare GID Sonar data."""
-    potholes_file = prod_file_base + "pothole_" + prod_file_end
-
-    # Read CSV
-    gid = pd.read_csv(potholes_file)
-
-    # Set accepted fields
-    fields = ['service_request_id', 'date_requested', 'date_updated',
-              'case_origin', 'service_name', 'status', 'lat', 'lng']
-
-    # Filter on field
-    gid = gid[fields]
-
-    # Convert datetime columns
-    gid['date_requested'] = pd.to_datetime(gid['date_requested'])
-    gid['date_updated'] = pd.to_datetime(gid['date_updated'])
-
-    return gid
-
-def build_gid_sonar_ph_closed(**kwargs):
-    """Todo use filters for dynamic filtering from this data."""
-    range_start = kwargs['range_start']
-    gid = prepare_sonar_gid_data()
-
-    # Get only closed potholes
-    mask = (gid.service_name == 'Pothole') & \
-           (gid.status == 'Closed')
-
-    gid_ph_closed = gid[mask]
-    gid_ph_closed = gid_ph_closed.copy()
-
-    range_start_year = range_start.year
-    range_start_month = range_start.month
-    range_start_day = range_start.day
-
-    range_start_naive = dt.datetime(range_start_year,range_start_month,range_start_day)
-
-    # Get closed potholes, last x days
-    potholes_sub = gid_ph_closed.loc[gid_ph_closed['date_requested'] >= range_start_naive]
-
-    potholes_closed = potholes_sub.shape[0]
-
-    # Return expected dict
-    return {'value': potholes_closed}
