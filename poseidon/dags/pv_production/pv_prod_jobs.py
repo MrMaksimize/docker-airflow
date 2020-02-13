@@ -101,8 +101,6 @@ def update_pv_prod(currTime, **context):
 	prod_hourly_file = conf['prod_data_dir'] + '/pv_hourly_production.csv'
 	build_production_files(prod_hourly_file, hourly_file)
 
-	print('currTime.hour is ',currTime.hour)
-
 	if currTime.hour in [15,16]:
 		prod_file = conf['prod_data_dir'] + '/pv_production.csv'
 		temp_file = conf['temp_data_dir'] + '/pv_daily_results.csv'
