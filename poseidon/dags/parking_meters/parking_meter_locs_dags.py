@@ -81,4 +81,4 @@ update_parking_trans_md = get_seaboard_update_dag('parking_meters_locations.md',
 
 #: Execution Rules
 
-get_parking_files >> build_prod_file >> clean_daily_files >> upload_prod_file >> [update_parking_trans_md, update_json_date]
+get_parking_files >> build_prod_file >> upload_prod_file >> [update_parking_trans_md, update_json_date]
