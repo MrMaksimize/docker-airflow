@@ -1,8 +1,6 @@
 """DSD Permits _dags file."""
 from airflow.operators.python_operator import PythonOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
-from airflow.operators.latest_only_operator import LatestOnlyOperator
-from airflow.operators.bash_operator import BashOperator
 from airflow.models import DAG
 from trident.util import general
 from dags.permits.permits_jobs import *
@@ -13,7 +11,6 @@ conf = general.config
 args = general.args
 schedule = general.schedule['dsd_approvals']
 start_date = general.start_date['dsd_approvals']
-year = general.get_year()
 
 #: Dag spec for dsd permits
 dag = DAG(dag_id='dsd_permits',
@@ -21,23 +18,22 @@ dag = DAG(dag_id='dsd_permits',
           start_date=start_date,
           schedule_interval=schedule)
 
-#: Latest Only Operator for dsd permits.
-dsd_permits_latest_only = LatestOnlyOperator(
-    task_id='dsd_permits_latest_only', dag=dag)
-
 #: Get permits reports
-get_permits_files = BashOperator(
+get_permits_files = PythonOperator(
     task_id='get_permits_files',
-    bash_command=get_permits_files(),
+    provide_context=True,
+    python_callable=get_permits_files,
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
     dag=dag)
 
 #: Clean permits reports
-clean_data = PythonOperator(
-    task_id='clean_data',
-    python_callable=clean_data,
+create_pts_active = PythonOperator(
+    task_id='create_pts_active',
+    provide_context=True,
+    python_callable=build_pts,
+    op_kwargs={'mode': 'active'},
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
