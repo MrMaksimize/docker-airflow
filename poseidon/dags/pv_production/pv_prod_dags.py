@@ -13,14 +13,14 @@ schedule = general.schedule['pv_prod']
 start_date = general.start_date['pv_prod']
 conf = general.config
 
-currTime = context['execution_date'].in_timezone('America/Los_Angeles')
-
 dag = DAG(
     dag_id='pv_prod',
     default_args=args,
     start_date=start_date,
     schedule_interval=schedule
     )
+
+currTime = general.get_last_run(dag).in_timezone('America/Los_Angeles')
 
 #: Downloads latest 1:40min of PV data from API
 get_pv_data_write_temp = PythonOperator(

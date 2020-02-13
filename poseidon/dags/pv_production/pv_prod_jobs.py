@@ -31,14 +31,11 @@ hourly_pv_meters = ['2000.05.088.SWG01.MTR01']
 
 #DAG Function
 def get_pv_data_write_temp(currTime, **context):
-	print('currTime is ',currTime)
-	#currTime = context['execution_date'].in_timezone('America/Los_Angeles')
-	#API_to_csv(hourly_pv_meters, 'hourly', currTime)
-	'''
+	API_to_csv(hourly_pv_meters, 'hourly', currTime)
+	
 	if currTime.hour in [15,16]:
 		API_to_csv(daily_pv_meters, 'daily', currTime)
-	'''
-
+	
 	return f"Successfully wrote temp files"
 
 #Helper Function
@@ -50,9 +47,10 @@ def API_to_csv(elem_paths, interval, execution_date):
 
 	elif interval == 'daily':
 		temp_file = conf['temp_data_dir'] + '/pv_daily_results.csv'
-		endDate = execution_date
+		endDate = execution_date.subtract(minutes=30)
 		startDate = endDate.subtract(days=3)
 	
+	logging.info(f'Calling API with: {startDate}, {endDate}, # of elements: {len(elem_paths)} ')
 	df_5min, df_15min = get_data(startDate, endDate, elem_paths, 'AC_POWER', True)
 	df_15min = df_15min.rename(columns=pv_meters)
 	df_15min.index.name = 'Timestamp'
@@ -89,29 +87,28 @@ def get_data(start_date, end_date, elem_paths, attr, two_hours=False, resolution
 	tstamps = pd.date_range(start_tstamp, end_tstamp, periods=num_vals)
 	df_5min = pd.DataFrame(index=tstamps, data=results)
 	df_15min = df_5min.resample('15T', label='right', closed='right').mean()
-		
+
 	if fp:
 		df_15min.to_csv(fp)
 		return
 	else:
+		logging.info('API returned ' + str(df_15min.shape[0]) + ' rows')
 		return df_15min, df_5min
 
 #DAG Function
-def update_pv_prod(**context):
+def update_pv_prod(currTime, **context):
 	hourly_file = conf['temp_data_dir'] + '/pv_hourly_results.csv'
 	prod_hourly_file = conf['prod_data_dir'] + '/pv_hourly_production.csv'
-	build_production_files(prod_file, temp_file)
+	build_production_files(prod_hourly_file, hourly_file)
 
-	'''
-	if ##DAILY###
+	print('currTime.hour is ',currTime.hour)
+
+	if currTime.hour in [15,16]:
 		prod_file = conf['prod_data_dir'] + '/pv_production.csv'
 		temp_file = conf['temp_data_dir'] + '/pv_daily_results.csv'
 		build_production_files(prod_file, temp_file)
-	'''
 
-	results = df_prod.shape[0]
-	logging.info('Writing ' + str(df_prod.shape[0]) + ' rows')
-	return f"Successfully wrote prod file with {results} records"
+	return f"Successfully wrote production files"
 
 #Helper Function
 def build_production_files(prod_file, temp_file, **context):
@@ -121,6 +118,10 @@ def build_production_files(prod_file, temp_file, **context):
 	df_prod = df_prod.groupby(df_prod.index).first()
 	df_prod = df_prod.round(decimals=3)
 	general.pos_write_csv(df_prod, prod_file, index=True, date_format=conf['date_format_ymd_hms'])
+
+	results = df_prod.shape[0]
+	logging.info('Writing to production ' + str(results) + ' rows in '+str(prod_file))
+	return f"Successfully wrote prod file with {results} records"
 
 #Push to Lucid
 #TO DO
