@@ -182,8 +182,8 @@ for index, file_ in enumerate(files):
             for service_index, service in enumerate(services):
                 if task_name == service:
                     service_update_task = get_seaboard_update_dag('gid-' + md_name + '.md', dag)
-                    upload_task >> service_tasks[service_index]
-                    service_update_task >> upload_task
+                    upload_task << service_tasks[service_index]
+                    service_update_task << upload_task
         else:
             upload_task << create_prod_files
 
