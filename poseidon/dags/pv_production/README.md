@@ -12,13 +12,14 @@ Date last updated: February 2020
 
 ## To Dos
 
+- Change 15min to 5min in production csv
+- Add functionality for trident.util.seaboard_updates.update_json_date
 - Future integration with Lucid BuildingOS API
 - Add Malcolm X Library, Point Loma Library once systems are repaired
 
 ## Data transformations
 
 The source of the data is a REST API with Power Factors, who have been contracted to provide the PV data. The data is queried from the API hourly, combined and saved to /data/temp, pushed to Lucid for dashboard integration, and appends a production dataset in /data/prod of all PV data since 2020. The production dataset will be uploaded to S3 once a day. 
-
 
 ### get_pv_data_write_temp
 

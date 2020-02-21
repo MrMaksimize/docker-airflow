@@ -58,4 +58,7 @@ s3_upload = S3FileTransferOperator( # creating a different upload object for eac
     replace=True,
     dag=dag)
 
-get_pv_data_write_temp >> update_pv_prod >> s3_upload
+#: Update portal modified date
+update_pv_md = get_seaboard_update_dag('pv_production.md', dag)
+
+get_pv_data_write_temp >> update_pv_prod >> s3_upload >> update_pv_md
