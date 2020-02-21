@@ -96,13 +96,6 @@ def build_prod_file(**kwargs):
     update.pole_id = update.pole_id.str.upper()
     update.pay_method = update.pay_method.str.upper()
     update.meter_type = update.meter_type.str.extract('(SS|MS)', expand=False)
-
-    # Construct a unique id:
-    logging.info("Generating UUID for update file")
-    update['uuid'] = update.meter_type.str.cat(update.pole_id, sep="")\
-        .str.cat(update.date_trans_start.dt.strftime('%y%m%d%H%M%S'), sep="")\
-        .str.cat(update.trans_amt.astype(str), sep="")\
-        .str.replace("-", "")
     
     # Rearrange column order
     logging.info("Rearranging column order")
@@ -137,7 +130,7 @@ def build_prod_file(**kwargs):
 
     # Drop duplicate entries
     logging.info("Dropping duplicates")
-    portal_up_dedupe = portal_up.drop_duplicates('uuid', keep='last')
+    portal_up_dedupe = portal_up.drop_duplicates()
 
     # Log amt of duplicates found
     logging.info(
