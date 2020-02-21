@@ -20,10 +20,13 @@ dag = DAG(
     schedule_interval=schedule
     )
 
+currTime = general.get_last_run(dag).in_timezone('America/Los_Angeles')
+
 #: Downloads latest 1:40min of PV data from API
 get_pv_data_write_temp = PythonOperator(
     task_id='get_pv_data_write_temp',
     python_callable=get_pv_data_write_temp,
+    op_kwargs={'currTime': currTime},
     provide_context=True,
     on_failure_callback=notify,
     on_retry_callback=notify,
@@ -34,6 +37,7 @@ get_pv_data_write_temp = PythonOperator(
 update_pv_prod = PythonOperator(
     task_id='update_pv_prod',
     python_callable=update_pv_prod,
+    op_kwargs={'currTime': currTime},
     provide_context=True,
     on_failure_callback=notify,
     on_retry_callback=notify,

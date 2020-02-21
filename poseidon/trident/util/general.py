@@ -162,7 +162,7 @@ schedule = {
     'pd_cfs': "@daily",
     'pd_col': "@daily",
     'pd_hc': None,
-    'ttcs': "@daily",
+    'ttcs': '0 8 * * *',
     'indicator_bacteria_tests': "@daily",
     'parking_meters': "@daily",
     'traffic_counts': "@weekly",
@@ -238,7 +238,7 @@ start_date = {
     'onbase_test': default_date,
     'gis_tree_canopy': default_date,
     'parking_meter_locs': datetime(2019, 12, 25),
-    'pv_prod': datetime(2020, 2, 11)
+    'pv_prod': datetime(2020, 2, 14)
 }
 
 
