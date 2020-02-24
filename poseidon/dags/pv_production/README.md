@@ -12,6 +12,7 @@ Date last updated: February 2020
 
 ## To Dos
 
+- Change execution date for when job is ready to go into production
 - Change 15min to 5min in production csv
 - Add functionality for trident.util.seaboard_updates.update_json_date
 - Future integration with Lucid BuildingOS API
