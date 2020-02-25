@@ -9,6 +9,8 @@ from trident.util import general
 
 conf = general.config
 PRIMARY_KEY = conf['pf_api_key']
+LUCID_USER = conf["lucid_api_user"]
+LUCID_PASS = conf["lucid_api_pass"]
 
 pv_meters = {'2000.05.066.SWG01.MTR01': 'Carmel Valley Rec Center', 
 					'2000.05.088.SWG01.MTR01': 'Serra Mesa-Kearny Mesa Library', 
@@ -121,5 +123,33 @@ def build_production_files(prod_file, temp_file, **context):
 	logging.info('Writing to production ' + str(results) + ' rows in '+str(prod_file))
 	return f"Successfully wrote prod file with {results} records"
 
-#Push to Lucid
-#TO DO
+# TODO TESTED WORKING
+def get_lucid_token(**context):
+	url = "https://api.buildingos.com/o/token/"
+	payload = f'client_id={LUCID_USER}&client_secret={LUCID_PASS}&grant_type=client_credentials'
+	headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+	response = requests.request("POST", url, headers=headers, data = payload)
+	token_data = json.loads(response.text)
+	token = token_data['access_token']
+	print(token)
+	return token
+
+# TODO
+def push_lucid_data(**context):
+
+	### CHANGE DIRECTORY OF TEMPORARY FILE
+	df_payload=pd.read_csv('/Users/bryanolson/Programming/poseidon-airflow/data/temp/pv_hourly_results.csv')
+	temp = df_payload.values.tolist()
+	payload = """{\"meta\":{\"naive_timestamp_utc\":false},\"data\":{\"90822aa2575a11ea978002420aff27ae\":"""
+	payload_f = payload+str(json.dumps(temp))+'}}'
+
+	task_instance = context['task_instance']
+	token = task_instance.xcom_pull(task_ids='get_lucid_token')
+	print(token)
+	'''
+	url = "https://api.buildingos.com/gateways/34893/data/"
+	headers = {'Content-Type': 'application/json','Authorization': f'Bearer {token}'}
+	response = requests.request("POST", url, headers=headers, data = payload_f)
+	'''
+	return token
+

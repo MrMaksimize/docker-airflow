@@ -44,6 +44,26 @@ update_pv_prod = PythonOperator(
     on_success_callback=notify,
     dag=dag)
 
+#: TODO
+get_lucid_token = PythonOperator(
+    task_id='get_lucid_token',
+    python_callable=get_lucid_token,
+    provide_context=True,
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
+
+#: TODO
+push_lucid_data = PythonOperator(
+    task_id='push_lucid_data',
+    python_callable=push_lucid_data,
+    provide_context=True,
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
+
 #: Uploads the pv production file
 s3_upload = S3FileTransferOperator( # creating a different upload object for each...
     task_id='s3_upload',
@@ -61,4 +81,16 @@ s3_upload = S3FileTransferOperator( # creating a different upload object for eac
 #: Update portal modified date
 update_pv_md = get_seaboard_update_dag('pv_production.md', dag)
 
-get_pv_data_write_temp >> update_pv_prod >> s3_upload >> update_pv_md
+get_pv_data_write_temp >> [update_pv_prod,get_lucid_token]
+update_pv_prod >> s3_upload >> update_pv_md
+get_lucid_token >> push_lucid_data
+
+
+
+
+
+
+
+
+
+
