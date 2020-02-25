@@ -87,13 +87,3 @@ update_pv_md = get_seaboard_update_dag('pv_production.md', dag)
 get_pv_data_write_temp >> [update_pv_prod,get_lucid_token]
 update_pv_prod >> check_upload_time >> s3_upload >> update_pv_md
 get_lucid_token >> push_lucid_data
-
-
-
-
-
-
-
-
-
-
