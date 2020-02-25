@@ -240,7 +240,7 @@ start_date = {
     'onbase_test': default_date,
     'gis_tree_canopy': default_date,
     'parking_meter_locs': datetime(2019, 12, 25),
-    'pv_prod': datetime(2020, 2, 14)
+    'pv_prod': datetime(2020, 2, 26)
 }
 
 

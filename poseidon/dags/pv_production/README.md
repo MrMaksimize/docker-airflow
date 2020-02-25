@@ -5,17 +5,13 @@ This job creates datasets containing energy produced by solar photovoltaic syste
 Data sources: PowerFactors API
 
 Owning department: Sustainability
-
 SMEs: Shannon Sales, SSalese@sandiego.gov, and Bryan Olson, OlsonB@sandiego.gov
 
 Date last updated: February 2020
 
 ## To Dos
 
-- Change execution date for when job is ready to go into production
-- Change 15min to 5min in production csv
 - Add functionality for trident.util.seaboard_updates.update_json_date
-- Future integration with Lucid BuildingOS API
 - Add Malcolm X Library, Point Loma Library once systems are repaired
 
 ## Data transformations

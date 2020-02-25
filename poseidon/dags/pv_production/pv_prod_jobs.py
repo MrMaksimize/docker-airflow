@@ -12,6 +12,7 @@ PRIMARY_KEY = conf['pf_api_key']
 LUCID_USER = conf["lucid_api_user"]
 LUCID_PASS = conf["lucid_api_pass"]
 
+
 pv_meters = {'2000.05.066.SWG01.MTR01': 'Carmel Valley Rec Center', 
 					'2000.05.088.SWG01.MTR01': 'Serra Mesa-Kearny Mesa Library', 
 					'2000.05.100.SWG01.MTR01': 'Fire Repair Facility', 
@@ -32,12 +33,14 @@ daily_pv_meters = [*pv_meters]
 hourly_pv_meters = ['2000.05.088.SWG01.MTR01']
 
 #DAG Function
-def get_pv_data_write_temp(currTime, **context):
-	API_to_csv(hourly_pv_meters, 'hourly', currTime)
+def get_pv_data_write_temp(**context):
+	currTime = context['execution_date'].in_timezone('America/Los_Angeles')
+	
+	API_to_csv(hourly_pv_meters, 'hourly', currTime)	
 	
 	if currTime.hour in [15,16]:
-		API_to_csv(daily_pv_meters, 'daily', currTime)
-	
+		API_to_csv(daily_pv_meters, 'daily', currTime)		
+
 	return f"Successfully wrote temp files"
 
 #Helper Function
@@ -54,9 +57,10 @@ def API_to_csv(elem_paths, interval, execution_date):
 	
 	logging.info(f'Calling API with: {startDate}, {endDate}, # of elements: {len(elem_paths)} ')
 	df_5min, df_15min = get_data(startDate, endDate, elem_paths, 'AC_POWER', True)
-	df_15min = df_15min.rename(columns=pv_meters)
-	df_15min.index.name = 'Timestamp'
-	general.pos_write_csv(df_15min, temp_file, index=True, date_format=conf['date_format_ymd_hms'])
+	df_5min = df_5min.rename(columns=pv_meters)
+	df_5min.index.name = 'Timestamp'
+	df_5min = df_5min.round(decimals=3)
+	general.pos_write_csv(df_5min, temp_file, index=True, date_format=conf['date_format_ymd_hms'])
 
 #Helper Function
 def get_data(start_date, end_date, elem_paths, attr, two_hours=False, resolution="raw", fp=None):
@@ -94,20 +98,21 @@ def get_data(start_date, end_date, elem_paths, attr, two_hours=False, resolution
 		df_15min.to_csv(fp)
 		return
 	else:
-		logging.info('API returned ' + str(df_15min.shape[0]) + ' rows')
-		return df_15min, df_5min
+		logging.info('API returned ' + str(df_5min.shape[0]) + ' rows')
+		return df_5min, df_15min
 
 #DAG Function
-def update_pv_prod(currTime, **context):
+def update_pv_prod(**context):
+	currTime = context['execution_date'].in_timezone('America/Los_Angeles')
 	hourly_file = conf['temp_data_dir'] + '/pv_hourly_results.csv'
 	prod_hourly_file = conf['prod_data_dir'] + '/pv_hourly_production.csv'
 	build_production_files(prod_hourly_file, hourly_file)
-
+	
 	if currTime.hour in [15,16]:
 		prod_file = conf['prod_data_dir'] + '/pv_production.csv'
 		temp_file = conf['temp_data_dir'] + '/pv_daily_results.csv'
 		build_production_files(prod_file, temp_file)
-
+	
 	return f"Successfully wrote production files"
 
 #Helper Function
@@ -123,7 +128,7 @@ def build_production_files(prod_file, temp_file, **context):
 	logging.info('Writing to production ' + str(results) + ' rows in '+str(prod_file))
 	return f"Successfully wrote prod file with {results} records"
 
-# TODO TESTED WORKING
+#DAG Function
 def get_lucid_token(**context):
 	url = "https://api.buildingos.com/o/token/"
 	payload = f'client_id={LUCID_USER}&client_secret={LUCID_PASS}&grant_type=client_credentials'
@@ -131,25 +136,33 @@ def get_lucid_token(**context):
 	response = requests.request("POST", url, headers=headers, data = payload)
 	token_data = json.loads(response.text)
 	token = token_data['access_token']
-	print(token)
+	logging.info('Successfully got access_token  ' + str(token) + ' from Lucid')
 	return token
 
-# TODO
+#DAG Function
 def push_lucid_data(**context):
-
-	### CHANGE DIRECTORY OF TEMPORARY FILE
-	df_payload=pd.read_csv('/Users/bryanolson/Programming/poseidon-airflow/data/temp/pv_hourly_results.csv')
+	df_payload=pd.read_csv(conf['temp_data_dir'] + '/pv_hourly_results.csv')
 	temp = df_payload.values.tolist()
 	payload = """{\"meta\":{\"naive_timestamp_utc\":false},\"data\":{\"90822aa2575a11ea978002420aff27ae\":"""
 	payload_f = payload+str(json.dumps(temp))+'}}'
 
 	task_instance = context['task_instance']
 	token = task_instance.xcom_pull(task_ids='get_lucid_token')
-	print(token)
-	'''
+
 	url = "https://api.buildingos.com/gateways/34893/data/"
 	headers = {'Content-Type': 'application/json','Authorization': f'Bearer {token}'}
 	response = requests.request("POST", url, headers=headers, data = payload_f)
-	'''
-	return token
+	
+	results = df_payload.shape[0]
+	logging.info('Writing to Lucid ' + str(results) + ' rows of data')
+	return f"Successfully wrote to Lucid with {results} records"
 
+#DAG Function
+def check_upload_time(**context):
+	currTime = context['execution_date'].in_timezone('America/Los_Angeles')
+	if currTime.hour in [15,16]:
+		logging.info('Calling downstream tasks, hour is: {}'.format(currTime.hour))
+		return True
+	else:
+		logging.info('Skipping downstream tasks, hour is: '.format(currTime.hour))
+		return False
