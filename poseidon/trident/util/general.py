@@ -7,12 +7,21 @@ import requests
 import shutil
 from datetime import datetime, timedelta, date
 from dateutil import tz
+import pendulum
 
 import subprocess
 import csv
 import json
 
 from airflow.models import Variable
+
+def get_last_run(dag):
+    last_dag_run = dag.get_last_dagrun()
+    if last_dag_run is None:
+        return pendulum.now()
+    else:
+        return last_dag_run.execution_date
+
 
 def seven_days_ago():
     """Return the date seven days ago."""
@@ -154,7 +163,7 @@ schedule = {
     'pd_cfs': "@daily",
     'pd_col': "@daily",
     'pd_hc': None,
-    'ttcs': "@daily",
+    'ttcs': '0 8 * * *',
     'indicator_bacteria_tests': "@daily",
     'parking_meters': "@daily",
     'traffic_counts': "@weekly",
