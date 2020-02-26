@@ -73,7 +73,6 @@ def build_pts(mode='active', **context):
 
     date_cols = ['Project Create Date',
     'Project Deemed Complete Date',
-    'Project Expiration Date',
     ' Approval Create Date',
     'Approval Issue Date',
     'Approval Expiration Date',
@@ -82,8 +81,7 @@ def build_pts(mode='active', **context):
     dtypes = {'Development ID':'str',
     'Project ID':'str',
     'Job ID':'str',
-    'Approval ID':'str',
-    'Appl_Days':np.int64}
+    'Approval ID':'str'}
 
     filename = context['task_instance'].xcom_pull(dag_id="dsd_permits",
         task_ids='get_permits_files')
@@ -135,7 +133,6 @@ def build_pts(mode='active', **context):
         'job_street_address':'address_job',
         'project_create_date':'date_project_create',
         'project_deemed_complete_date':'date_project_complete',
-        'project_expiration_date':'date_project_expire',
         'approval_issue_date':'date_approval_issue',
         'approval_expiration_date':'date_approval_expire',
         'approval_create_date':'date_approval_create',
@@ -153,6 +150,11 @@ def build_pts(mode='active', **context):
         else:
             logging.info("Did not find any active approvals with a closed project")
 
+    logging.info("Removing certain columns")
+    # Removing columns per SME
+
+    df = df.drop(columns=['project_expiration_date','appl_days','project_expiration_code'])
+
     logging.info("Writing file to temp")
     general.pos_write_csv(
     df,
@@ -166,7 +168,6 @@ def build_accela(mode='active', **context):
     
     date_cols = ['project_create_date',
     'project_deemed_complete_date',
-    'project_expiration_date',
     'approval_create_date',
     'approval_issue_date',
     'approval_will_expire_date',
@@ -234,15 +235,17 @@ def build_accela(mode='active', **context):
     df = df.rename(columns={'pmt_job_latitude':'lat_job',
                         'pmt_job_longitude':'lng_job',
                         'pmt_job_street_address':'address_job',
-                        'pmt_job_apn':'apn_job',
+                        'pmt_job_apn':'job_apn',
                         'project_create_date':'date_project_create',
                         'project_deemed_complete_date':'date_project_complete',
-                        'project_expiration_date':'date_project_expire',
                         'approval_issue_date':'date_approval_issue',
                         'approval_create_date':'date_approval_create',
                         'approval_close_date':'date_approval_close',
                         'approval_will_expire_date':'date_approval_expire'
                        })
+
+    df = df.drop(columns=['project_expiration_date','project_expiration_code'])
+
     logging.info("Writing file to temp")
     general.pos_write_csv(
     df,
@@ -447,6 +450,17 @@ def create_pw_sap_subset():
     df.columns = ['id','title']
 
     df = df.sort_values('id')
+    # duplicates exist because we're using Project ID, but the dataset is approvals
+    df = df.drop_duplicates('id')
+
+    # Now set character length limit
+    df['id'] = df['id'].str.slice(0,15)
+    df['title'] = df['title'].str.slice(0,75)
+
+    logging.info(df.head())
+
+    #Finally, drop the one test project
+    df = df.drop([3350],axis=0)
 
     general.pos_write_csv(
         df,

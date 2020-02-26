@@ -16,7 +16,9 @@ start_date = general.start_date['dsd_approvals']
 dag = DAG(dag_id='dsd_permits',
           default_args=args,
           start_date=start_date,
-          schedule_interval=schedule)
+          schedule_interval=schedule,
+          catchup=False
+          )
 
 #: Get permits reports
 get_permits_files = PythonOperator(
@@ -49,14 +51,26 @@ upload_files = SubDagOperator(
   dag=dag,
   )
 
-update_permits_md = get_seaboard_update_dag('permits-dsd.md', dag)
+update_set1_md = get_seaboard_update_dag('development-permits-set1.md', dag)
+update_set2_md = get_seaboard_update_dag('development-permits-set2.md', dag)
 
 #: Update data inventory json
-update_json_date = PythonOperator(
-    task_id='update_json_date',
+update_set1_json_date = PythonOperator(
+    task_id='update_set1_json_date',
     python_callable=update_json_date,
     provide_context=True,
-    op_kwargs={'ds_fname': 'permits-for-development'},
+    op_kwargs={'ds_fname': 'development-permits-set1'},
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
+
+#: Update data inventory json
+update_set2_json_date = PythonOperator(
+    task_id='update_set2_json_date',
+    python_callable=update_json_date,
+    provide_context=True,
+    op_kwargs={'ds_fname': 'development-permits-set2'},
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
@@ -112,6 +126,7 @@ upload_pw_sap = S3FileTransferOperator(
 
 #: Execution rules
 get_permits_files>>create_files>>join_bids>>upload_files
-upload_files>>[update_permits_md,update_json_date,create_tsw_file,create_pw_sap_file]
+upload_files>>[update_set1_md,update_set2_md,update_set1_json_date,update_set2_json_date]
+upload_files>>[create_tsw_file,create_pw_sap_file]
 create_tsw_file>>upload_tsw
 create_pw_sap_file>>upload_pw_sap

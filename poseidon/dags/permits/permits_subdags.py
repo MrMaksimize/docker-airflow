@@ -22,7 +22,8 @@ def create_file_subdag():
     dag_id='dsd_permits.create_files',
     default_args=args,
     start_date=start_date,
-    schedule_interval=schedule
+    schedule_interval=schedule,
+    catchup=False
   )
 
   for file in files:
@@ -68,7 +69,8 @@ def join_bids_subdag():
     dag_id='dsd_permits.join_bids',
     default_args=args,
     start_date=start_date,
-    schedule_interval=schedule
+    schedule_interval=schedule,
+    catchup=False
   )
 
   for file in files:
@@ -96,7 +98,8 @@ def upload_files_subdag():
     dag_id='dsd_permits.upload_files',
     default_args=args,
     start_date=start_date,
-    schedule_interval=schedule
+    schedule_interval=schedule,
+    catchup=False
   )
 
   for file in files:
