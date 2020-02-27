@@ -1,4 +1,5 @@
 from airflow.operators.python_operator import PythonOperator
+from airflow.operators import ShortCircuitOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
 from airflow.models import DAG
 from trident.util import general
@@ -20,13 +21,10 @@ dag = DAG(
     schedule_interval=schedule
     )
 
-currTime = general.get_last_run(dag).in_timezone('America/Los_Angeles')
-
 #: Downloads latest 1:40min of PV data from API
 get_pv_data_write_temp = PythonOperator(
     task_id='get_pv_data_write_temp',
     python_callable=get_pv_data_write_temp,
-    op_kwargs={'currTime': currTime},
     provide_context=True,
     on_failure_callback=notify,
     on_retry_callback=notify,
@@ -37,11 +35,37 @@ get_pv_data_write_temp = PythonOperator(
 update_pv_prod = PythonOperator(
     task_id='update_pv_prod',
     python_callable=update_pv_prod,
-    op_kwargs={'currTime': currTime},
     provide_context=True,
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
+    dag=dag)
+
+#: TODO
+get_lucid_token = PythonOperator(
+    task_id='get_lucid_token',
+    python_callable=get_lucid_token,
+    provide_context=True,
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
+
+#: TODO
+push_lucid_data = PythonOperator(
+    task_id='push_lucid_data',
+    python_callable=push_lucid_data,
+    provide_context=True,
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
+
+#Operator to control only one S3 upload a day
+check_upload_time = ShortCircuitOperator(
+    task_id='check_upload_time',
+    provide_context=True,
+    python_callable=check_upload_time,
     dag=dag)
 
 #: Uploads the pv production file
@@ -58,4 +82,8 @@ s3_upload = S3FileTransferOperator( # creating a different upload object for eac
     replace=True,
     dag=dag)
 
-get_pv_data_write_temp >> update_pv_prod >> s3_upload
+#: Update portal modified date
+update_pv_md = get_seaboard_update_dag('pv_production.md', dag)
+get_pv_data_write_temp >> [update_pv_prod,get_lucid_token]
+update_pv_prod >> check_upload_time >> s3_upload >> update_pv_md
+get_lucid_token >> push_lucid_data
