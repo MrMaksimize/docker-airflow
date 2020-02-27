@@ -1,12 +1,12 @@
-import os
 import pandas as pd
 import geopandas as gpd
+import math
 import fiona
 from fiona import crs
 from shapely.geometry import mapping
 import requests
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime
 import logging
 from airflow.hooks.mssql_hook import MsSqlHook
 from trident.util import general
@@ -17,7 +17,9 @@ from arcgis.features import FeatureLayerCollection
 
 conf = general.config
 
-temp_file = conf['temp_data_dir'] + '/sd_paving_results.csv'
+temp_query = conf['temp_data_dir'] + '/cartegraph_results.csv'
+temp_file = conf['temp_data_dir'] + '/sd_paving_base.csv'
+temp_gis = conf['temp_data_dir'] + '/sd_paving_esri_base.csv'
 
 prod_file = {
     'sdif': conf['prod_data_dir'] + '/sd_paving_datasd_v1.csv',
@@ -34,13 +36,11 @@ def number_str_cols(col):
 
 def get_paving_miles(row):
     """ Calculate paving miles """
-
-    seg_ft_rounded = math.ceil(row['seg_length_ft'])
     
     if row['seg_width_ft'] >= 50:
-        return (row['seg_length_ft'] * 2)/5280
+        return math.ceil((row['seg_length_ft'] * 2)/5280)
     else:
-        return row['seg_length_ft']/5280
+        return math.ceil(row['seg_length_ft']/5280)
 
 def get_start_end_dates(row):
     """ Determine correct start and end dates """
@@ -67,11 +67,11 @@ def get_streets_paving_data():
     results = df.shape[0]
 
     general.pos_write_csv(
-        df, temp_file)
+        df, temp_query)
     
     return f"Successfully wrote temp file with {results} records"
 
-def process_paving_data(mode='sdif', **kwargs):
+def create_base_data():
 
     """Get streets paving data from DB."""
     moratorium_string = "Post Construction"
@@ -85,18 +85,27 @@ def process_paving_data(mode='sdif', **kwargs):
 
     today = general.today()
 
-    date_cols = ['wo_design_start_dt','wo_design_end_dt','job_start_dt','job_end_dt']
+    date_cols = ['wo_design_start_dt',
+    'wo_design_end_dt',
+    'job_start_dt',
+    'job_end_dt']
 
-    df = pd.read_csv(temp_file,low_memory=False, parse_dates=date_cols)
+    df = pd.read_csv(temp_query,low_memory=False,
+        parse_dates=date_cols)
 
     # Update column types
 
-    float_cols = ['pve_id','rd_seg_id','seg_council_district']
+    float_cols = ['pve_id',
+    'rd_seg_id',
+    'seg_council_district']
 
     for i in float_cols:
         df[i] = number_str_cols(df[i])
 
-    str_cols = ['seg_id','wo_proj_type','wo_id','wo_name']
+    str_cols = ['seg_id',
+    'wo_proj_type',
+    'wo_id',
+    'wo_name']
 
     df.loc[:,str_cols] = df.loc[:,str_cols].replace(np.nan, '')
 
@@ -194,16 +203,26 @@ def process_paving_data(mode='sdif', **kwargs):
     df['end'] = dates_final[1]
 
     #*** Calculate paving miles ***
+
+    logging.info('Rounding length in feet and calculating paving miles')
+
+    #First, round segment length to next whole number
+    df['seg_length_ft'] = df['seg_length_ft'].fillna(0.0)
+    df['seg_length_ft'] = df['seg_length_ft'].apply(lambda x: math.ceil(x))
+
     
     paving_miles = df.apply(get_paving_miles, axis=1)
     df = df.assign(paving_miles=paving_miles)
 
+    # Now we need to set paving miles to zero for certain activity type
+    df.loc[df['job_activity'] == 'AC - Surface Treatment Partial','paving_miles'] = 0
+
     #*** Remove unneeded records ***
+    # Additional record removal based on mode happens in next task
 
     logging.info(f"Starting with {df.shape[0]} rows before removing records")
 
     start_no = df.shape[0]
-    logging.info(df.iloc[0])
 
     # UTLY jobs where job end date is missing
     df = df[~((df.wo_id == "UTLY") & (df.job_end_dt.isnull()))]
@@ -216,22 +235,6 @@ def process_paving_data(mode='sdif', **kwargs):
         remove_search, regex=True, case=False, na=False))]
     logging.info(f"Removed {start_no - df.shape[0]} records for data entry, etc")
     start_no = df.shape[0] 
-
-    five_yrs_ago = today.replace(year=(today.year - 5))
-    three_yrs_ago = today.replace(year=(today.year - 3))
-    
-    start_no = df.shape[0]
-
-    # All older than 5 years plus slurry records older than 3 years for imcat
-    if mode == 'imcat':
-        df = df[(df.job_end_dt > five_yrs_ago) | (df.job_end_dt.isnull())]
-        logging.info(f"Removed {start_no - df.shape[0]} records older than 5 years")
-        df = df[~((df.wo_proj_type == 'Slurry') &
-                 (df.job_end_dt < three_yrs_ago))]
-        logging.info(f"Removed {start_no - df.shape[0]} Slurry records older than 3 years")
-    else:
-        df = df[(df.job_end_dt >= '07/01/2013') | (df.job_end_dt.isnull())]
-        logging.info(f"Removed {start_no - df.shape[0]} records older than July 1, 2013")
 
     # Records with no activity, type or status
     mask = (df.job_activity.isnull()) | (df.job_activity == None) | (df.job_activity == 'None') | (df.job_activity == '')\
@@ -248,10 +251,39 @@ def process_paving_data(mode='sdif', **kwargs):
 
     logging.info(f"End with {df.shape[0]} rows after removing records")
 
-    #*** Rename columns and create subsets ***
+    # Write csv
+    logging.info('Writing base data')
+    general.pos_write_csv(
+        df, temp_file, date_format=conf['date_format_ymd'])
+    
+    return "Successfully wrote prod file at " + prod_file[mode]
 
-    # For IMCAT uppercase status
+def create_mode_data(mode='sdif', **context):
+    """ Creating final files based on mode """
+
+    date_cols = ['wo_design_start_dt',
+    'wo_design_end_dt',
+    'job_start_dt',
+    'job_end_dt']
+
+    df = pd.read_csv(temp_file,low_memory=False,parse_dates=date_cols)
+
+    exec_date = context['execution_date']
+
+    five_yrs_ago = exec_date.subtract(years=5)
+    three_yrs_ago = exec_date.subtract(years=3)
+
     if mode == 'imcat':
+
+        # All older than 5 years plus slurry records older than 3 years for imcat
+
+        df = df[(df.job_end_dt > five_yrs_ago) | (df.job_end_dt.isnull())]
+        logging.info(f"Removed {start_no - df.shape[0]} records older than 5 years")
+        df = df[~((df.wo_proj_type == 'Slurry') &
+                 (df.job_end_dt < three_yrs_ago))]
+        logging.info(f"Removed {start_no - df.shape[0]} Slurry records older than 3 years")
+
+        # Remove duplicates for imcat. Must be unique project list
 
         logging.info("Flagging duplicates for removal")
 
@@ -301,9 +333,10 @@ def process_paving_data(mode='sdif', **kwargs):
 
     else:
 
-        # Remove duplicates
-        #df = df.sort_values(by='job_end_dt', na_position='last', ascending=False)
-        #df = df.drop_duplicates('seg_id', keep='first')
+        # Keep duplicates and anything after July 1 2013 for public dataset
+
+        df = df[(df.job_end_dt >= '07/01/2013') | (df.job_end_dt.isnull())]
+        logging.info(f"Removed {start_no - df.shape[0]} records older than July 1, 2013")
 
         df = df.sort_values(by=['seg_id','job_end_dt'], na_position='last', ascending=[True,False])
 
@@ -342,16 +375,120 @@ def process_paving_data(mode='sdif', **kwargs):
 
         df_final['status'] = df_final['status'].str.lower()
 
-    
     # Write csv
     logging.info('Writing ' + str(df_final.shape[0]) + ' rows in mode ' + mode)
     general.pos_write_csv(
         df_final, prod_file[mode], date_format=conf['date_format_ymd'])
-    
+
     return "Successfully wrote prod file at " + prod_file[mode]
 
-def create_arcgis():
+def create_arcgis_base():
     """ Create GIS file and send to ArcGIS online """
+
+    logging.info("Reading geojson")
+    geojson = gpd.read_file(f"{conf['prod_data_dir']}/sd_paving_segs_datasd.geojson")
+    geojson = geojson.rename(columns={'geometry':'geom'})
+    
+    logging.info("Reading repair data")
+    df = pd.read_csv(prod_file['sdif'],low_memory=False,parse_dates=['date_end','date_start'])
+
+    logging.info("Creating calendar and fiscal year cols")
+
+    df['date_end'] = df['date_end'].dt.date
+
+    df['date_cy'] = df['date_end'].apply(lambda x: x.year)
+    df['date_fy'] = df['date_end'].apply(lambda x: x.year+1 if x.month > 6 else x.year )
+
+    df['date_cy'] = number_str_cols(df['date_cy'])
+    df['date_fy'] = number_str_cols(df['date_fy'])
+
+    logging.info("Renaming cols to meet character limits")
+    
+    df = df.rename(columns={'address_street':'addr_st',
+        'street_from':'street_fr',
+        'street_to':'street_to',
+        'paving_miles':'pav_mi'})
+
+    logging.info("Creating miles completed for chart")
+
+    df.loc[df['status'] == 'post construction','mi_comp'] = df.loc[df['status'] == 'post construction','pav_mi']
+    df.loc[df['status'] != 'post construction','mi_comp'] = 0
+
+    logging.info("Creating subset for merging")
+
+    df_sub = df[['pve_id',
+    'seg_id',
+    'project_id',
+    'title',
+    'status',
+    'type',
+    'date_start',
+    'date_end',
+    'pav_mi',
+    'date_cy',
+    'date_fy',
+    'mi_comp']]
+
+    logging.info("Merging paving data with street segments")
+
+    df_merge = pd.merge(geojson,
+        df_sub,
+        how='outer',
+        right_on='seg_id',
+        left_on='sapid')
+
+    logging.info("Set sapid equal to segid when null")
+
+    df_merge.loc[df_merge['sapid'].isnull(),
+    'sapid'] = df_merge.loc[df_merge['sapid'].isnull(),
+    'seg_id'] 
+
+
+    df_gis = df_merge.drop(columns={'seg_id'})
+    df_gis = df_gis.rename(columns={'sapid':'seg_id'})
+
+    date_cols = ['date_end','date_cy','date_fy', 'date_start']
+    for dc in date_cols:
+        logging.info(f"Converting {dc} from date to string")
+        df_gis[dc] = df_gis[dc].fillna('')
+        df_gis[dc] = df_gis[dc].astype(str)
+
+    logging.info("Filling in NAs")
+
+    df_gis['type'] = df_gis['type'].fillna('None')
+
+    na_cols = ['pve_id','seg_id','project_id','title','status']
+    for nc in na_cols:
+        df_gis[nc] = df_gis[nc].fillna('')
+
+    logging.info("Reading in OCI data")
+
+    oci_11 = pd.read_csv(f"{conf['prod_data_dir']}/oci_2011_datasd.csv")
+    oci_15 = pd.read_csv(f"{conf['prod_data_dir']}/oci_2015_datasd.csv")
+
+    logging.info("Merging segment OCI to create OCI cols")
+
+    merge_oci = pd.merge(df_gis,oci_11[['seg_id','oci','oci_desc']],how='left',on='seg_id')
+    merge_oci = merge_oci.rename(columns={'oci':'oci_11','oci_desc':'oci11_des'})
+    
+    final_pave_gis = pd.merge(merge_oci,oci_15[['seg_id','oci','oci_desc']],how='left',on='seg_id')
+    final_pave_gis = final_pave_gis.rename(columns={'oci':'oci_15','oci_desc':'oci15_des'})
+
+    logging.info("Write data to CSV for QA purposes")
+
+    final_pave_gis.drop(columns=['geom']).to_csv(f"{conf['prod_data_dir']}/streets_map_data.csv",index=False)
+
+    logging.info("Writing data for layer creation")
+
+    general.pos_write_csv(
+        final_pave_gis,
+        temp_gis,
+        date_format=conf['date_format_ymd'])
+
+    return "Successfully created GIS base for ESRI"
+
+def send_arcgis(mode=['completed'], **context):
+    """ Update ArcGIS online feature layer """
 
     dtypes = OrderedDict([
         ('roadsegid', 'str'),
@@ -373,7 +510,6 @@ def create_arcgis():
         ('date_end','str'),
         ('pav_mi','float'),
         ('mi_comp','float'),
-        ('mi_plan','float'),
         ('date_cy','str'),
         ('date_fy','str'),
         ('oci_11','float'),
@@ -382,98 +518,38 @@ def create_arcgis():
         ('oci15_des','str')
     ])
 
-    logging.info("Reading geojson")
-    geojson = gpd.read_file(f"{conf['prod_data_dir']}/sd_paving_segs_datasd.geojson")
-    geojson = geojson.rename(columns={'geometry':'geom'})
-    
-    logging.info("Reading repair data")
-    df = pd.read_csv(prod_file['sdif'],low_memory=False,parse_dates=['date_end','date_start'])
+    logging.info("Read in ESRI base file")
 
-    df['date_end'] = df['date_end'].dt.date
+    df = pd.read_csv(temp_gis,low_memory=False)
 
-    df['date_cy'] = df['date_end'].apply(lambda x: x.year)
-    df['date_fy'] = df['date_end'].apply(lambda x: x.year+1 if x.month > 6 else x.year )
+    logging.info(f"Divide {df.shape[0]} rows of data into layers")
 
-    df['date_cy'] = number_str_cols(df['date_cy'])
-    df['date_fy'] = number_str_cols(df['date_fy'])
-    
-    df = df.rename(columns={'address_street':'addr_st',
-        'street_from':'street_fr',
-        'street_to':'street_to',
-        'paving_miles':'pav_mi'})
+    layer = df.loc[df['status'].isin(mode),:]
+    logging.info(f"Completed layer has {layer.shape[0]} rows")
 
-    df.loc[df['status'] == 'post construction','mi_comp'] = df.loc[df['status'] == 'post construction','pav_mi']
-    df.loc[df['status'] != 'post construction','mi_plan'] = df.loc[df['status'] != 'post construction','pav_mi']
+    # Layer 2 is in progress
 
-    df_sub = df[['pve_id',
-    'seg_id',
-    'project_id',
-    'title',
-    'status',
-    'type',
-    'date_start',
-    'date_end',
-    'pav_mi',
-    'date_cy',
-    'date_fy',
-    'mi_comp',
-    'mi_plan'
-    ]]
+    #lyr2 = final_pave_gis.loc[final_pave_gis['status'] == "construction",:]
+    #logging.info(f"In progress layer has {lyr2.shape[0]} rows")
 
-    logging.info("Merging data")
+    # Layer 3 is planned
+
+    #lyr3 = final_pave_gis.loc[(final_pave_gis['status'] != "construction") &
+    #(final_pave_gis['status'] != "post construction"),:]
+
+    #logging.info(f"Planned layer has {lyr3.shape[0]} rows")
 
 
-    df_merge = pd.merge(geojson,
-        df_sub,
-        how='outer',
-        right_on='seg_id',
-        left_on='sapid')
-
-    df_merge.loc[df_merge['sapid'].isnull(),
-    'sapid'] = df_merge.loc[df_merge['sapid'].isnull(),
-    'seg_id'] 
-
-
-    df_gis = df_merge.drop(columns={'seg_id'})
-    df_gis = df_gis.rename(columns={'sapid':'seg_id'})
-
-    date_cols = ['date_end','date_cy','date_fy', 'date_start']
-    for dc in date_cols:
-        logging.info(f"Converting {dc} from date to string")
-        df_gis[dc] = df_gis[dc].fillna('')
-        df_gis[dc] = df_gis[dc].astype(str)
-
-    df_gis['type'] = df_gis['type'].fillna('None')
-
-    na_cols = ['pve_id','seg_id','project_id','title','status']
-    for nc in na_cols:
-        df_gis[nc] = df_gis[nc].fillna('')
-
-    logging.info("Reading in OCI data")
-
-    oci_11 = pd.read_csv(f"{conf['prod_data_dir']}/oci_2011_datasd.csv")
-    oci_15 = pd.read_csv(f"{conf['prod_data_dir']}/oci_2015_datasd.csv")
-
-    merge_oci = pd.merge(df_gis,oci_11[['seg_id','oci','oci_desc']],how='left',on='seg_id')
-    merge_oci = merge_oci.rename(columns={'oci':'oci_11','oci_desc':'oci11_des'})
-    
-    final_pave_gis = pd.merge(merge_oci,oci_15[['seg_id','oci','oci_desc']],how='left',on='seg_id')
-    final_pave_gis = final_pave_gis.rename(columns={'oci':'oci_15','oci_desc':'oci15_des'})
-
-    final_pave_gis.drop(columns=['geom']).to_csv(f"{conf['prod_data_dir']}/streets_map_data.csv",index=False)
-
-    #df_gis = gpd.GeoDataFrame(df_merge,geometry='geom')
-
-    logging.info("Writing shapefile")
+    logging.info("Writing layer to shapefile")
 
     with fiona.collection(
-        f"{conf['prod_data_dir']}/sd_paving_gis_datasd.shp",
+        f"{conf['prod_data_dir']}/sd_paving_gis_{layer}.shp",
         'w',
         driver='ESRI Shapefile',
         crs=crs.from_epsg(2230),
         schema={'geometry': 'LineString', 'properties': dtypes}
     ) as shpfile:
-        for index, row in final_pave_gis.iterrows():
+        for index, row in df.iterrows():
             try:
                 geometry = row['geom']
                 props = {}
@@ -483,76 +559,13 @@ def create_arcgis():
             except Exception as e:
                 logging.info(f"Problem with {index} because {e}")
 
-    shp2zip('sd_paving_gis_datasd')
+    shp2zip(f'sd_paving_gis_{layer}')
 
-    return "Successfully created GIS version for ESRI"
-
-def send_arcgis():
-    """ Update ArcGIS online feature layer """
-    street_source = f"{conf['prod_data_dir']}/sd_paving_gis_datasd.zip"
     arc_gis = GIS("https://SanDiego.maps.arcgis.com",conf["arc_online_user"],conf["arc_online_pass"])
+    # This depends on mode
     shape_file = arc_gis.content.get('1d4a99e263784467b33c42dfc26b6b9d')
     streets_flayer_collection = FeatureLayerCollection.fromitem(shape_file)
     logging.info("Overwriting streets feature layer collection")
-    overwrite = streets_flayer_collection.manager.overwrite(street_source)
+    overwrite = streets_flayer_collection.manager.overwrite(df)
 
     return overwrite
-
-def build_sonar_miles_aggs(mode='sdif', pav_type='total', **kwargs):
-    pav_csv = prod_file[mode]
-    dbl_spec = 2
-
-    range_start = kwargs['range_start']
-    range_start_year = range_start.year
-    range_start_month = range_start.month
-    range_start_day = range_start.day
-
-    range_start_naive = datetime(range_start_year,range_start_month,range_start_day)
-
-    # Read CSV
-    df = pd.read_csv(pav_csv)
-
-
-    # Convert moratorium to date
-    df["moratorium"] = pd.to_datetime(df["moratorium"])
-
-    # Get post construction, within range
-    mask = (df.status == 'Post Construction') & \
-           (df.moratorium >= range_start_naive)
-    df = df[mask]
-
-    # Get sums
-    sums = df[["paving_miles", "type"]].groupby("type").sum()
-    sums.reset_index(inplace=True)
-
-    # Get total paved
-    total = round(sums["paving_miles"].sum(), dbl_spec)
-
-    # Get total overlay
-    overlay = sums.loc[sums["type"] == 'Overlay', "paving_miles"].reset_index()
-
-    if len(overlay) == 0:
-        overlay = 0
-    else:
-        overlay = round(overlay["paving_miles"][0], dbl_spec)
-
-    # Get total slurry
-    slurry = sums.loc[sums["type"] == 'Slurry', "paving_miles"].reset_index()
-    if len(slurry) == 0:
-        slurry = 0
-    else:
-        slurry = round(slurry["paving_miles"][0], dbl_spec)
-
-
-    # Return dicts
-    if pav_type == 'total':
-        logging.info('{} miles paved {}'.format(pav_type, total))
-        return {'value': total}
-    elif pav_type == 'overlay':
-        logging.info('{} miles paved {}'.format(pav_type, overlay))
-        return {'value': overlay}
-    elif pav_type == 'slurry':
-        logging.info('{} miles paved {}'.format(pav_type, slurry))
-        return {'value': slurry}
-    else:
-        raise ValueError("Unknown pav_type")
