@@ -35,9 +35,10 @@ parking_meters_latest_only = LatestOnlyOperator(
 
 
 #: Downloads all parking files from FTP
-get_parking_files = BashOperator(
+get_parking_files = PythonOperator(
     task_id='get_parking_files',
-    bash_command=ftp_download_wget(),
+    python_callable=ftp_download_wget,
+    provide_context=True,
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,

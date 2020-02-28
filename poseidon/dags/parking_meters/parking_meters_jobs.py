@@ -6,35 +6,65 @@ import glob
 import logging
 from datetime import datetime, timedelta, date
 from trident.util import general
-
+from subprocess import Popen, PIPE, check_output
+import subprocess
+from shlex import quote
 
 conf = general.config
 cur_yr = general.get_year()
 cur_mon = datetime.now().month
-portal_fname = conf['prod_data_dir'] +'/treas_parking_payments_{}_datasd_v1.csv'.format(cur_yr)
+portal_fname = conf['prod_data_dir'] +'/treas_parking_payments_{}_datasd_v2.csv'.format(cur_yr)
 
-def ftp_download_wget():
- """Download parking meters data from FTP."""
- 
- wget_str = "wget -np --continue " \
- + "--user=$ftp_user " \
- + "--password='$ftp_pass' " \
- + "--directory-prefix=$temp_dir " \
- + "ftp://ftp.datasd.org/uploads/IPS/SanDiegoData_{0}{1}*.csv".format(cur_yr, cur_mon)
- tmpl = string.Template(wget_str)
- command = tmpl.substitute(
- ftp_user=conf['ftp_datasd_user'],
- ftp_pass=conf['ftp_datasd_pass'],
- temp_dir=conf['temp_data_dir'])
- 
- return command
+def ftp_download_wget(**context):
+    """Download parking meters data from FTP."""
+    cur_time = context['execution_date']
+    cur_yr = cur_time.year
+    cur_mon = cur_time.month
+    print('current time ',cur_time)
+    print('current year ',cur_yr)
+    print('current month ',cur_mon)
+    wget_str = "wget -np --continue " \
+    + "--user=$ftp_user " \
+    + "--password='$ftp_pass' " \
+    + "--directory-prefix=$temp_dir " \
+    + "ftp://ftp.datasd.org/uploads/IPS/SanDiegoData_{0}{1}*.csv".format(cur_yr, cur_mon)
+    tmpl = string.Template(wget_str)
+    command = tmpl.substitute(
+    ftp_user=conf['ftp_datasd_user'],
+    ftp_pass=conf['ftp_datasd_pass'],
+    temp_dir=conf['temp_data_dir'])
 
-def build_prod_file(**kwargs):
+    for root, dirs, files in os.walk(conf['temp_data_dir'], topdown=False):
+        before_files = files    
+
+    #Use shlex.quote() for enhanced security
+    command = command.format(quote(command))
+
+    p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
+    output, error = p.communicate()    
+
+    #Track which files were downloaded
+    for root, dirs, files in os.walk(conf['temp_data_dir'], topdown=False):
+        after_files = files
+
+    new_files = set(after_files) - set(before_files)
+    new_files = [x for x in new_files if 'SanDiegoData' in x]
+
+    if p.returncode != 0:
+        raise Exception(p.returncode)
+    else:
+        logging.info("Found {} file(s)".format(len(new_files)))
+        return new_files
+
+    return #command
+
+def build_prod_file(**context):
     """Process parking meters data."""
 
     # Look for files for the past week
     # Job dies sometimes with more files
-    last_week = (datetime.now() - timedelta(days=6)).day
+    #last_week = (datetime.now() - timedelta(days=6)).day
+    last_week = (context['execution_date'] - timedelta(days=76)).day
     today = datetime.now().day
     logging.info(last_week)
     
@@ -130,7 +160,7 @@ def build_prod_file(**kwargs):
 
     # Drop duplicate entries
     logging.info("Dropping duplicates")
-    portal_up_dedupe = portal_up.drop_duplicates()
+    portal_up_dedupe = portal_up.drop_duplicates(keep=False)
 
     # Log amt of duplicates found
     logging.info(
@@ -147,7 +177,6 @@ def build_prod_file(**kwargs):
         date_format=conf['date_format_ymd_hms'])  
 
     return "Updated prod file"
-
 
 def build_aggregation(agg_type="pole_by_month", **kwargs):
     """Aggregate raw production data by month/day."""
