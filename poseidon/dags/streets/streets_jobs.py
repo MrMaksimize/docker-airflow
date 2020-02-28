@@ -26,6 +26,19 @@ prod_file = {
     'imcat': conf['prod_data_dir'] + '/sd_paving_imcat_datasd_v1.csv'
 }
 
+esri_layer = {
+    'completed': {
+        'selection':['post construction'],
+        'feature_lyr':'29b698b5146e453cbf62f0a3287edad9'},
+    'in_progress': {
+        'selection':['construction'],
+        'feature_lyr':'07378f1d04ce4087a41ad5b65bfa38d3'},
+    'planned': {
+        'selection':['planning','design','bid / award'],
+        'feature_lyr':'7b84dd98e337420498ab2d136fceece8'},
+}
+
+#: Helper function
 def number_str_cols(col):
     col = col.fillna(-9999.0)
     col = col.astype(int)
@@ -34,6 +47,7 @@ def number_str_cols(col):
 
     return col
 
+#: Helper function
 def get_paving_miles(row):
     """ Calculate paving miles """
     
@@ -42,6 +56,7 @@ def get_paving_miles(row):
     else:
         return math.ceil(row['seg_length_ft']/5280)
 
+#: Helper function
 def get_start_end_dates(row):
     """ Determine correct start and end dates """
 
@@ -56,6 +71,7 @@ def get_start_end_dates(row):
         else:
             return row['start'], row['end']
 
+#: DAG function
 def get_streets_paving_data():
     """Get streets paving data from DB."""
     
@@ -71,9 +87,10 @@ def get_streets_paving_data():
     
     return f"Successfully wrote temp file with {results} records"
 
+#: DAG function
 def create_base_data():
-
-    """Get streets paving data from DB."""
+    """ Process paving data with changes for both modes """
+    
     moratorium_string = "Post Construction"
     phone_UTLY = "858-627-3200"
     phone_OTHER = "619-527-7500"
@@ -258,6 +275,7 @@ def create_base_data():
     
     return "Successfully wrote prod file at " + prod_file[mode]
 
+#: DAG function
 def create_mode_data(mode='sdif', **context):
     """ Creating final files based on mode """
 
@@ -331,7 +349,7 @@ def create_mode_data(mode='sdif', **context):
         df_final.columns = [x.upper() for x in df_final.columns]
         df_final['STATUS'] = df_final['STATUS'].str.upper()
 
-    else:
+    elif mode == 'sdif':
 
         # Keep duplicates and anything after July 1 2013 for public dataset
 
@@ -382,6 +400,7 @@ def create_mode_data(mode='sdif', **context):
 
     return "Successfully wrote prod file at " + prod_file[mode]
 
+#: DAG function
 def create_arcgis_base():
     """ Create GIS file and send to ArcGIS online """
 
@@ -441,8 +460,7 @@ def create_arcgis_base():
 
     df_merge.loc[df_merge['sapid'].isnull(),
     'sapid'] = df_merge.loc[df_merge['sapid'].isnull(),
-    'seg_id'] 
-
+    'seg_id']
 
     df_gis = df_merge.drop(columns={'seg_id'})
     df_gis = df_gis.rename(columns={'sapid':'seg_id'})
@@ -524,48 +542,46 @@ def send_arcgis(mode=['completed'], **context):
 
     logging.info(f"Divide {df.shape[0]} rows of data into layers")
 
-    layer = df.loc[df['status'].isin(mode),:]
+    layer = df.loc[df['status'].isin(esri_layer[mode].get('selection')),:]
     logging.info(f"Completed layer has {layer.shape[0]} rows")
+    
+    if not layer.empty:
 
-    # Layer 2 is in progress
+        logging.info("Writing layer to shapefile")
+        layer_name = f'sd_paving_gis_{mode}'
 
-    #lyr2 = final_pave_gis.loc[final_pave_gis['status'] == "construction",:]
-    #logging.info(f"In progress layer has {lyr2.shape[0]} rows")
+        shp_path = f"{conf['prod_data_dir']}/{layer_name}"
 
-    # Layer 3 is planned
+        with fiona.collection(
+            f"{shp_path}.shp",
+            'w',
+            driver='ESRI Shapefile',
+            crs=crs.from_epsg(2230),
+            schema={'geometry': 'LineString', 'properties': dtypes}
+        ) as shpfile:
+            for index, row in layer.iterrows():
+                try:
+                    geometry = row['geom']
+                    props = {}
+                    for prop in dtypes:
+                        props[prop] = row[prop]
+                    shpfile.write({'properties': props, 'geometry': mapping(geometry)})
+                except Exception as e:
+                    logging.info(f"Problem with {index} because {e}")
 
-    #lyr3 = final_pave_gis.loc[(final_pave_gis['status'] != "construction") &
-    #(final_pave_gis['status'] != "post construction"),:]
+        shp2zip(layer_name)
 
-    #logging.info(f"Planned layer has {lyr3.shape[0]} rows")
+        arc_gis = GIS("https://SanDiego.maps.arcgis.com",conf["arc_online_user"],conf["arc_online_pass"])
+        # This depends on mode
+        shape_file = arc_gis.content.get('1d4a99e263784467b33c42dfc26b6b9d')
+        streets_flayer_collection = FeatureLayerCollection.fromitem(shape_file)
+        logging.info("Overwriting streets feature layer collection")
+        overwrite = streets_flayer_collection.manager.overwrite(f"{shp_path}.zip")
 
+        return overwrite
 
-    logging.info("Writing layer to shapefile")
+    else:
 
-    with fiona.collection(
-        f"{conf['prod_data_dir']}/sd_paving_gis_{layer}.shp",
-        'w',
-        driver='ESRI Shapefile',
-        crs=crs.from_epsg(2230),
-        schema={'geometry': 'LineString', 'properties': dtypes}
-    ) as shpfile:
-        for index, row in df.iterrows():
-            try:
-                geometry = row['geom']
-                props = {}
-                for prop in dtypes:
-                    props[prop] = row[prop]
-                shpfile.write({'properties': props, 'geometry': mapping(geometry)})
-            except Exception as e:
-                logging.info(f"Problem with {index} because {e}")
+        return f"{mode} could not update because the selection is empty"
 
-    shp2zip(f'sd_paving_gis_{layer}')
-
-    arc_gis = GIS("https://SanDiego.maps.arcgis.com",conf["arc_online_user"],conf["arc_online_pass"])
-    # This depends on mode
-    shape_file = arc_gis.content.get('1d4a99e263784467b33c42dfc26b6b9d')
-    streets_flayer_collection = FeatureLayerCollection.fromitem(shape_file)
-    logging.info("Overwriting streets feature layer collection")
-    overwrite = streets_flayer_collection.manager.overwrite(df)
-
-    return overwrite
+    

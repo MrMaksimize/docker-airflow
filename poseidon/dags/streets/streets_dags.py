@@ -2,7 +2,7 @@
 from __future__ import print_function
 from airflow.operators.python_operator import PythonOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
-from airflow.operators.latest_only_operator import LatestOnlyOperator
+from airflow.operators.subdag_operator import SubDagOperator
 from trident.operators.poseidon_email_operator import PoseidonEmailFileUpdatedOperator
 from trident.operators.poseidon_sonar_operator import PoseidonSonarCreator
 from airflow.models import DAG
@@ -12,6 +12,7 @@ from trident.util.notifications import notify
 from trident.util.seaboard_updates import *
 
 from dags.streets.streets_jobs import *
+from dags.streets.streets_subdags import *
 
 # All times in Airflow UTC.  Set Start Time in PST?
 args = general.args
@@ -105,23 +106,20 @@ update_json_date = PythonOperator(
     on_success_callback=notify,
     dag=dag)
 
+#: Get streets data from DB
 create_esri_file = PythonOperator(
-    task_id='create_streets_gis',
+    task_id='create_esri_base',
     python_callable=create_arcgis_base,
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
     dag=dag)
 
-send_esri_layers = PythonOperator(
-    task_id='send_esri_layers',
-    python_callable=send_esri_layers,
-    provide_context=True,
-    op_kwargs={'mode': 'streets_repair_projects'},
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
-    dag=dag)
+update_esri = SubDagOperator(
+  task_id='write_esri_layers',
+  subdag=esri_layer_subdag(),
+  dag=dag,
+  )
 
 #: send file update email to interested parties
 #send_last_file_updated_email = PoseidonEmailFileUpdatedOperator(
@@ -144,7 +142,7 @@ get_streets_data >> base_data >> [portal_data,imcat_data]
 portal_data >> [upload_sdif_data, create_esri_file]
 imcat_data >> upload_imcat_data
 upload_sdif_data >> [update_json_date,update_streets_md]
-create_esri_file >> send_esri_file
+create_esri_file >> update_esri
 
 #: email notification is sent after the data was uploaded to S3
 #send_last_file_updated_email.set_upstream(upload_imcat_data)

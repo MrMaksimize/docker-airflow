@@ -1,15 +1,9 @@
 """Streets _dags file."""
 from __future__ import print_function
 from airflow.operators.python_operator import PythonOperator
-from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
-from airflow.operators.latest_only_operator import LatestOnlyOperator
-from trident.operators.poseidon_email_operator import PoseidonEmailFileUpdatedOperator
-from trident.operators.poseidon_sonar_operator import PoseidonSonarCreator
 from airflow.models import DAG
-
 from trident.util import general
 from trident.util.notifications import notify
-from trident.util.seaboard_updates import *
 
 from dags.streets.streets_jobs import *
 
@@ -19,120 +13,33 @@ conf = general.config
 schedule = general.schedule['streets']
 start_date = general.start_date['streets']
 
-#: Dag spec
-dag = DAG(dag_id='streets', default_args=args, start_date=start_date, schedule_interval=schedule)
+files = ['completed','in_progress','planned']
 
+def esri_layer_subdag():
+  """
+  Generate a DAG to be used as a subdag 
+  that updates ESRI map layers
+  """
 
-#: Latest Only Operator for imcat
-streets_latest_only = LatestOnlyOperator(task_id='streets_latest_only', dag=dag)
+  dag_subdag = DAG(
+    dag_id='streets.write_esri_layers',
+    default_args=args,
+    start_date=start_date,
+    schedule_interval=schedule,
+    catchup=False
+  )
 
-#: Get streets data from DB
-get_streets_data = PythonOperator(
-    task_id='get_streets_paving_data',
-    python_callable=get_streets_paving_data,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
-    dag=dag)
+  for file in files:
 
-#: Process data for public
-process_data_sdif = PythonOperator(
-    task_id='process_sdif',
-    python_callable=process_paving_data,
-    op_kwargs={'mode': 'sdif'},
-    provide_context=True,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
-    dag=dag)
+    write_esri_layer = PythonOperator(
+        task_id=f"send_arcgis_{file}",
+        provide_context=True,
+        python_callable=send_arcgis,
+        op_kwargs={'mode': file},
+        on_failure_callback=notify,
+        on_retry_callback=notify,
+        on_success_callback=notify,
+        dag=dag_subdag,
+      )
 
-#: Process data for imcat
-process_data_imcat = PythonOperator(
-    task_id='process_imcat',
-    python_callable=process_paving_data,
-    op_kwargs={'mode': 'imcat'},
-    provide_context=True,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
-    dag=dag)
-
-#: Upload imcat streets file to S3
-upload_imcat_data = S3FileTransferOperator(
-    task_id='upload_streets_data_imcat',
-    source_base_path=conf['prod_data_dir'],
-    source_key='sd_paving_imcat_datasd_v1.csv',
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_bucket=conf['dest_s3_bucket'],
-    dest_s3_key='tsw/sd_paving_imcat_datasd_v1.csv',
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
-    replace=True,
-    dag=dag)
-
-#: Upload sdif streets file to S3
-upload_sdif_data = S3FileTransferOperator(
-    task_id='upload_streets_data_sdif',
-    source_base_path=conf['prod_data_dir'],
-    source_key='sd_paving_datasd_v1.csv',
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_bucket=conf['dest_s3_bucket'],
-    dest_s3_key='tsw/sd_paving_datasd_v1.csv',
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
-    replace=True,
-    dag=dag)
-
-update_json_date = PythonOperator(
-    task_id='update_json_date',
-    python_callable=update_json_date,
-    provide_context=True,
-    op_kwargs={'ds_fname': 'streets_repair_projects'},
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
-    dag=dag)
-
-create_esri_file = PythonOperator(
-    task_id='create_streets_gis',
-    python_callable=create_arcgis,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
-    dag=dag)
-
-send_esri_file = PythonOperator(
-    task_id='upload_streets_gis',
-    python_callable=send_arcgis,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
-    dag=dag)
-
-#: send file update email to interested parties
-#send_last_file_updated_email = PoseidonEmailFileUpdatedOperator(
-    #task_id='send_last_file_updated',
-    #to='chudson@sandiego.gov',
-    #subject='IMCAT Streets File Updated',
-    #file_url='http://{}/{}'.format(conf['dest_s3_bucket'],
-                                   #'tsw/sd_paving_imcat_datasd_v1.csv'),
-    #on_failure_callback=notify,
-    #on_retry_callback=notify,
-    #on_success_callback=notify,
-    #dag=dag)
-
-#: Update portal modified date
-update_streets_md = get_seaboard_update_dag('streets-repair-projects.md', dag)
-
-#: Execution order
-
-streets_latest_only >> get_streets_data >> [process_data_sdif,process_data_imcat] 
-process_data_sdif >> [upload_sdif_data, create_esri_file]
-process_data_imcat >> upload_imcat_data
-[update_json_date,update_streets_md] << upload_sdif_data
-create_esri_file >> send_esri_file
-
-#: email notification is sent after the data was uploaded to S3
-#send_last_file_updated_email.set_upstream(upload_imcat_data)
+  return dag_subdag
