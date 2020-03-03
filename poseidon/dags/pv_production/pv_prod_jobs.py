@@ -31,7 +31,7 @@ pv_meters = {'2000.05.066.SWG01.MTR01': 'Carmel Valley Rec Center',
 daily_pv_meters = [*pv_meters]
 hourly_pv_meters = ['2000.05.088.SWG01.MTR01']
 
-#DAG Function
+#: DAG Function
 def get_pv_data_write_temp(**context):
 	currTime = context['execution_date'].in_timezone('America/Los_Angeles')
 	#currTime = currTime.replace(tzinfo=None)
@@ -43,7 +43,7 @@ def get_pv_data_write_temp(**context):
 	
 	return f"Successfully wrote temp files"
 
-#Helper Function
+#: Helper Function
 def API_to_csv(elem_paths, interval, execution_date):
 	if interval == 'hourly':
 		temp_file = conf['temp_data_dir'] + '/pv_hourly_results.csv'
@@ -56,13 +56,14 @@ def API_to_csv(elem_paths, interval, execution_date):
 		startDate = endDate.subtract(days=3)
 	
 	logging.info(f'Calling API with: {startDate}, {endDate}, # of elements: {len(elem_paths)} ')
-	df_5min, df_15min = get_data(startDate, endDate, elem_paths, 'AC_POWER', True)
+	df_5min = get_data(startDate, endDate, elem_paths, 'AC_POWER', True)
 	df_5min = df_5min.rename(columns=pv_meters)
 	df_5min.index.name = 'Timestamp'
 	df_5min = df_5min.round(decimals=3)
+	logging.info(f"Writing {interval} data to temp")
 	general.pos_write_csv(df_5min, temp_file, index=True, date_format=conf['date_format_ymd_hms'])
 
-#Helper Function
+#: Helper Function
 def get_data(start_date, end_date, elem_paths, attr, two_hours=False, resolution="raw", fp=None):
 	baseurl = 'https://api.powerfactorscorp.com'
 	headers = {"Ocp-Apim-Subscription-Key": PRIMARY_KEY}
@@ -74,7 +75,9 @@ def get_data(start_date, end_date, elem_paths, attr, two_hours=False, resolution
 	num_vals = 0
 	start_tstamp = start_date.replace(tzinfo=None)
 	end_tstamp = end_date.replace(tzinfo=None)
-	for path in elem_paths: # Loop through each element in list
+	sites = len(elem_paths)
+	logging.info(f"Looping through {sites} sites")
+	for index, path in enumerate(elem_paths): # Loop through each element in list
 		for start, end in dates: # Iterate through list of start and end times
 			body = {"startTime": start,
 					"endTime": end,
@@ -82,29 +85,29 @@ def get_data(start_date, end_date, elem_paths, attr, two_hours=False, resolution
 					"attributes": attr,
 					"ids": path}
 			# Use POST to avoid hitting max URL length w/ many params
+			
+			logging.info(f"Sending post request for {index+1}/{sites}")
 			try:
 				r = requests.post(dataURL, headers=headers, data=body).json()
 			except requests.exceptions.RequestException as e:
 				logging.info('Request failed with status code {}'.format(e))
-					
-			results[path] += r['assets'][0]['attributes'][0]['values'][1:] # Append readings for this time period to list of readings for this element
 
+			results[path] += r['assets'][0]['attributes'][0]['values'][1:] # Append readings for this time period to list of readings for this element
+			if start_tstamp is None: # Get the start timestamp of the entire time period
+				# API returns data starting the first 5-min interval AFTER the start time
+				start_tstamp = pd.to_datetime(r['assets'][0]['startTime'][:19])+datetime.timedelta(minutes=5)  
+				
+		end_tstamp = pd.to_datetime(r['assets'][0]['endTime'][:19])
 		num_vals = len(results[path])
 
-		print("RETURNED API START DATE IS  {}, END DATE IS {}".format(start_tstamp, end_tstamp))
-	   
 	tstamps = pd.date_range(start_tstamp, end_tstamp, periods=num_vals)
 	df_5min = pd.DataFrame(index=tstamps, data=results)
-	df_15min = df_5min.resample('15T', label='right', closed='right').mean()
+	
+	logging.info(f'API returned {df_5min.shape[0]} rows')
 
-	if fp:
-		df_15min.to_csv(fp)
-		return
-	else:
-		logging.info('API returned ' + str(df_5min.shape[0]) + ' rows')
-		return df_5min, df_15min
+	return df_5min
 
-#DAG Function
+#: DAG Function
 def update_pv_prod(**context):
 	currTime = context['execution_date'].in_timezone('America/Los_Angeles')
 	hourly_file = conf['temp_data_dir'] + '/pv_hourly_results.csv'
@@ -118,20 +121,23 @@ def update_pv_prod(**context):
 	
 	return f"Successfully wrote production files"
 
-#Helper Function
+#: Helper Function
 def build_production_files(prod_file, temp_file, **context):
+	logging.info("Reading prod and temp files")
 	df_prod = pd.read_csv(prod_file,low_memory=False,index_col=0)
 	df_temp = pd.read_csv(temp_file,low_memory=False,index_col=0)
 	df_prod = pd.concat([df_prod,df_temp])
+	# Index is timestamp
+	# Group by timestamp to deduplicate by keeping first
 	df_prod = df_prod.groupby(df_prod.index).first()
 	df_prod = df_prod.round(decimals=3)
 	general.pos_write_csv(df_prod, prod_file, index=True, date_format=conf['date_format_ymd_hms'])
 
 	results = df_prod.shape[0]
-	logging.info('Writing to production ' + str(results) + ' rows in '+str(prod_file))
+	logging.info(f'Writing to production {results} rows in {prod_file}')
 	return f"Successfully wrote prod file with {results} records"
 
-#DAG Function
+#: DAG Function
 def get_lucid_token(**context):
 	url = "https://api.buildingos.com/o/token/"
 	payload = f'client_id={LUCID_USER}&client_secret={LUCID_PASS}&grant_type=client_credentials'
@@ -142,7 +148,7 @@ def get_lucid_token(**context):
 	logging.info('Successfully got access_token  ' + str(token) + ' from Lucid')
 	return token
 
-#DAG Function
+#: DAG Function
 def push_lucid_data(**context):
 	df_payload=pd.read_csv(conf['temp_data_dir'] + '/pv_hourly_results.csv')
 	temp = df_payload.values.tolist()
@@ -155,12 +161,11 @@ def push_lucid_data(**context):
 	url = "https://api.buildingos.com/gateways/34893/data/"
 	headers = {'Content-Type': 'application/json','Authorization': f'Bearer {token}'}
 	response = requests.request("POST", url, headers=headers, data = payload_f)
-	
 	results = df_payload.shape[0]
 	logging.info('Writing to Lucid ' + str(results) + ' rows of data')
 	return f"Successfully wrote to Lucid with {results} records"
 
-#DAG Function
+#: DAG Function
 def check_upload_time(**context):
 	currTime = context['execution_date'].in_timezone('America/Los_Angeles')
 	if currTime.hour in [15,16]:

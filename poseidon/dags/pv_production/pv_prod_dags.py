@@ -18,7 +18,8 @@ dag = DAG(
     dag_id='pv_prod',
     default_args=args,
     start_date=start_date,
-    schedule_interval=schedule
+    schedule_interval=schedule,
+    catchup=False
     )
 
 #: Downloads latest 1:40min of PV data from API
@@ -61,7 +62,7 @@ push_lucid_data = PythonOperator(
     on_success_callback=notify,
     dag=dag)
 
-#Operator to control only one S3 upload a day
+#: Operator to control only one S3 upload a day
 check_upload_time = ShortCircuitOperator(
     task_id='check_upload_time',
     provide_context=True,
@@ -84,6 +85,8 @@ s3_upload = S3FileTransferOperator( # creating a different upload object for eac
 
 #: Update portal modified date
 update_pv_md = get_seaboard_update_dag('pv_production.md', dag)
+
+#: Execution rules
 get_pv_data_write_temp >> [update_pv_prod,get_lucid_token]
 update_pv_prod >> check_upload_time >> s3_upload >> update_pv_md
 get_lucid_token >> push_lucid_data

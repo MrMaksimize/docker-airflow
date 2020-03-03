@@ -22,6 +22,8 @@ The source of the data is a REST API with Power Factors, who have been contracte
 
 This function orchestrates calls to the Power Factor API, by utilizing two helper functions: API_to_csv and get_data. API_to_csv utilizes the get_data helper function to make calls, and stores the returned values to csv files in /data/temp. This function store the information to make both hourly and daily calls. get_data is a function that creates the proper HTTP request for the API.
 
+Daily calls pull 3 days worth of data. This overlap is necessary to ensure all interval data is included because the API is unreliable in the data it returns. Daily data is appended to production file and deduplicated.
+
 ### update_pv_prod
 
 This function orchestrates the joining of the new data from /data/temp into the production file in /data/prod by utilizing the build_production_files helper function, and replaces the production dataset in /data/prod. 
