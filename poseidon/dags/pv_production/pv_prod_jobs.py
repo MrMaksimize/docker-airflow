@@ -65,7 +65,7 @@ def API_to_csv(elem_paths, interval, execution_date):
 
 #: Helper Function
 def get_data(start_date, end_date, elem_paths, attr, two_hours=False, resolution="raw", fp=None):
-	baseurl = 'https://api.powerfactorscorp.com'
+	baseurl = 'https://apii.powerfactorscorp.com'
 	headers = {"Ocp-Apim-Subscription-Key": PRIMARY_KEY}
 	dataURL = baseurl + '/drive/v2/data'
 	# To store values for each element
@@ -90,7 +90,8 @@ def get_data(start_date, end_date, elem_paths, attr, two_hours=False, resolution
 			try:
 				r = requests.post(dataURL, headers=headers, data=body).json()
 			except requests.exceptions.RequestException as e:
-				logging.info('Request failed with status code {}'.format(e))
+				logging.info('Request failed with status code {}'.format(e))				
+				raise ValueError('Request failed with status code {}'.format(e))
 
 			results[path] += r['assets'][0]['attributes'][0]['values'][1:] # Append readings for this time period to list of readings for this element
 
