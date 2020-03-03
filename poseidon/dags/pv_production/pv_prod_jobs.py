@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import logging
 from trident.util import general
+from airflow import AirflowException
 
 conf = general.config
 PRIMARY_KEY = conf['pf_api_key']
@@ -48,7 +49,7 @@ def API_to_csv(elem_paths, interval, execution_date):
 	if interval == 'hourly':
 		temp_file = conf['temp_data_dir'] + '/pv_hourly_results.csv'
 		endDate = execution_date.subtract(minutes=30)
-		startDate = endDate.subtract(days=6)
+		startDate = endDate.subtract(hours=3)
 
 	elif interval == 'daily':
 		temp_file = conf['temp_data_dir'] + '/pv_daily_results.csv'
@@ -65,7 +66,7 @@ def API_to_csv(elem_paths, interval, execution_date):
 
 #: Helper Function
 def get_data(start_date, end_date, elem_paths, attr, two_hours=False, resolution="raw", fp=None):
-	baseurl = 'https://apii.powerfactorscorp.com'
+	baseurl = 'https://api.powerfactorscorp.com'
 	headers = {"Ocp-Apim-Subscription-Key": PRIMARY_KEY}
 	dataURL = baseurl + '/drive/v2/data'
 	# To store values for each element
@@ -91,7 +92,7 @@ def get_data(start_date, end_date, elem_paths, attr, two_hours=False, resolution
 				r = requests.post(dataURL, headers=headers, data=body).json()
 			except requests.exceptions.RequestException as e:
 				logging.info('Request failed with status code {}'.format(e))				
-				raise ValueError('Request failed with status code {}'.format(e))
+				raise AirflowException
 
 			results[path] += r['assets'][0]['attributes'][0]['values'][1:] # Append readings for this time period to list of readings for this element
 
