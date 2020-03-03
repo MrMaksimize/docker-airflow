@@ -12,7 +12,6 @@ PRIMARY_KEY = conf['pf_api_key']
 LUCID_USER = conf["lucid_api_user"]
 LUCID_PASS = conf["lucid_api_pass"]
 
-
 pv_meters = {'2000.05.066.SWG01.MTR01': 'Carmel Valley Rec Center', 
 					'2000.05.088.SWG01.MTR01': 'Serra Mesa-Kearny Mesa Library', 
 					'2000.05.100.SWG01.MTR01': 'Fire Repair Facility', 
@@ -35,12 +34,13 @@ hourly_pv_meters = ['2000.05.088.SWG01.MTR01']
 #DAG Function
 def get_pv_data_write_temp(**context):
 	currTime = context['execution_date'].in_timezone('America/Los_Angeles')
+	#currTime = currTime.replace(tzinfo=None)
 	
 	API_to_csv(hourly_pv_meters, 'hourly', currTime)	
 	
 	if currTime.hour in [15,16]:
 		API_to_csv(daily_pv_meters, 'daily', currTime)		
-
+	
 	return f"Successfully wrote temp files"
 
 #Helper Function
@@ -48,7 +48,7 @@ def API_to_csv(elem_paths, interval, execution_date):
 	if interval == 'hourly':
 		temp_file = conf['temp_data_dir'] + '/pv_hourly_results.csv'
 		endDate = execution_date.subtract(minutes=30)
-		startDate = endDate.subtract(hours=3)
+		startDate = endDate.subtract(days=6)
 
 	elif interval == 'daily':
 		temp_file = conf['temp_data_dir'] + '/pv_daily_results.csv'
@@ -72,8 +72,8 @@ def get_data(start_date, end_date, elem_paths, attr, two_hours=False, resolution
 	dates = [(start_date, end_date)]
 
 	num_vals = 0
-	start_tstamp = None
-	end_tstamp = None
+	start_tstamp = start_date.replace(tzinfo=None)
+	end_tstamp = end_date.replace(tzinfo=None)
 	for path in elem_paths: # Loop through each element in list
 		for start, end in dates: # Iterate through list of start and end times
 			body = {"startTime": start,
@@ -82,13 +82,16 @@ def get_data(start_date, end_date, elem_paths, attr, two_hours=False, resolution
 					"attributes": attr,
 					"ids": path}
 			# Use POST to avoid hitting max URL length w/ many params
-			r = requests.post(dataURL, headers=headers, data=body).json()
+			try:
+				r = requests.post(dataURL, headers=headers, data=body).json()
+			except requests.exceptions.RequestException as e:
+				logging.info('Request failed with status code {}'.format(e))
+					
 			results[path] += r['assets'][0]['attributes'][0]['values'][1:] # Append readings for this time period to list of readings for this element
-			if start_tstamp is None: # Get the start timestamp of the entire time period
-				start_tstamp = pd.to_datetime(r['assets'][0]['startTime'][:19])+datetime.timedelta(minutes=5)  
-				
-		end_tstamp = pd.to_datetime(r['assets'][0]['endTime'][:19])
+
 		num_vals = len(results[path])
+
+		print("RETURNED API START DATE IS  {}, END DATE IS {}".format(start_tstamp, end_tstamp))
 	   
 	tstamps = pd.date_range(start_tstamp, end_tstamp, periods=num_vals)
 	df_5min = pd.DataFrame(index=tstamps, data=results)
