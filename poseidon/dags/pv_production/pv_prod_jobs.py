@@ -93,11 +93,7 @@ def get_data(start_date, end_date, elem_paths, attr, two_hours=False, resolution
 				logging.info('Request failed with status code {}'.format(e))
 
 			results[path] += r['assets'][0]['attributes'][0]['values'][1:] # Append readings for this time period to list of readings for this element
-			if start_tstamp is None: # Get the start timestamp of the entire time period
-				# API returns data starting the first 5-min interval AFTER the start time
-				start_tstamp = pd.to_datetime(r['assets'][0]['startTime'][:19])+datetime.timedelta(minutes=5)  
-				
-		end_tstamp = pd.to_datetime(r['assets'][0]['endTime'][:19])
+
 		num_vals = len(results[path])
 
 	tstamps = pd.date_range(start_tstamp, end_tstamp, periods=num_vals)
