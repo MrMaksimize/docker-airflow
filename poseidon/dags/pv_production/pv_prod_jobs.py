@@ -92,7 +92,7 @@ def get_data(start_date, end_date, elem_paths, attr, two_hours=False, resolution
 				r = requests.post(dataURL, headers=headers, data=body).json()
 			except requests.exceptions.RequestException as e:
 				logging.info('Request failed with status code {}'.format(e))				
-				raise AirflowException
+				raise AirflowException('Request failed with status code {}'.format(e))
 
 			results[path] += r['assets'][0]['attributes'][0]['values'][1:] # Append readings for this time period to list of readings for this element
 
