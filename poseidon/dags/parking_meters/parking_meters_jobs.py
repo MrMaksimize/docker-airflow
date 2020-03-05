@@ -9,6 +9,7 @@ from trident.util import general
 from subprocess import Popen, PIPE, check_output
 import subprocess
 from shlex import quote
+from airflow import AirflowException
 
 conf = general.config
 cur_yr = general.get_year()
@@ -20,51 +21,77 @@ def ftp_download_wget(**context):
     cur_time = context['execution_date']
     cur_yr = cur_time.year
     cur_mon = cur_time.month
-    print('current time ',cur_time)
-    print('current year ',cur_yr)
-    print('current month ',cur_mon)
+    day = cur_time.day
+
     wget_str = "wget -np --continue " \
     + "--user=$ftp_user " \
     + "--password='$ftp_pass' " \
     + "--directory-prefix=$temp_dir " \
-    + "ftp://ftp.datasd.org/uploads/IPS/SanDiegoData_{0}{1}*.csv".format(cur_yr, cur_mon)
+    + "ftp://ftp.datasd.org/uploads/IPS/SanDiegoData_{0}{1}{2}*.csv".format(cur_yr, cur_mon, day)
     tmpl = string.Template(wget_str)
     command = tmpl.substitute(
     ftp_user=conf['ftp_datasd_user'],
     ftp_pass=conf['ftp_datasd_pass'],
     temp_dir=conf['temp_data_dir'])
 
+    #Get list of files in /data/temp to compare what was returned from wget above
     for root, dirs, files in os.walk(conf['temp_data_dir'], topdown=False):
         before_files = files    
 
-    #Use shlex.quote() for enhanced security
+    #Use shlex.quote() to wrap command for enhanced security (from Popen documentation)
     command = command.format(quote(command))
 
     p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
     output, error = p.communicate()    
 
-    #Track which files were downloaded
+    #Get list of files in /data/temp after wget command is executed
     for root, dirs, files in os.walk(conf['temp_data_dir'], topdown=False):
         after_files = files
 
+    #Identify which files were downloaded, return as a list
     new_files = set(after_files) - set(before_files)
     new_files = [x for x in new_files if 'SanDiegoData' in x]
 
+    for item in after_files:
+        if wget_str[122:-5] == item[:-8]:
+            dupe_file = item
+
+    #Handle returns from wget (error codes, file already exists, no files downloaded)
     if p.returncode != 0:
-        raise Exception(p.returncode)
+        raise AirflowException(p.returncode)
+    elif len(new_files) == 0 and dupe_file != None:        
+        logging.info("Found duplicate file, /data/temp contains : {}".format(dupe_file))
+    elif len(new_files) == 0:
+        logging.info("Found {} *new* file(s) named {}".format(len(new_files), wget_str[122:]))
     else:
         logging.info("Found {} file(s)".format(len(new_files)))
         return new_files
 
-    return #command
-
 def build_prod_file(**context):
     """Process parking meters data."""
+
+    #Get list of downloaded files from ftp server
+    files = context['task_instance'].xcom_pull(task_ids='get_parking_files')
 
     # Look for files for the past week
     # Job dies sometimes with more files
     #last_week = (datetime.now() - timedelta(days=6)).day
-    last_week = (context['execution_date'] - timedelta(days=76)).day
+    #last_week = (context['execution_date'] - timedelta(days=76)).day
+
+    
+    for file_ in files:
+        try:
+            df = pd.read_csv(file_, index_col=False, header=0)
+            list_.append(df)
+            logging.info("Read "+file_)
+        except:
+            logging.info(str(file_) + " is empty or broken") 
+
+    frame = pd.DataFrame()
+    frame = pd.concat(list_, ignore_index=True)
+
+    '''
+    #today = context['execution_date'].day
     today = datetime.now().day
     logging.info(last_week)
     
@@ -89,6 +116,8 @@ def build_prod_file(**context):
                 logging.info(str(file_) + " is empty or broken") 
     
     frame = pd.concat(list_, ignore_index=True)
+
+    '''
 
     # Clean the schema
     logging.info("Cleaning the schema")
