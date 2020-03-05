@@ -4,6 +4,7 @@ import math
 import fiona
 from fiona import crs
 from shapely.geometry import mapping
+from shapely.geometry import LineString
 import requests
 import numpy as np
 from datetime import datetime
@@ -29,13 +30,13 @@ prod_file = {
 esri_layer = {
     'completed': {
         'selection':['post construction'],
-        'feature_lyr':'29b698b5146e453cbf62f0a3287edad9'},
+        'feature_lyr':'46b86c7c13f342f28a7636e1763633dd'},
     'in_progress': {
         'selection':['construction'],
-        'feature_lyr':'07378f1d04ce4087a41ad5b65bfa38d3'},
+        'feature_lyr':'36523bce316c41ab88f555d99d1130bf'},
     'planned': {
         'selection':['planning','design','bid / award'],
-        'feature_lyr':'7b84dd98e337420498ab2d136fceece8'},
+        'feature_lyr':'0a3b0632f980495fb7946b68040b3732'},
 }
 
 #: Helper function
@@ -52,9 +53,9 @@ def get_paving_miles(row):
     """ Calculate paving miles """
     
     if row['seg_width_ft'] >= 50:
-        return math.ceil((row['seg_length_ft'] * 2)/5280)
+        return (row['seg_length_ft'] * 2)/5280
     else:
-        return math.ceil(row['seg_length_ft']/5280)
+        return row['seg_length_ft']/5280
 
 #: Helper function
 def get_start_end_dates(row):
@@ -273,7 +274,7 @@ def create_base_data():
     general.pos_write_csv(
         df, temp_file, date_format=conf['date_format_ymd'])
     
-    return "Successfully wrote prod file at " + prod_file[mode]
+    return "Successfully wrote base file"
 
 #: DAG function
 def create_mode_data(mode='sdif', **context):
@@ -286,19 +287,21 @@ def create_mode_data(mode='sdif', **context):
 
     df = pd.read_csv(temp_file,low_memory=False,parse_dates=date_cols)
 
-    exec_date = context['execution_date']
+    exec_date = context['execution_date'].in_tz(tz='US/Pacific')
 
-    five_yrs_ago = exec_date.subtract(years=5)
-    three_yrs_ago = exec_date.subtract(years=3)
+    five_yrs_ago = exec_date.subtract(years=5).strftime('%Y-%m-%d')
+    three_yrs_ago = exec_date.subtract(years=3).strftime('%Y-%m-%d')
 
     if mode == 'imcat':
 
         # All older than 5 years plus slurry records older than 3 years for imcat
+        start_no = df.shape[0]
+        logging.info(f"Starting with {start_no} records")
 
-        df = df[(df.job_end_dt > five_yrs_ago) | (df.job_end_dt.isnull())]
+        df = df[(df['job_end_dt'] > five_yrs_ago) | (df['job_end_dt'].isnull())]
         logging.info(f"Removed {start_no - df.shape[0]} records older than 5 years")
         df = df[~((df.wo_proj_type == 'Slurry') &
-                 (df.job_end_dt < three_yrs_ago))]
+                 (df['job_end_dt'] < three_yrs_ago))]
         logging.info(f"Removed {start_no - df.shape[0]} Slurry records older than 3 years")
 
         # Remove duplicates for imcat. Must be unique project list
@@ -352,6 +355,8 @@ def create_mode_data(mode='sdif', **context):
     elif mode == 'sdif':
 
         # Keep duplicates and anything after July 1 2013 for public dataset
+        start_no = df.shape[0]
+        logging.info(f"Starting with {start_no} records")
 
         df = df[(df.job_end_dt >= '07/01/2013') | (df.job_end_dt.isnull())]
         logging.info(f"Removed {start_no - df.shape[0]} records older than July 1, 2013")
@@ -403,10 +408,6 @@ def create_mode_data(mode='sdif', **context):
 #: DAG function
 def create_arcgis_base():
     """ Create GIS file and send to ArcGIS online """
-
-    logging.info("Reading geojson")
-    geojson = gpd.read_file(f"{conf['prod_data_dir']}/sd_paving_segs_datasd.geojson")
-    geojson = geojson.rename(columns={'geometry':'geom'})
     
     logging.info("Reading repair data")
     df = pd.read_csv(prod_file['sdif'],low_memory=False,parse_dates=['date_end','date_start'])
@@ -417,9 +418,6 @@ def create_arcgis_base():
 
     df['date_cy'] = df['date_end'].apply(lambda x: x.year)
     df['date_fy'] = df['date_end'].apply(lambda x: x.year+1 if x.month > 6 else x.year )
-
-    df['date_cy'] = number_str_cols(df['date_cy'])
-    df['date_fy'] = number_str_cols(df['date_fy'])
 
     logging.info("Renaming cols to meet character limits")
     
@@ -448,36 +446,14 @@ def create_arcgis_base():
     'date_fy',
     'mi_comp']]
 
-    logging.info("Merging paving data with street segments")
-
-    df_merge = pd.merge(geojson,
-        df_sub,
-        how='outer',
-        right_on='seg_id',
-        left_on='sapid')
-
-    logging.info("Set sapid equal to segid when null")
-
-    df_merge.loc[df_merge['sapid'].isnull(),
-    'sapid'] = df_merge.loc[df_merge['sapid'].isnull(),
-    'seg_id']
-
-    df_gis = df_merge.drop(columns={'seg_id'})
-    df_gis = df_gis.rename(columns={'sapid':'seg_id'})
-
-    date_cols = ['date_end','date_cy','date_fy', 'date_start']
-    for dc in date_cols:
-        logging.info(f"Converting {dc} from date to string")
-        df_gis[dc] = df_gis[dc].fillna('')
-        df_gis[dc] = df_gis[dc].astype(str)
-
     logging.info("Filling in NAs")
 
-    df_gis['type'] = df_gis['type'].fillna('None')
+    df_sub['type'] = df_sub['type'].fillna('None')
 
     na_cols = ['pve_id','seg_id','project_id','title','status']
     for nc in na_cols:
-        df_gis[nc] = df_gis[nc].fillna('')
+        df_sub[nc] = df_sub[nc].fillna('')
+
 
     logging.info("Reading in OCI data")
 
@@ -486,15 +462,11 @@ def create_arcgis_base():
 
     logging.info("Merging segment OCI to create OCI cols")
 
-    merge_oci = pd.merge(df_gis,oci_11[['seg_id','oci','oci_desc']],how='left',on='seg_id')
+    merge_oci = pd.merge(df_sub,oci_11[['seg_id','oci','oci_desc']],how='left',on='seg_id')
     merge_oci = merge_oci.rename(columns={'oci':'oci_11','oci_desc':'oci11_des'})
     
     final_pave_gis = pd.merge(merge_oci,oci_15[['seg_id','oci','oci_desc']],how='left',on='seg_id')
     final_pave_gis = final_pave_gis.rename(columns={'oci':'oci_15','oci_desc':'oci15_des'})
-
-    logging.info("Write data to CSV for QA purposes")
-
-    final_pave_gis.drop(columns=['geom']).to_csv(f"{conf['prod_data_dir']}/streets_map_data.csv",index=False)
 
     logging.info("Writing data for layer creation")
 
@@ -508,74 +480,96 @@ def create_arcgis_base():
 def send_arcgis(mode=['completed'], **context):
     """ Update ArcGIS online feature layer """
 
-    dtypes = OrderedDict([
-        ('roadsegid', 'str'),
-        ('rd20full','str'),
-        ('xstrt1','str'),
-        ('xstrt2','str'),
-        ('llowaddr','str'),
-        ('lhighaddr','str'),
-        ('rlowaddr','str'),
-        ('rhighaddr','str'),
-        ('zip','str'),
-        ('pve_id', 'str'),
-        ('seg_id', 'str'),
-        ('project_id', 'str'),
-        ('title','str'),
-        ('status','str'),
-        ('type','str'),
-        ('date_start','str'),
-        ('date_end','str'),
-        ('pav_mi','float'),
-        ('mi_comp','float'),
-        ('date_cy','str'),
-        ('date_fy','str'),
-        ('oci_11','float'),
-        ('oci11_des','str'),
-        ('oci_15','float'),
-        ('oci15_des','str')
-    ])
-
     logging.info("Read in ESRI base file")
 
-    df = pd.read_csv(temp_gis,low_memory=False)
+    df = pd.read_csv(temp_gis,low_memory=False,dtype={'date_start':str,
+        'date_end':str,
+        'date_cy':str,
+        'date_fy':str,
+        'pve_id':str})
 
     logging.info(f"Divide {df.shape[0]} rows of data into layers")
 
     layer = df.loc[df['status'].isin(esri_layer[mode].get('selection')),:]
     logging.info(f"Completed layer has {layer.shape[0]} rows")
-    
+
     if not layer.empty:
 
+        logging.info("Reading in line segments")
+
+        geojson = gpd.read_file(f"{conf['prod_data_dir']}/sd_paving_segs_datasd.geojson")
+
+        geojson = geojson.to_crs("EPSG:2230")
+
+        logging.info("Merging paving data with street segments")
+
+        layer_merge = pd.merge(layer,
+            geojson,
+            how='left',
+            left_on='seg_id',
+            right_on='sapid')
+
+        logging.info("Set sapid equal to segid when null")
+
+        layer_merge = layer_merge.drop(columns={'seg_id'})
+        layer_merge = layer_merge.rename(columns={'sapid':'seg_id'})
+
+        logging.info("Converting date to string")
+
+        date_cols = ['date_end','date_cy','date_fy', 'date_start']
+        for dc in date_cols:
+            logging.info(f"Converting {dc} from date to string")
+            layer_merge[dc] = layer_merge[dc].fillna('')
+            layer_merge[dc] = layer_merge[dc].astype(str)
+    
         logging.info("Writing layer to shapefile")
         layer_name = f'sd_paving_gis_{mode}'
 
+        final = gpd.GeoDataFrame(layer_merge,geometry='geometry',crs="EPSG:2230")
+
+        final = final[['roadsegid',
+        'rd20full',
+        'xstrt1',
+        'xstrt2',
+        'llowaddr',
+        'lhighaddr',
+        'rlowaddr',
+        'rhighaddr',
+        'zip',
+        'pve_id',
+        'seg_id',
+        'project_id',
+        'title',
+        'status',
+        'type',
+        'date_start',
+        'date_end',
+        'pav_mi',
+        'mi_comp',
+        'date_cy',
+        'date_fy',
+        'oci_11',
+        'oci11_des',
+        'oci_15',
+        'oci15_des',
+        'geometry']]
+
         shp_path = f"{conf['prod_data_dir']}/{layer_name}"
 
-        with fiona.collection(
-            f"{shp_path}.shp",
-            'w',
-            driver='ESRI Shapefile',
-            crs=crs.from_epsg(2230),
-            schema={'geometry': 'LineString', 'properties': dtypes}
-        ) as shpfile:
-            for index, row in layer.iterrows():
-                try:
-                    geometry = row['geom']
-                    props = {}
-                    for prop in dtypes:
-                        props[prop] = row[prop]
-                    shpfile.write({'properties': props, 'geometry': mapping(geometry)})
-                except Exception as e:
-                    logging.info(f"Problem with {index} because {e}")
+        # Write to csv for QA
+
+        #final.to_csv(f"{conf['prod_data_dir']}/projects_for_gis_{mode}.csv")
+
+        final.to_file(f"{shp_path}.shp")
 
         shp2zip(layer_name)
 
         arc_gis = GIS("https://SanDiego.maps.arcgis.com",conf["arc_online_user"],conf["arc_online_pass"])
         # This depends on mode
-        shape_file = arc_gis.content.get('1d4a99e263784467b33c42dfc26b6b9d')
+        lyr_id = esri_layer[mode].get('feature_lyr')
+        shape_file = arc_gis.content.get(lyr_id)
         streets_flayer_collection = FeatureLayerCollection.fromitem(shape_file)
-        logging.info("Overwriting streets feature layer collection")
+        #logging.info("Overwriting streets feature layer collection")
         overwrite = streets_flayer_collection.manager.overwrite(f"{shp_path}.zip")
 
         return overwrite
