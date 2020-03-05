@@ -29,7 +29,7 @@ get_file = PythonOperator(
     dag=dag)
 
 create_prod = PythonOperator(
-  task_id=f"create_tags_prod",
+  task_id="create_tags_prod",
   provide_context=True,
   python_callable=build_tags,
   on_failure_callback=notify,

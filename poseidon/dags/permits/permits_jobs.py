@@ -10,27 +10,27 @@ from trident.util.geospatial import *
 
 conf = general.config
 
-filelist = [{'name':'P2K_261-Panda_Extract_DSD_Projects_Closed',
-                'ext':'txt',
-                'desc':'Closed projects'},
-            {'name':'P2K_261-Panda_Extract_DSD_Permits_Closed',
-                'ext':'txt',
-                'desc':'Closed approvals since 2019'},
-            {'name':'P2K_261-Panda_Extract_DSD_Permits_Active',
-                'ext':'txt',
-                'desc':'Active approvals since 2003'},
-            {'name':'Accela_Active_PV',
-                'ext':'xls',
-                'desc':'Active Accela PV permits all time'},
-            {'name':'Accela_Closed_PV',
-                'ext':'xls',
-                'desc':'Closed Accela PV permits all time'},
-            {'name':'Accela_Active_NonPV',
-                'ext':'xls',
-                'desc':'All other active Accela permits all time'},
-            {'name':'Accela_Closed_NonPV',
-                'ext':'xls',
-                'desc':'All other closed Accela permits all time'}]
+filelist = {'Closed projects':{
+                'name':'P2K_261-Panda_Extract_DSD_Projects_Closed',
+                'ext':'txt'},
+            'Closed approvals since 2019':{
+                'name':'P2K_261-Panda_Extract_DSD_Permits_Closed',
+                'ext':'txt'},
+            'Active approvals since 2003':{
+                'name':'P2K_261-Panda_Extract_DSD_Permits_Active',
+                'ext':'txt'},
+            'Active Accela PV permits all time':{
+                'name':'Accela_Active_PV',
+                'ext':'xls'},
+            'Closed Accela PV permits all time':{
+                'name':'Accela_Closed_PV',
+                'ext':'xls'},
+            'All other active Accela permits all time':{
+                'name':'Accela_Active_NonPV',
+                'ext':'xls'},
+            'All other closed Accela permits all time':{
+                'name':'Accela_Closed_NonPV',
+                'ext':'xls'}}
 
 def get_permits_files(**context):
     """ Get permit file from ftp site. """
@@ -45,11 +45,13 @@ def get_permits_files(**context):
     f"{file_date.strftime('%m')}" \
     f"{file_date.strftime('%d')}"
 
-    for file in filelist:
+    files = [*filelist]
 
-        logging.info(f"Checking FTP for {file['name']}")
+    for file in files:
 
-        fpath = f"{file['name']}_{filename}.{file['ext']}"
+        logging.info(f"Checking FTP for {filelist[file].get('name')}")
+
+        fpath = f"{filelist[file].get('name')}_{filename}.{filelist[file].get('ext')}"
 
         command = f"cd {conf['temp_data_dir']} && " \
         f"curl --user {conf['ftp_datasd_user']}:{conf['ftp_datasd_pass']} " \
@@ -92,7 +94,9 @@ def build_pts(mode='active', **context):
 
         # Currently active permits
         logging.info("Reading active permits")
-        df = pd.read_csv(f"{conf['temp_data_dir']}/{filelist[2]['name']}_{filename}.{filelist[2]['ext']}",
+        active = pd.read_csv(f"{conf['temp_data_dir']}/" \
+            + f"{filelist['Active approvals since 2003'].get('name')}_" \
+            + f"{filename}.{filelist['Active approvals since 2003'].get('ext')}",
             low_memory=False,
             sep=",",
             encoding="ISO-8859-1",
@@ -101,12 +105,16 @@ def build_pts(mode='active', **context):
         # Need to check active approvals against closed projects
         # Usually don't find an overlap
         logging.info("Reading closed projects")
-        closed_projects = pd.read_csv(f"{conf['temp_data_dir']}/{filelist[0]['name']}_{filename}.{filelist[0]['ext']}",
+        closed_projects = pd.read_csv(f"{conf['temp_data_dir']}/" \
+            + f"{filelist['Closed projects'].get('name')}_{filename}." \
+            + f"{filelist['Closed projects'].get('ext')}",
             low_memory=False,
             sep=",",
             encoding="ISO-8859-1",
             parse_dates=date_cols,
             dtype=dtypes)
+
+        df = pd.concat([active,closed_projects],sort=False)
 
         prod_permits = f"{conf['temp_data_dir']}/permits_set1_active.csv"
 
@@ -114,7 +122,9 @@ def build_pts(mode='active', **context):
 
         # Closed permits
         logging.info("Reading closed permits")
-        df = pd.read_csv(f"{conf['temp_data_dir']}/{filelist[1]['name']}_{filename}.{filelist[1]['ext']}",
+        df = pd.read_csv(f"{conf['temp_data_dir']}/" \
+            + f"{filelist['Closed approvals since 2019'].get('name')}_{filename}." \
+            + f"{filelist['Closed approvals since 2019'].get('ext')}",
             low_memory=False,
             sep=",",
             encoding="ISO-8859-1",
@@ -137,18 +147,6 @@ def build_pts(mode='active', **context):
         'approval_expiration_date':'date_approval_expire',
         'approval_create_date':'date_approval_create',
         'approval_close_date':'date_approval_close'})
-
-    if mode == 'active':
-        # Here, we check if any approvals in the open set belong to projects that are closed
-        closed_projects_approvals = closed_projects['Approval ID'].tolist()
-        active_in_closed = df[df['approval_id'].isin(closed_projects_approvals)]
-        if not active_in_closed.empty:
-            logging.info(f'Found {active_in_closed.shape[0]} active approvals that have a closed project')
-            # Not doing anything else with this yet
-            # Need to remove these from active and add them to closed
-            # Potentially write list to xcoms for closed mode
-        else:
-            logging.info("Did not find any active approvals with a closed project")
 
     logging.info("Removing certain columns")
     # Removing columns per SME
@@ -188,12 +186,16 @@ def build_accela(mode='active', **context):
         # Read in PV and All
         
         logging.info(f"Reading active PV permits for {filename}")
-        pv = pd.read_excel(f"{conf['temp_data_dir']}/{filelist[3]['name']}_{filename}.{filelist[3]['ext']}",
+        pv = pd.read_excel(f"{conf['temp_data_dir']}/" \
+            + f"{filelist['Active Accela PV permits all time'].get('name')}_{filename}." \
+            + f"{filelist['Active Accela PV permits all time'].get('ext')}",
             dtype=dtypes,
             na_values=' null')
         
         logging.info(f"Reading active non PV permits for {filename}")
-        other = pd.read_excel(f"{conf['temp_data_dir']}/{filelist[5]['name']}_{filename}.{filelist[5]['ext']}",
+        other = pd.read_excel(f"{conf['temp_data_dir']}/" \
+            + f"{filelist['All other active Accela permits all time'].get('name')}_{filename}." \
+            + f"{filelist['All other active Accela permits all time'].get('ext')}",
             dtype=dtypes,
             na_values=' null')
 
@@ -204,12 +206,16 @@ def build_accela(mode='active', **context):
         # Read in PV and All
         
         logging.info(f"Reading inactive PV permits for {filename}")
-        pv = pd.read_excel(f"{conf['temp_data_dir']}/{filelist[4]['name']}_{filename}.{filelist[4]['ext']}",
+        pv = pd.read_excel(f"{conf['temp_data_dir']}/" \
+            + f"{filelist['Closed Accela PV permits all time'].get('name')}_{filename}." \
+            + f"{filelist['Closed Accela PV permits all time'].get('ext')}",
             dtype=dtypes,
             na_values=' null')
         
         logging.info(f"Reading inactive non PV permits for {filename}")
-        other = pd.read_excel(f"{conf['temp_data_dir']}/{filelist[6]['name']}_{filename}.{filelist[6]['ext']}",
+        other = pd.read_excel(f"{conf['temp_data_dir']}/" \
+            + f"{filelist['All other closed Accela permits all time'].get('name')}_{filename}." \
+            + f"{filelist['All other closed Accela permits all time'].get('ext')}",
             dtype=dtypes,
             na_values=' null')
 
@@ -459,11 +465,14 @@ def create_pw_sap_subset():
 
     logging.info(df.head())
 
-    #Finally, drop the one test project
-    df = df.drop([3350],axis=0)
+    # Drop the one test project
+    df = df[df['title'] != 'TESTPROJECT']
+
+    # Add a column that just contains the value 01
+    df['01'] = '01'
 
     general.pos_write_csv(
-        df,
+        df[['01','id','title']],
         f"{conf['prod_data_dir']}/dsd_permits_public_works.csv")
 
     return 'Successfully created PW timecard subset'
