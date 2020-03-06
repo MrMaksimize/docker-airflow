@@ -20,18 +20,22 @@ temp_file2 = conf['temp_data_dir'] + '/cleaned_amcs_sites.csv'
 temp_file3 = conf['temp_data_dir'] + '/all_columns_amcs_sites.csv'
 final_file = conf['temp_data_dir'] + '/final_amcs_sites.csv'
 
+# If the server IP ever changes, the smbclient command might fail with NT_STATUS_UNSUCCESSFUL errors
+server_ip = '10.68.8.140'
+
 
 def write_to_shared_drive():
     """Write the file to the share location"""
     logging.info('Retrieving data for current FY.')
-    command = "smbclient //ad.sannet.gov/dfs " \
-        + "--user={adname}%{adpass} -W ad " \
-        + "--directory='TOWER7/Tower7Train/EPACS Import' -c " \
-        + " put {out_f};"
+    command = "smbclient //csdsdcamcsappt/TOWER7 -W ad -mSMB3 " \
+        + "--user={adname}%{adpass} --ip-address={server_ip} " \
+        + "--directory='Tower7Train/EPACS Import' -c '" \
+        + " put {out_f} sites_export.csv'"
 
     command = command.format(adname=conf['svc_acct_user'],
                              adpass=conf['svc_acct_pass'],
-                             out_f=final_file)
+                             out_f=final_file,
+                             server_ip=server_ip)
 
     logging.info(command)
 
@@ -234,9 +238,6 @@ def add_all_columns():
     final['YCoordinate'] = df['Site: Y-Coordinate']
 
     final = final.round({'ParcelNumber': 0, 'RefuseQty': 0, 'RecycleQty': 0, 'GreenQty': 0})
-
-    logging.info('-- Final output --')
-    logging.info(final.head())
 
     general.pos_write_csv(
         final,
