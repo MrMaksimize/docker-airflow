@@ -1,31 +1,29 @@
 """PD RIPA _dags file."""
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.subdag_operator import SubDagOperator
-from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
 from airflow.models import DAG
 from dags.pd.pd_ripa_jobs import *
 from dags.pd.pd_ripa_subdags import *
 from trident.util import general
 from trident.util.notifications import notify
-from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag, update_json_date
+
 
 args = general.args
 conf = general.config
-schedule = general.schedule
+schedule = general.schedule['pd_ripa']
 start_date = general.start_date['pd_ripa']
 
 dag = DAG(
     dag_id='pd_ripa',
     default_args=args,
     start_date=start_date,
-    schedule_interval=schedule['ripa'],
+    schedule_interval=schedule,
     catchup=False
     )
 
 #: Get RIPA data from FTP and save to temp folder
 get_ripa_data = PythonOperator(
     task_id='get_data',
-    provide_context=True,
     python_callable=get_data,
     on_failure_callback=notify,
     on_retry_callback=notify,
@@ -40,7 +38,7 @@ process_excel = PythonOperator(
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
-    dag=dag_subdag)
+    dag=dag)
 
 #: Process final RIPA files and save result to prod folder
 process_ripa_files = SubDagOperator(
@@ -62,7 +60,7 @@ update_ripa_date = SubDagOperator(
 
 #: Update portal modified date
 update_pd_ripa_md = SubDagOperator(
-  task_id='update_md_files',
+  task_id='update_md',
   subdag=update_md_files(),
   dag=dag)
 

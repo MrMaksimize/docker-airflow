@@ -5,6 +5,7 @@ from airflow.models import DAG
 from trident.util import general
 from dags.pd.pd_ripa_jobs import *
 from trident.util.notifications import notify
+from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag, update_json_date
 conf = general.config
 args = general.args
 schedule = general.schedule['pd_ripa']
@@ -78,7 +79,7 @@ def upload_prod_files():
       on_failure_callback=notify,
       on_retry_callback=notify,
       on_success_callback=notify,
-      dag=dag)
+      dag=dag_subdag)
 
   return dag_subdag
 
@@ -96,7 +97,9 @@ def update_md_files():
 
   for sheet in sheets:
 
-    get_seaboard_update_dag(f'police-ripa-{sheet}.md', dag)
+    sheet = sheet.replace('_','-')
+
+    get_seaboard_update_dag(f'police-ripa-{sheet}.md', dag_subdag)
 
   return dag_subdag
 
@@ -122,7 +125,7 @@ def update_json():
       on_failure_callback=notify,
       on_retry_callback=notify,
       on_success_callback=notify,
-      dag=dag)
+      dag=dag_subdag)
 
   return dag_subdag
 
