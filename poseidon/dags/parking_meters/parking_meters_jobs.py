@@ -75,9 +75,18 @@ def build_prod_file(**context):
     """Process parking meters data."""
 
     #Get list of downloaded files from ftp server
-    files = context['task_instance'].xcom_pull(task_ids='get_parking_files')
+    #files = context['task_instance'].xcom_pull(task_ids='get_parking_files')
+
+    for root, dirs, files in os.walk(conf['temp_data_dir'], topdown=False):
+        af_files = files
+
+    for __ in af_files:
+        if 'SanDiegoData' in __:
+            files.append(__)
 
     list_ = []
+
+    print(files)
 
     for file_ in files:
         try:
@@ -140,7 +149,7 @@ def build_prod_file(**context):
     logging.info("Removing entries from other years")
 
     ### UNCOMMENT THIS FOR PRODUCTION ###
-    #update = update[update['date_trans_start'] >= cur_yr+'-01-01 00:00:00']
+    update = update[update['date_trans_start'] >= cur_yr+'-01-01 00:00:00']
 
     # Look for an existing file for the year to add to
     logging.info("Looking for this year's file")
