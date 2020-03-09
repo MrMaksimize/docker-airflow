@@ -7,12 +7,21 @@ import requests
 import shutil
 from datetime import datetime, timedelta, date
 from dateutil import tz
+import pendulum
 
 import subprocess
 import csv
 import json
 
 from airflow.models import Variable
+
+def get_last_run(dag):
+    last_dag_run = dag.get_last_dagrun()
+    if last_dag_run is None:
+        return pendulum.now()
+    else:
+        return last_dag_run.execution_date
+
 
 def seven_days_ago():
     """Return the date seven days ago."""
@@ -151,15 +160,13 @@ schedule = {
     'claims_stat': "@monthly",
     'pd_cfs': "@daily",
     'pd_col': "@daily",
-    'ttcs': "@daily",
+    'pd_hc': None,
+    'ttcs': '0 8 * * *',
     'indicator_bacteria_tests': "@daily",
     'parking_meters': "@daily",
     'traffic_counts': "@weekly",
     'read': "@daily",
-    'dsd_approvals': "@daily",
-    'dsd_code_enforcement': "@daily",
-    'streets_sdif': "@daily",
-    'streets_imcat': "@daily",
+    'dsd_approvals': "0 2 * * 1", # Weekly on Monday at 2p UTC / 7a PST
     'streets':"@hourly",
     'get_it_done': "@hourly",
     'gid_potholes': "0 12 * * *",
@@ -174,23 +181,27 @@ schedule = {
     'budget': "@weekly",
     'campaign_fin': "@daily",
     'public_art': '@daily',
-    'sire': "0 7 * * *",
-    'onbase': "*/5 * * * *",
-    'documentum_24' : "0 7 * * *",
-    'documentum_others' : "30 * * * *",
+    'sire': "0 8 * * 1-5", # 8am UTC / 12am PST every Mon-Fri
+    'onbase': "*/5 0,1,2,3,4,13,14,15,16,17,18,19,20,21,22,23 * * 1-6", # every 5 mins, 7am to 7pm, Mon-Fri PST
+    'documentum_daily' : "0 8 * * 1-5", # 8am UTC / 12am PST every Mon-Fri
+    'documentum_hr_30' : "30 0,1,2,3,4,13,14,15,16,17,18,19,20,21,22,23 * * 1-6", # 30 mins past the hour, 7am to 7pm, Mon-Fri PST
+    'documentum_hr_15': "15 0,1,2,3,4,13,14,15,16,17,18,19,20,21,22,23 * * 1-6", # 15 mins past the hour, 7am to 7pm, Mon-Fri PST
     'tsw_integration': '0 6 * * *',  # daily at 6am UTC / 10pm PST
     'cip': '@daily',
+	'cityiq': '@daily',
     'onbase_test': '*/15 * * * *',
-    'gis_tree_canopy': None
+    'gis_tree_canopy': None,
+    'parking_meter_locs': '0 19 * * *' # daily at 7pm UTC
 }
 
-default_date = datetime(2019, 6, 21)
+default_date = datetime(2019, 10, 8)
 
 start_date = {
     'fd_incidents' : default_date,
     'pd_cfs': default_date,
     'pd_col': default_date,
-    'claims_stat': datetime(2019, 7, 8),
+    'pd_hc': default_date,
+    'claims_stat': default_date,
     'ttcs': default_date,
     'indicator_bacteria_tests': default_date,
     'parking_meters': default_date,
@@ -200,7 +211,7 @@ start_date = {
     'dsd_code_enforcement': default_date,
     'streets_sdif': default_date,
     'streets_imcat': default_date,
-    'streets':datetime(2019, 7, 8),
+    'streets': default_date,
     'get_it_done': default_date,
     'gid_potholes': default_date,
     'gid_ava': default_date,
@@ -216,12 +227,15 @@ start_date = {
     'public_art': default_date,
     'sire': default_date,
     'onbase': default_date,
-    'documentum_24' : default_date,
-    'documentum_others' : default_date,
+    'documentum_daily' : datetime(2019, 10, 29),
+    'documentum_hr_30' : datetime(2019, 10, 29),
+    'documentum_hr_15': datetime(2019, 10, 29),
     'tsw_integration': default_date,
     'cip': default_date,
-    'onbase_test': datetime(2019, 7, 28),
-    'gis_tree_canopy': datetime(2019, 6, 30)
+    'cityiq': default_date,
+    'onbase_test': default_date,
+    'gis_tree_canopy': default_date,
+    'parking_meter_locs': datetime(2019, 12, 25)
 }
 
 
