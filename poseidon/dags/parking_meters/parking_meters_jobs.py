@@ -79,8 +79,6 @@ def build_prod_file(**context):
 
     list_ = []
 
-    print(files)
-
     for file_ in files:
         try:
             df = pd.read_csv((conf['temp_data_dir'] + '/' + file_), index_col=False, header=0)
