@@ -128,7 +128,7 @@ def build_prod_file(**context):
 
     else:
 
-        logging.info(f"Need to get segments for {new_segments.shape[0]} rows")
+        logging.info(f"Need to get segments for {need_segments.shape[0]} rows")
 
 
     final_sapid = final_sapid.drop(columns='_merge')

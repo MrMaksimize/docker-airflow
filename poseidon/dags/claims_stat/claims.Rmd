@@ -253,7 +253,8 @@ map<- subset(claims, CLAIMANT_REFERENCE2_Desc!= "NA")
 
 #Remove lat-longs clearly outside of SDC
 #map<- subset(map, lng>=-117.27 & lng<=-117.11 & lat >=32.567 & lat <=32.88)
-map<- subset(map, lng>=-117.27 & lng<=-117.04 & lat >=32.567 & lat <=32.88)
+#map<- subset(map, lng>=-117.27 & lng<=-117.04 & lat >=32.567 & lat <=32.88)
+map<- subset(map, lng>=-117.27 & lng<=-117.04 & lat >=32.567 & lat <=33.06)
 
 
 #Remove rows with missing lat-longs
