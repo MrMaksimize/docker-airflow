@@ -56,7 +56,7 @@ def ftp_download_wget(**context):
         if wget_str[122:-5] == item[:-8]:
             dupe_file = item
         else:
-            dupe_file = 'No Duplicate File'
+            dupe_file = None
 
     #Handle returns from wget (error codes, file already exists, no files downloaded)
     if p.returncode != 0:
@@ -75,14 +75,7 @@ def build_prod_file(**context):
     """Process parking meters data."""
 
     #Get list of downloaded files from ftp server
-    #files = context['task_instance'].xcom_pull(task_ids='get_parking_files')
-
-    for root, dirs, files in os.walk(conf['temp_data_dir'], topdown=False):
-        af_files = files
-
-    for __ in af_files:
-        if 'SanDiegoData' in __:
-            files.append(__)
+    files = context['task_instance'].xcom_pull(task_ids='get_parking_files')    
 
     list_ = []
 
@@ -148,8 +141,7 @@ def build_prod_file(**context):
 
     logging.info("Removing entries from other years")
 
-    ### UNCOMMENT THIS FOR PRODUCTION ###
-    update = update[update['date_trans_start'] >= cur_yr+'-01-01 00:00:00']
+    update = update[update['date_trans_start'].dt.year == int(cur_yr)]
 
     # Look for an existing file for the year to add to
     logging.info("Looking for this year's file")
@@ -171,7 +163,7 @@ def build_prod_file(**context):
     # Drop duplicate entries
     logging.info("Dropping duplicates")
     portal_up_dedupe = portal_up.drop_duplicates(keep=False)
-
+    portal_up_dedupe = portal_up_dedupe.drop_duplicates(keep='first')
     # Log amt of duplicates found
     logging.info(
         'Found and removed ' +
@@ -179,9 +171,6 @@ def build_prod_file(**context):
         ' duplicated entries out of ' +
         str(orig_entries_ct)
         )
-
-    logging.info("Sorting by transaction start date")
-    portal_up_dedupe = portal_up_dedupe.sort_values(by='date_trans_start')
 
     logging.info("Writing updated data to " + portal_fname)
     general.pos_write_csv(
@@ -193,7 +182,7 @@ def build_prod_file(**context):
 
 def build_aggregation(agg_type="pole_by_month", **kwargs):
     """Aggregate raw production data by month/day."""
-    out_fname = 'treas_meters_{0}_{1}_datasd_v1.csv'.format(cur_yr,agg_type)
+    out_fname = 'treas_meters_{0}_{1}_datasd_v2.csv'.format(cur_yr,agg_type)
 
     logging.info("Reading portal data " + portal_fname)
     portal = pd.read_csv(portal_fname)
