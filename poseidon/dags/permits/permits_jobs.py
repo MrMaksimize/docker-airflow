@@ -463,16 +463,14 @@ def create_pw_sap_subset():
     df['id'] = df['id'].str.slice(0,15)
     df['title'] = df['title'].str.slice(0,75)
 
-    logging.info(df.head())
-
     # Drop the one test project
     df = df[df['title'] != 'TESTPROJECT']
 
     # Add a column that just contains the value 01
-    df['01'] = '01'
+    df['type'] = '01'
 
     general.pos_write_csv(
-        df[['01','id','title']],
+        df[['type','id','title']],
         f"{conf['prod_data_dir']}/dsd_permits_public_works.csv")
 
     return 'Successfully created PW timecard subset'
