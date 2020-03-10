@@ -30,7 +30,7 @@ def get_data():
         + "ftp://ftp.datasd.org/uploads/sdpd/" \
         + "ripa/*.xlsx"
 
-    #command = command.format(quote(command)) 
+    command = command.format(quote(command)) 
 
     p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
     output, error = p.communicate()
@@ -102,12 +102,18 @@ def process_prod_files(mode='stops',**context):
         )
     cols = new_df.columns.to_list()
     logging.info(f"Reading in prod {mode} file")
-    prod_df = pd.read_csv(outfile,low_memory=False)
+
+    try:
+        prod_df = pd.read_csv(outfile,low_memory=False)
+        logging.info('Prod file found with {} rows'.format(prod_df.shape[0]))
+    except Exception as e:
+        prod_df = pd.DataFrame(columns=cols)        
+        logging.info('No prod file found for {}. Creating from new data.....'.format(mode))
     
-    prod_df.columns = cols
 
     logging.info("Combining them")
     df = pd.concat([prod_df,new_df])
+    df = df.drop_duplicates()
 
     logging.info(f"After dedupe, result has {df.shape} cols & rows")
     logging.info("Sorting and writing data")
