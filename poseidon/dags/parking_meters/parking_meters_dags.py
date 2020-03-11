@@ -2,7 +2,6 @@
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.bash_operator import BashOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
-from airflow.operators.latest_only_operator import LatestOnlyOperator
 from airflow.models import DAG
 from trident.util import general
 from trident.util.notifications import notify
@@ -29,15 +28,10 @@ dag = DAG(
     start_date=start_date,
     schedule_interval=schedule)
 
-#: Latest Only Operator for parking meters
-parking_meters_latest_only = LatestOnlyOperator(
-    task_id='parking_meters_latest_only', dag=dag)
-
-
 #: Downloads all parking files from FTP
 get_parking_files = PythonOperator(
     task_id='get_parking_files',
-    python_callable=ftp_download_wget,
+    python_callable=download_latest,
     provide_context=True,
     on_failure_callback=notify,
     on_retry_callback=notify,
@@ -133,39 +127,7 @@ update_json_date = PythonOperator(
 #: Update portal modified date
 update_parking_trans_md = get_seaboard_update_dag('parking-meters-transactions.md', dag)
 
-#: Execution Rules
-
-#: parking_meters_latest_only must run before get_parking_files
-get_parking_files.set_upstream(parking_meters_latest_only)
-
-#: Download Files, build prod file.
-
-#: build_prod_file depends on get_parking_files:
-build_prod_file.set_upstream(get_parking_files)
-
-#: Upload Prod File
-
-#: upload_prod_file depends on build_prod_file
-upload_prod_file.set_upstream(build_prod_file)
-
-#: Build Aggs
-
-#: build_by_month_aggregation depends on build_prod_file:
-build_by_month_aggregation.set_upstream(build_prod_file)
-
-#: build_by_day_aggregation depends on build_prod_file:
-build_by_day_aggregation.set_upstream(build_prod_file)
-
-#: Upload Aggs
-
-#: upload_by_month_agg depends on build_by_month_aggregation
-upload_by_month_agg.set_upstream(build_by_month_aggregation)
-
-#: upload_by_day_agg depends on build_by_month_aggregation
-upload_by_day_agg.set_upstream(build_by_day_aggregation)
-
-#: github update depends on data uploads
-update_parking_trans_md.set_upstream(upload_by_day_agg)
-
-#: upload data must succeed before updating json
-update_json_date.set_upstream(upload_by_day_agg)
+get_parking_files >> build_prod_file >> upload_prod_file >> [update_parking_trans_md,update_json_date]
+build_prod_file >> [build_by_month_aggregation,build_by_day_aggregation]
+build_by_month_aggregation >> upload_by_month_agg
+build_by_day_aggregation >> upload_by_day_agg
