@@ -79,6 +79,20 @@ def get_updates_only():
 
     if last_run != 0:
         get_diff(previous_file=previous_run_temp_file1, current_file=temp_file1, output_file=temp_file2)
+
+        # collect all the rows that belong to any site in the diff
+        latest_df = pd.read_csv(temp_file1, encoding='ISO-8859-1', low_memory=False, error_bad_lines=False)
+        diff_df = pd.read_csv(temp_file2, encoding='ISO-8859-1', low_memory=False, error_bad_lines=False)
+        changed_site_ids = diff_df['Site: Site ID']
+
+        unique_changed_site_ids = changed_site_ids.drop_duplicates()
+        changed_sites = pd.merge(latest_df, unique_changed_site_ids, on='Site: Site ID')
+
+        general.pos_write_csv(
+                changed_sites,
+                temp_file2,
+                date_format='%Y-%m-%dT%H:%M:%S%z')
+
     else:
         # no previous run, send the whole thing
         shutil.copyfile(temp_file1, temp_file2)
@@ -105,15 +119,11 @@ def group_site_containers():
     recycle_bins = container_type_df[container_type_df['ContainerType'] == 'Recycle']
 
     unique_sites = df.drop_duplicates(subset=['Site: Site ID'])
-    unique_sites.head()
 
     grouped = refuse_bins.groupby(['Site: Site ID','ContainerType']).size().reset_index()
     unique_sites = pd.merge(unique_sites, grouped, left_on='Site: Site ID', right_on='Site: Site ID', how='left')
 
     unique_sites = unique_sites.rename(index=str, columns={0: 'RefuseQty'})
-
-    unique_sites.head()
-    #pd.merge(df, refuse_df, on='Site: Site ID')
 
     grouped = recycle_bins.groupby(['Site: Site ID','ContainerType']).size().reset_index()
     unique_sites = pd.merge(unique_sites, grouped, left_on='Site: Site ID', right_on='Site: Site ID', how='left')
