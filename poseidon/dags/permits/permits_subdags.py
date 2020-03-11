@@ -118,4 +118,32 @@ def upload_files_subdag():
       dag=dag_subdag,
     )
 
+  upload_file = S3FileTransferOperator(
+    task_id="upload_pts_all",
+    source_base_path=conf['prod_data_dir'],
+    source_key="dsd_permits_all_pts.csv",
+    dest_s3_bucket=conf['dest_s3_bucket'],
+    dest_s3_conn_id=conf['default_s3_conn_id'],
+    dest_s3_key="dsd/dsd_permits_all_pts.csv",
+    replace=True,
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag_subdag,
+    )
+
+  upload_file = S3FileTransferOperator(
+    task_id="upload_accela_all",
+    source_base_path=conf['prod_data_dir'],
+    source_key="dsd_permits_all_accela.csv",
+    dest_s3_bucket=conf['dest_s3_bucket'],
+    dest_s3_conn_id=conf['default_s3_conn_id'],
+    dest_s3_key="dsd/dsd_permits_all_accela.csv",
+    replace=True,
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag_subdag,
+    )
+
   return dag_subdag

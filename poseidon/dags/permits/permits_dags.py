@@ -44,6 +44,15 @@ join_bids = SubDagOperator(
   dag=dag,
   )
 
+#: Create full sets for internal
+create_full = PythonOperator(
+    task_id='create_full_sets',
+    python_callable=create_full_set,
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
+
 #: Upload 4 files using subdag
 upload_files = SubDagOperator(
   task_id='upload_files',
@@ -125,7 +134,7 @@ upload_pw_sap = S3FileTransferOperator(
     )
 
 #: Execution rules
-get_permits_files>>create_files>>join_bids>>upload_files
+get_permits_files>>create_files>>join_bids>>create_full>>upload_files
 upload_files>>[update_set1_md,update_set2_md,update_set1_json_date,update_set2_json_date]
 upload_files>>[create_tsw_file,create_pw_sap_file]
 create_tsw_file>>upload_tsw

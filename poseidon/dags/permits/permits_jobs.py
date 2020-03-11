@@ -102,8 +102,7 @@ def build_pts(mode='active', **context):
             encoding="ISO-8859-1",
             parse_dates=date_cols,
             dtype=dtypes)
-        # Need to check active approvals against closed projects
-        # Usually don't find an overlap
+        # Need to add closed projects to open approvals
         logging.info("Reading closed projects")
         closed_projects = pd.read_csv(f"{conf['temp_data_dir']}/" \
             + f"{filelist['Closed projects'].get('name')}_{filename}." \
@@ -286,6 +285,90 @@ def join_bids_permits(pt_file='set1_active', **context):
         bid_permits)
 
     return 'Successfully joined permits to BIDs'
+
+def create_full_set():
+    """
+    Create a file for internal use that has all permits together
+    """
+
+    date_cols = ['date_project_create',
+    'date_project_complete',
+    'date_approval_issue',
+    'date_approval_expire',
+    'date_approval_create',
+    'date_approval_close']
+
+    dtypes = {'development_id':str,
+    'project_id':str,
+    'job_id':str,
+    'approval_id':str,
+    'job_bc_code':str
+    }
+
+    logging.info("Reading in all PTS files")
+    logging.info("Reading in active")
+
+    pts_active = pd.read_csv(f"{conf['prod_data_dir']}/permits_set1_active_datasd.csv",
+        low_memory=False,
+        parse_dates=date_cols,
+        dtype=dtypes
+        )
+    logging.info("Reading in historical")
+    pts_historical = pd.read_csv(f"{conf['prod_data_dir']}/permits_set1_closed_historical_datasd.csv",
+        low_memory=False,
+        parse_dates=date_cols,
+        dtype=dtypes,
+        error_bad_lines=False
+        )
+    logging.info("Reading in closed")
+    pts_closed = pd.read_csv(f"{conf['prod_data_dir']}/permits_set1_closed_datasd.csv",
+        low_memory=False,
+        parse_dates=date_cols,
+        dtype=dtypes
+        )
+
+    pts_all = pd.concat([pts_historical,pts_closed,pts_active],sort=False)
+
+    logging.info(f"Combined all sets for {pts_all.shape[0]} records")
+
+    logging.info("Sorting by approval id")
+    pts_all = pts_all.sort_values('approval_id')
+
+    logging.info("Writing to csv")
+    general.pos_write_csv(
+        pts_all,
+        f"{conf['prod_data_dir']}/dsd_permits_all_pts.csv",
+        date_format=conf['date_format_ymd_hms'])
+
+    logging.info("Reading in all Accela files")
+    logging.info("Reading in Active")
+    
+    accela_active = pd.read_csv(f"{conf['prod_data_dir']}/permits_set2_active_datasd.csv",
+        low_memory=False,
+        parse_dates=date_cols)
+
+    logging.info("Reading in Closed")
+
+    accela_closed = pd.read_csv(f"{conf['prod_data_dir']}/permits_set2_closed_datasd.csv",
+        low_memory=False,
+        parse_dates=date_cols)
+
+    accela_all = pd.concat([accela_active,accela_closed],sort=False)
+
+    logging.info(f"Combined all sets for {accela_all.shape[0]} records")
+
+    logging.info("Sorting by approval id")
+
+    accela_all = accela_all.sort_values('approval_id')
+
+    logging.info("Writing to csv")
+
+    general.pos_write_csv(
+        accela_all,
+        f"{conf['prod_data_dir']}/dsd_permits_all_accela.csv",
+        date_format=conf['date_format_ymd'])
+
+    return "Successfully created full PTS and Accela sets"
 
 def create_tsw_subset():
     """ 
