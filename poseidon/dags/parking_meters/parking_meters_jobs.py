@@ -15,7 +15,9 @@ conf = general.config
 portal_fname = f"{conf['prod_data_dir']}/treas_parking_payments_"
 
 def download_latest(**context):
-    """Download parking meters data from FTP."""
+    """
+    Download parking meters data from FTP.
+    """
     
     file_date = context['execution_date']
 
@@ -34,6 +36,8 @@ def download_latest(**context):
     f"ftp://ftp.datasd.org/uploads/IPS/" \
     f"{fpath} -sk"
 
+    command = command.format(quote(command))
+
     p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
     output, error = p.communicate()
     
@@ -41,18 +45,36 @@ def download_latest(**context):
         raise Exception(p.returncode)
     else:
         logging.info("Found file")
-        return filename
+        return [file_date.year,file_date.month,file_date.day]
 
-def build_prod_file(**context):
+def build_prod_file(year=2020,**context):
     """Process parking meters data."""
 
-    filename = context['task_instance'].xcom_pull(task_ids='get_parking_files')
+    date_parts = context['task_instance'].xcom_pull(task_ids='get_parking_files')
+    
+    filename = f"{date_parts[0]}" \
+    f"{date_parts[1]}" \
+    f"{date_parts[2]}"
+    
     fpath = f"SanDiegoData_{filename}_954.csv"
+    
+    trigger_branch = False
     
     logging.info(f"Looking for {fpath}")
 
     
-    update = pd.read_csv(f"{conf['temp_data_dir']}/{fpath}")
+    update = pd.read_csv(f"{conf['temp_data_dir']}/{fpath}",
+        parse_dates=['StartDateTime','ExpiryTime']
+        )
+    
+    # Creating subset of just needed columns in case others show up
+    update = update[['PoleSerNo',
+    'MeterType',
+    'StartDateTime',
+    'ExpiryTime',
+    'Amount',
+    'TransactionType'
+    ]]
 
     logging.info(f"Read in {update.shape[0]} new records")
 
@@ -60,30 +82,19 @@ def build_prod_file(**context):
     logging.info("Cleaning the schema")
 
     update = update.rename(columns={
+        'PoleSerNo': 'pole_id',
         'MeterType': 'meter_type',
         'StartDateTime': 'date_trans_start',
         'ExpiryTime': 'date_meter_expire',
         'Amount': 'trans_amt',
-        'TransactionType': 'pay_method',
-        'StartDateTime': 'date_trans_start',
-        'PoleSerNo': 'pole_id'
+        'TransactionType': 'pay_method'
     })
-
-    # Convert datetime columns to dt
-    logging.info("Setting datetime for update file")
-    update['date_trans_start'] = pd.to_datetime(update['date_trans_start'],
-                                           format="%m/%d/%Y %H:%M:%S",
-                                           errors='coerce')
-
-    update['date_meter_expire'] = pd.to_datetime(update['date_meter_expire'],
-                                            format="%m/%d/%Y %H:%M:%S",
-                                            errors='coerce')
 
     # Removing any errant old records from before 2019
     update = update[update['date_trans_start'] >= '01/01/2019 00:00:00']
 
     # Convert transactions to cents.
-    logging.info("Converting update transactions to cents")
+    logging.info("Converting updated transactions to cents")
     update['trans_amt'] = update['trans_amt'] * 100
     update['trans_amt'] = update['trans_amt'].astype(int)
 
@@ -93,46 +104,36 @@ def build_prod_file(**context):
     update.pole_id = update.pole_id.str.upper()
     update.pay_method = update.pay_method.str.upper()
     update.meter_type = update.meter_type.str.extract('(SS|MS)', expand=False)
-    
-    # Rearrange column order
-    logging.info("Rearranging column order")
-    cols = update.columns.tolist()
-    # Set last column as first
-    cols = cols[-1:] + cols[:-1]
-    update = update[cols]
 
     logging.info("Sorting by transaction start")
     update = update.sort_values(by='date_trans_start')
 
-    logging.info("Files sometimes contain two years")
+    #Files sometimes contain transactions from two years
+    curr_yr = date_parts[0]
+    last_yr = curr_yr - 1
 
-    last_yr = int(filename[0:4])-1
+    curr_set = update[update['date_trans_start'] >= f"01/01/{curr_yr} 00:00:00"]
+    last_set = update[(update['date_trans_start'] < f"01/01/{curr_yr} 00:00:00") &
+                      (update['date_trans_start'] >= f"01/01/{last_yr} 00:00:00")]
 
-    curr_set = update[update['date_trans_start'] >= f"01/01/{filename[0:4]} 00:00:00"]
-    last_set = update[update['date_trans_start'] <= f"01/01/{last_yr} 00:00:00"]
+    logging.info(f"Adding {curr_set.shape[0]} records to {curr_yr}")
 
-    curr_prod = f"{portal_fname}{filename[0:4]}_datasd_v2.csv"
-    to_agg = [curr_prod]
+    curr_prod = f"{portal_fname}{curr_yr}_datasd_v2.csv"
+
+    logging.info(f"Appending to file for {curr_yr}")
 
     if os.path.isfile(curr_prod):
-        logging.info(f"Found {filename[0:4]} file")
+        logging.info(f"Found {curr_yr} file")
         portal = pd.read_csv(curr_prod,low_memory=False)
-        logging.info("Concatenating update + portal")
+        logging.info(f"Prod file has {portal.shape[0]} records")
         portal_up = pd.concat([portal, curr_set])
 
     else:
-        logging.info(f"Did not find {filename[0:4]} file")
-        logging.info(f"Starting a new file for {filename[0:4]}")
-        portal_up = update
+        logging.info(f"Did not find {curr_yr} file")
+        logging.info(f"Starting a new file for {curr_yr}")
+        portal_up = curr_set
 
-    logging.info("Dropping duplicates")
-    logging.info(f"Starting with {portal_up.shape[0]}")
-
-    portal_up = portal_up.drop_duplicates()
-
-    logging.info(f"Ending with {portal_up.shape[0]}")
-    logging.info(portal_up.head())
-    logging.info(f"Writing updated data for {filename[0:4]}")
+    
     general.pos_write_csv(
         portal_up,
         curr_prod,
@@ -142,45 +143,49 @@ def build_prod_file(**context):
 
         logging.info("Need to add records to previous year")
 
+        trigger_branch = True
+
         last_prod = f"{portal_fname}{last_yr}_datasd_v2.csv"
-        to_agg.append(last_prod)
 
         portal = pd.read_csv(last_prod,low_memory=False)
         logging.info("Concatenating update + portal")
         portal_up = pd.concat([portal, last_set])
 
-        logging.info("Dropping duplicates")
-        logging.info(f"Starting with {portal_up.shape[0]}")
-
-        portal_up = portal_up.drop_duplicates()
-
-        logging.info(f"Ending with {portal_up.shape[0]}")
-        logging.info(portal_up.head())
-        logging.info(f"Writing updated data for {last_yr}")
         general.pos_write_csv(
             portal_up,
             last_prod,
             date_format=conf['date_format_ymd_hms'])
  
-    return to_agg
+    return trigger_branch
 
-def build_aggregation(agg_type="pole_by_month", **kwargs):
+def check_trigger(**context):
+    """
+    Check output from build_prod_file
+    To see if need prev yr branch
+    """
+    trigger = context['task_instance'].xcom_pull(task_ids='build_prod_file')
+    if trigger:
+        return "create_prev_agg"
+    else:
+        return "update_json_date"
+
+def build_aggregation(agg_type="pole_by_month", agg_year=2020, **context):
     """Aggregate raw production data by month/day."""
-    out_fname = 'treas_meters_{0}_{1}_datasd_v2.csv'.format(cur_yr,agg_type)
 
-    logging.info("Reading portal data " + portal_fname)
-    portal = pd.read_csv(portal_fname)
+    out_fname = f'treas_meters_{agg_year}_{agg_type}_datasd_v2.csv'
+
+    logging.info(f"Reading portal data {agg_year}")
+    portal = pd.read_csv(f"{portal_fname}{agg_year}_datasd_v2.csv",
+        low_memory=False,
+        parse_dates=['date_trans_start']
+        )
 
     logging.info("Translate start_date to dt, create agg columns")
 
-    portal['date_trans_start'] = pd.to_datetime(
-                                portal['date_trans_start'],
-                                format="%Y-%m-%d %H:%M:%S",
-                                errors='coerce')
     portal['month'] = portal.date_trans_start.dt.month
     portal['day'] = portal.date_trans_start.dt.day
 
-    logging.info("Creating " + agg_type + " aggregation")
+    logging.info(f"Creating {agg_type} aggregation")
     if agg_type == 'pole_by_month':
         grouped = portal.groupby(['pole_id', 'month'],
                                  as_index=False)
@@ -197,15 +202,13 @@ def build_aggregation(agg_type="pole_by_month", **kwargs):
                                                 'sum_trans_amt': 'sum',
                                                 'num_trans': 'count'
                                               })
-    else:
-        raise NotImplementedError("Not sure what " + agg_type + " is")
 
-    new_file_path = '{0}/{1}'.format(conf['prod_data_dir'],out_fname)
+    new_file_path = f"{conf['prod_data_dir']}/{out_fname}"
 
-    logging.info("Writing " + agg_type + " aggregation")
+    logging.info(f"Writing {agg_type} aggregation")
     general.pos_write_csv(
         aggregation,
         new_file_path,
         date_format=conf['date_format_ymd_hms'])
 
-    return "Updated agg " + agg_type + " file " + new_file_path
+    return f"Updated aggregations for {agg_year}"
