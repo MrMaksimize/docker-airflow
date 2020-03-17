@@ -170,12 +170,11 @@ def split_reso_ords():
 
     return f"Successfully divided {record_count} from {filename}"
 
-def latest_res_ords():
+def latest_res_ords(filename):
     """Get last decade from reso and ords table"""
 
-    filename = 'documentum_scs_council_reso_ordinance_v.csv'
-    save_path = f"{conf['prod_data_dir']}/documentum_scs_council_reso_ordinance_v"
-    df = pd.read_csv(f"{conf['prod_data_dir']}/{filename}",
+    save_path = f"{conf['prod_data_dir']}/{filename}"
+    df = pd.read_csv(f"{conf['prod_data_dir']}/{filename}.csv",
         low_memory=False)
 
     df['DOC_DATE'] = pd.to_datetime(df['DOC_DATE'],errors='coerce')

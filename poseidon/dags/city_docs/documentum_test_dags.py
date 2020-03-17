@@ -31,8 +31,17 @@ get_doc_tables = PythonOperator(
     on_success_callback=notify,
     dag=dag)
 
+div_doc_table = PythonOperator(
+    task_id='divide_doc_table',
+    python_callable=latest_res_ords,
+    op_kwargs={'filename': 'documentum_scs_council_reso_ordinance_v_test'},
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
 
 #: Execution rules
+get_doc_tables >> div_doc_table
 
 files = [f for f in os.listdir(conf['prod_data_dir'])]
 tables_all = dn.table_name('schedule_daily')+dn.table_name('schedule_hourly_15')+dn.table_name('schedule_hourly_30')
@@ -57,4 +66,4 @@ for f in files:
                 dag=dag)
 
             #: get_doc_tables must run before upload_doc_tables
-            upload_doc_tables.set_upstream(get_doc_tables)
+            upload_doc_tables << div_doc_table

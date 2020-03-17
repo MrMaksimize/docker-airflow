@@ -24,7 +24,6 @@ schedule_mode = 'schedule_hourly_15'
 #: Dag spec
 dag = DAG(dag_id='documentum_hourly_15', catchup=False, default_args=args, start_date=start_date, schedule_interval=schedule)
 
-#documentum_docs_latest_only = LatestOnlyOperator(task_id='documentum_24_docs_latest_only', dag=dag)
 
 #: Get documentum tables
 get_doc_tables = PythonOperator(
@@ -35,20 +34,6 @@ get_doc_tables = PythonOperator(
     on_retry_callback=notify,
     on_success_callback=notify,
     dag=dag)
-
-div_doc_table = PythonOperator(
-    task_id='divide_doc_table',
-    python_callable=split_reso_ords,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
-    dag=dag)
-
-#: Execution rules
-#: documentum_docs_latest_only must run before get_doc_tables
-#get_doc_tables.set_upstream(documentum_docs_latest_only)
-#: get_doc_tables must run before div_doc_table
-div_doc_table.set_upstream(get_doc_tables)
 
 files = [f for f in os.listdir(conf['prod_data_dir'])]
 tables_other = dn.table_name(schedule_mode)
@@ -73,4 +58,4 @@ for f in files:
                 dag=dag)
 
             #: get_doc_tables must run before upload_doc_tables
-            upload_doc_tables.set_upstream(div_doc_table)
+            upload_doc_tables << get_doc_tables
