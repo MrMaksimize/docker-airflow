@@ -124,11 +124,11 @@ def get_documentum(mode, test=False, conn_id='docm_sql', **kwargs):
             logging.info(f'Could not read {0} because {e}')
 
     return "Successfully retrieved Documentum tables"
-    
+
 def split_reso_ords(filename='documentum_scs_council_reso_ordinance_v'):
     """Split largest table of reso and ords"""
     save_path = f"{conf['prod_data_dir']}/{filename}"
-    df = pd.read_csv(f"{conf['prod_data_dir']}/{filename}",
+    df = pd.read_csv(f"{conf['prod_data_dir']}/{filename}.csv",
         low_memory=False)
 
     total_records = df.shape[0]
@@ -170,6 +170,6 @@ def latest_res_ords(filename='documentum_scs_council_reso_ordinance_v'):
 
     df_current = df.loc[df['DOC_DATE'] >= f"01/01/2016"]
     general.pos_write_csv(df_current, f"{save_path}_2016_current.csv")
-    logging.info(f"Wrote 2016_current")
+    logging.info(f"Wrote 2016_current with {df_current.shape[0]} records")
 
     return f"Successfully extracted this decade of resos and ords"

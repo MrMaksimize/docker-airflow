@@ -41,7 +41,7 @@ get_doc_tables = PythonOperator(
     dag=dag)
 
 div_doc_table = PythonOperator(
-    task_id='divide_doc_table',
+    task_id='divide_doc_latest',
     python_callable=latest_res_ords,
     op_kwargs={'filename': 'documentum_scs_council_reso_ordinance_v'},
     on_failure_callback=notify,
