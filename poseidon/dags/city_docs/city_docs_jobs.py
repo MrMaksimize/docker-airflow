@@ -88,57 +88,46 @@ def get_onbase_test():
 
     return "Successfully retrieved OnBase tables"
     
-def get_documentum(mode, **kwargs):
+def get_documentum(mode, test=False, conn_id='docm_sql', **kwargs):
     """Get tables from Documentum."""
     logging.info('Getting files from documentum')
-    table_name = dn.table_name(mode)
+    
+    if test:
+        table_name = dn.table_name('schedule_daily')+dn.table_name('schedule_hourly_15')+dn.table_name('schedule_hourly_30')
+    else:
+        table_name = dn.table_name(mode)
+    
+    save_path_pre = f"{conf['prod_data_dir']}/documentum_"
+    
     for name in table_name:
         logging.info('Querying for {0} table'.format(name))
         query_string = 'SELECT * FROM SCSLEGIS.dbo.{0};'.format(name)
         logging.info('Connecting to MS Database')
-        documentum_conn = MsSqlHook(mssql_conn_id='docm_sql')
+        documentum_conn = MsSqlHook(mssql_conn_id=conn_id)
         logging.info('Reading data to Pandas DataFrame')
-        df = documentum_conn.get_pandas_df(query_string)
 
-        logging.info('Correcting title column')
-        
-        df['TITLE'] = fix_title(df[['TITLE','OBJECT_NAME']])
-
-        save_path =  conf['prod_data_dir'] + '/documentum_{0}.csv'.format(name.lower())
-        logging.info('Writing Production file')
-        general.pos_write_csv(df, save_path)
-
-    return "Successfully retrieved Documentum tables"
-
-def get_documentum_test():
-    """Get tables from Documentum test database."""
-    logging.info('Getting files for documentum test')
-    table_name = dn.table_name('schedule_daily')+dn.table_name('schedule_hourly_15')+dn.table_name('schedule_hourly_30')
-    logging.info(table_name)
-    for name in table_name:
-        logging.info('Querying for {0} table'.format(name))
-        query_string = 'SELECT * FROM SCSLEGIS.dbo.{0};'.format(name)
-        logging.info('Connecting to MS Database')
-        documentum_conn = MsSqlHook(mssql_conn_id='docm_test_sql')
-        logging.info('Reading data to Pandas DataFrame')
         try:
             df = documentum_conn.get_pandas_df(query_string)
+
             logging.info('Correcting title column')
         
             df['TITLE'] = fix_title(df[['TITLE','OBJECT_NAME']])
-
-            save_path =  conf['prod_data_dir'] + '/documentum_{0}_test.csv'.format(name.lower())
+            if test:
+                save_path =  f"{save_path_pre}{name.lower()}_test.csv"
+            else:
+                save_path =  f"{save_path_pre}{name.lower()}.csv"
+            logging.info('Writing Production file')
             general.pos_write_csv(df, save_path)
 
         except Exception as e:
+            
             logging.info(f'Could not read {0} because {e}')
 
     return "Successfully retrieved Documentum tables"
-
-def split_reso_ords():
+    
+def split_reso_ords(filename='documentum_scs_council_reso_ordinance_v'):
     """Split largest table of reso and ords"""
-    filename = 'documentum_scs_council_reso_ordinance_v.csv'
-    save_path = f"{conf['prod_data_dir']}/documentum_scs_council_reso_ordinance_v"
+    save_path = f"{conf['prod_data_dir']}/{filename}"
     df = pd.read_csv(f"{conf['prod_data_dir']}/{filename}",
         low_memory=False)
 
@@ -170,7 +159,7 @@ def split_reso_ords():
 
     return f"Successfully divided {record_count} from {filename}"
 
-def latest_res_ords(filename):
+def latest_res_ords(filename='documentum_scs_council_reso_ordinance_v'):
     """Get last decade from reso and ords table"""
 
     save_path = f"{conf['prod_data_dir']}/{filename}"
