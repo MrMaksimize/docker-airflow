@@ -10,7 +10,6 @@ from dags.parking_meters.parking_meters_jobs import *
 from dags.parking_meters.parking_meters_subdags import *
 from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag, update_json_date
 from datetime import datetime, timedelta
-import logging
 
 args = general.args
 schedule = general.schedule['parking_meters']
@@ -26,13 +25,8 @@ dag = DAG(
 
 # Daily files sometimes contain transactions multiple year
 # But files are created per calendar year
-#last_run = general.get_last_run(dag)
-#run_date = last_run + timedelta(days=1)
-#run_year = run_date.year
 
-#run_year = datetime.utcnow().year
-
-run_year = 2020
+run_year = datetime.utcnow().year
 
 #: Downloads all parking files from FTP
 get_parking_files = PythonOperator(
@@ -79,10 +73,17 @@ upload_prev_s3 = SubDagOperator(
     subdag=upload_prev_files(run_year-1),
     dag=dag)
 
+agg_branch = BranchPythonOperator(
+    task_id='check_for_agg',
+    provide_context=True,
+    python_callable=check_agg,
+    dag=dag)
+
 year_branch = BranchPythonOperator(
     task_id='check_for_last_year',
     provide_context=True,
-    python_callable=check_trigger,
+    trigger_rule='none_failed',
+    python_callable=check_year,
     dag=dag)
 
 #: Update data inventory json
@@ -91,15 +92,19 @@ update_json_date = PythonOperator(
     python_callable=update_json_date,
     provide_context=True,
     op_kwargs={'ds_fname': 'parking_meters_transactions'},
+    trigger_rule='none_failed',
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
     dag=dag)
 
+
+
 #: Update portal modified date
 update_parking_trans_md = get_seaboard_update_dag('parking-meters-transactions.md', dag)
 
-get_parking_files >> build_prod_file >> build_curr_agg >> upload_curr_s3
-upload_curr_s3 >> year_branch
-year_branch >> build_prev_agg >> upload_prev_s3 >> update_json_date
-year_branch >> update_json_date >> update_parking_trans_md
+get_parking_files >> build_prod_file >> agg_branch >> year_branch >> update_json_date >> update_parking_trans_md
+agg_branch >> build_curr_agg >> upload_curr_s3 >> year_branch
+year_branch >> build_prev_agg >> upload_prev_s3
+upload_prev_s3 >> update_json_date
+

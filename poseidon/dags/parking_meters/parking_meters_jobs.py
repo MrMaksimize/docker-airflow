@@ -57,9 +57,7 @@ def build_prod_file(year=2020,**context):
     f"{date_parts[2]}"
     
     fpath = f"SanDiegoData_{filename}_954.csv"
-    
-    trigger_branch = False
-    
+        
     logging.info(f"Looking for {fpath}")
 
     
@@ -116,58 +114,108 @@ def build_prod_file(year=2020,**context):
     last_set = update[(update['date_trans_start'] < f"01/01/{curr_yr} 00:00:00") &
                       (update['date_trans_start'] >= f"01/01/{last_yr} 00:00:00")]
 
-    logging.info(f"Adding {curr_set.shape[0]} records to {curr_yr}")
+    if curr_set.empty:
 
-    curr_prod = f"{portal_fname}{curr_yr}_datasd_v2.csv"
+        logging.info("Transactions not available for current year")
 
-    logging.info(f"Appending to file for {curr_yr}")
+        context['task_instance'].xcom_push(key='agg', value=False)
 
-    if os.path.isfile(curr_prod):
-        logging.info(f"Found {curr_yr} file")
-        portal = pd.read_csv(curr_prod,low_memory=False)
-        logging.info(f"Prod file has {portal.shape[0]} records")
-        portal_up = pd.concat([portal, curr_set])
+        if not last_set.empty:
+
+            logging.info("Need to add records to previous year")
+
+            context['task_instance'].xcom_push(key='year', value=True)
+
+            last_prod = f"{portal_fname}{last_yr}_datasd_v2.csv"
+
+            portal = pd.read_csv(last_prod,
+                low_memory=False,
+                error_bad_lines=False,)
+            logging.info("Concatenating update + portal")
+            portal_up = pd.concat([portal, last_set])
+
+            general.pos_write_csv(
+                portal_up,
+                last_prod,
+                date_format=conf['date_format_ymd_hms'])
 
     else:
-        logging.info(f"Did not find {curr_yr} file")
-        logging.info(f"Starting a new file for {curr_yr}")
-        portal_up = curr_set
-
     
-    general.pos_write_csv(
-        portal_up,
-        curr_prod,
-        date_format=conf['date_format_ymd_hms'])
+        logging.info(f"Adding {curr_set.shape[0]} records to {curr_yr}")
 
-    if not last_set.empty:
+        context['task_instance'].xcom_push(key='agg', value=True)
 
-        logging.info("Need to add records to previous year")
+        curr_prod = f"{portal_fname}{curr_yr}_datasd_v2.csv"
 
-        trigger_branch = True
+        logging.info(f"Appending to file for {curr_yr}")
 
-        last_prod = f"{portal_fname}{last_yr}_datasd_v2.csv"
+        if os.path.isfile(curr_prod):
+            logging.info(f"Found {curr_yr} file")
+            portal = pd.read_csv(curr_prod,
+                low_memory=False,
+                error_bad_lines=False,)
+            logging.info(f"Prod file has {portal.shape[0]} records")
+            portal_up = pd.concat([portal, curr_set])
 
-        portal = pd.read_csv(last_prod,low_memory=False)
-        logging.info("Concatenating update + portal")
-        portal_up = pd.concat([portal, last_set])
+        else:
+            logging.info(f"Did not find {curr_yr} file")
+            logging.info(f"Starting a new file for {curr_yr}")
+            portal_up = curr_set
 
+        
         general.pos_write_csv(
             portal_up,
-            last_prod,
+            curr_prod,
             date_format=conf['date_format_ymd_hms'])
- 
-    return trigger_branch
 
-def check_trigger(**context):
+        if not last_set.empty:
+
+            logging.info("Need to add records to previous year")
+
+            context['task_instance'].xcom_push(key='year', value=True)
+
+            last_prod = f"{portal_fname}{last_yr}_datasd_v2.csv"
+
+            portal = pd.read_csv(last_prod,
+                low_memory=False,
+                error_bad_lines=False,
+                )
+            logging.info("Concatenating update + portal")
+            portal_up = pd.concat([portal, last_set])
+
+            general.pos_write_csv(
+                portal_up,
+                last_prod,
+                date_format=conf['date_format_ymd_hms'])
+
+        else:
+
+            context['task_instance'].xcom_push(key='year', value=False)
+
+     
+        return "Successfully built prod file"
+
+def check_year(**context):
     """
     Check output from build_prod_file
     To see if need prev yr branch
     """
-    trigger = context['task_instance'].xcom_pull(task_ids='build_prod_file')
+    trigger = context['task_instance'].xcom_pull(key='year', task_ids='build_prod_file')
     if trigger:
         return "create_prev_agg"
     else:
         return "update_json_date"
+
+def check_agg(**context):
+    """
+    Check output from build_prod_file
+    To see if need curr yr agg branch
+    """
+    trigger = context['task_instance'].xcom_pull(key='agg', task_ids='build_prod_file')
+    if trigger:
+        return "create_curr_agg"
+    else:
+        return "check_for_last_year"
 
 def build_aggregation(agg_type="pole_by_month", agg_year=2020, **context):
     """Aggregate raw production data by month/day."""
