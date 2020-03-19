@@ -19,7 +19,7 @@ parent_sched = {
 'documentum_hourly_30': schedule.get('documentum_hr_30'),
 'documentum_daily': schedule.get('documentum_daily'),
 'documentum_hourly_15': schedule.get('documentum_hr_15'),
-'documentum_test': start.get('documentum_hr_30')
+'documentum_test': schedule.get('documentum_hr_30')
 }
 parent_start = {
 'documentum_hourly_30': start.get('documentum_hr_30'),
@@ -59,10 +59,10 @@ def upload_files_subdag(files,parent_dag,test):
     upload_file = S3FileTransferOperator(
       task_id=f"upload_{filename}",
       source_base_path=conf['prod_data_dir'],
-      source_key=f"{filename}.csv",
+      source_key=f"documentum_{filename}.csv",
       dest_s3_bucket=conf['dest_s3_bucket'],
       dest_s3_conn_id=conf['default_s3_conn_id'],
-      dest_s3_key=f"city_docs/{filename}.csv",
+      dest_s3_key=f"city_docs/documentum_{filename}.csv",
       replace=True,
       on_failure_callback=notify,
       on_retry_callback=notify,
