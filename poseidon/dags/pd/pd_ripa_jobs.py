@@ -105,15 +105,15 @@ def process_prod_files(mode='stops',**context):
 
     try:
         prod_df = pd.read_csv(outfile,low_memory=False)
-        logging.info('Prod file found with {} rows'.format(prod_df.shape[0]))
+        logging.info(f'Prod file found with {prod_df.shape[0]} rows')
+    
     except Exception as e:
         prod_df = pd.DataFrame(columns=cols)        
-        logging.info('No prod file found for {}. Creating from new data.....'.format(mode))
+        logging.info(f'No prod file found for {mode}. Creating from new data.....')
     
 
     logging.info("Combining them")
     df = pd.concat([prod_df,new_df])
-    df = df.drop_duplicates()
 
     logging.info(f"After dedupe, result has {df.shape} cols & rows")
     logging.info("Sorting and writing data")
