@@ -158,6 +158,7 @@ config = buildConfig(os.environ.get('SD_ENV'))
 schedule = {
     'fd_incidents' : "0 8 * * *", # daily at 8am UTC / 1am PST
     'claims_stat': "@monthly",
+    'pd_ripa': None,
     'pd_cfs': "0 8 * * *", # daily at 8am UTC / 1am PST
     'pd_col': "0 8 * * *", # daily at 8am UTC / 1am PST
     'pd_hc': None,
@@ -199,6 +200,7 @@ start_date = {
     'pd_cfs': default_date,
     'pd_col': default_date,
     'pd_hc': default_date,
+    'pd_ripa': datetime(2020, 3, 5),
     'claims_stat': default_date,
     'ttcs': default_date,
     'indicator_bacteria_tests': default_date,
