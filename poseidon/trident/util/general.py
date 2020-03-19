@@ -156,38 +156,37 @@ config = buildConfig(os.environ.get('SD_ENV'))
 
 # https://crontab.guru/
 schedule = {
-    'fd_incidents' : "@daily",
+    'fd_incidents' : "0 8 * * *", # daily at 8am UTC / 1am PST
     'claims_stat': "@monthly",
-    'pd_cfs': "@daily",
-    'pd_col': "@daily",
+    'pd_ripa': None,
+    'pd_cfs': "0 8 * * *", # daily at 8am UTC / 1am PST
+    'pd_col': "0 8 * * *", # daily at 8am UTC / 1am PST
     'pd_hc': None,
-    'ttcs': '0 8 * * *',
-    'indicator_bacteria_tests': "@daily",
-    'parking_meters': "@daily",
+    'ttcs': '0 10 * * *', # daily at 10 am UTC / 3am PST
+    'indicator_bacteria_tests': "0 8 * * *", # daily at 8am UTC / 1am PST
+    'parking_meters': '0 19 * * *', # daily at 7pm UTC
     'traffic_counts': "@weekly",
-    'read': "@daily",
+    'read': "0 8 * * *", # daily at 8am UTC / 1am PST
     'dsd_approvals': "0 2 * * 1", # Weekly on Monday at 2p UTC / 7a PST
     'streets':"@hourly",
-    'get_it_done': "@hourly",
+    'get_it_done': "0 7 * * *", # daily at 7am UTC / 11pm PST
     'gid_potholes': "0 12 * * *",
     'gid_ava': "0 12 * * *",
-    'special_events': "@daily",
+    'special_events': "0 8 * * *", # daily at 8am UTC / 1am PST
     'waze': "*/5 * * * *",  # every 5 minutes
     'inventory': "@monthly",  # Run 1x a month at 00:00 of the 1st day of mo
-    'buffer_post_promo': "@daily",
-    'sonar': '@daily',
     'gis_daily': '0 6 * * *',  # daily at 6am UTC / 10pm PST
     'gis_weekly': '0 10 * * 2',  # weekly on Tuesday at 10am UTC / 2am PST
     'budget': "@weekly",
-    'campaign_fin': "@daily",
-    'public_art': '@daily',
+    'campaign_fin': "0 11 * * *", # daily at 11am UTC / 4am PST
+    'public_art': "0 11 * * *", # daily at 11am UTC / 4am PST
     'sire': "0 8 * * 1-5", # 8am UTC / 12am PST every Mon-Fri
     'onbase': "*/5 0,1,2,3,4,13,14,15,16,17,18,19,20,21,22,23 * * 1-6", # every 5 mins, 7am to 7pm, Mon-Fri PST
     'documentum_daily' : "0 8 * * 1-5", # 8am UTC / 12am PST every Mon-Fri
     'documentum_hr_30' : "30 0,1,2,3,4,13,14,15,16,17,18,19,20,21,22,23 * * 1-6", # 30 mins past the hour, 7am to 7pm, Mon-Fri PST
     'documentum_hr_15': "15 0,1,2,3,4,13,14,15,16,17,18,19,20,21,22,23 * * 1-6", # 15 mins past the hour, 7am to 7pm, Mon-Fri PST
     'tsw_integration': '0 6 * * *',  # daily at 6am UTC / 10pm PST
-    'cip': '@daily',
+    'cip': "0 8 * * *", # daily at 8am UTC / 1am PST
 	'cityiq': '@daily',
     'onbase_test': '*/15 * * * *',
     'gis_tree_canopy': None,
@@ -201,6 +200,7 @@ start_date = {
     'pd_cfs': default_date,
     'pd_col': default_date,
     'pd_hc': default_date,
+    'pd_ripa': datetime(2020, 3, 5),
     'claims_stat': default_date,
     'ttcs': default_date,
     'indicator_bacteria_tests': default_date,
