@@ -167,7 +167,7 @@ schedule = {
     'parking_meters': '0 19 * * *', # daily at 7pm UTC
     'traffic_counts': "@weekly",
     'read': "0 8 * * *", # daily at 8am UTC / 1am PST
-    'dsd_approvals': "0 2 * * 1", # Weekly on Monday at 2p UTC / 7a PST
+    'dsd_approvals': "0 16 * * 1", # Weekly on Monday at 4p UTC / 9a PST
     'streets':"@hourly",
     'get_it_done': "0 7 * * *", # daily at 7am UTC / 11pm PST
     'gid_potholes': "0 12 * * *",
