@@ -7,7 +7,7 @@ from shapely.geometry import mapping
 from shapely.geometry import LineString
 import requests
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 from airflow.hooks.mssql_hook import MsSqlHook
 from trident.util import general
@@ -405,19 +405,22 @@ def create_mode_data(mode='sdif', **context):
 
     return "Successfully wrote prod file at " + prod_file[mode]
 
+
 #: DAG function
 def create_arcgis_base():
     """ Create GIS file and send to ArcGIS online """
     
     logging.info("Reading repair data")
-    df = pd.read_csv(prod_file['sdif'],low_memory=False,parse_dates=['date_end','date_start'])
+    df = pd.read_csv(prod_file['sdif'],
+        low_memory=False,
+        parse_dates=['date_end','date_start'])
 
     logging.info("Creating calendar and fiscal year cols")
 
-    df['date_end'] = df['date_end'].dt.date
-
-    df['date_cy'] = df['date_end'].apply(lambda x: x.year)
-    df['date_fy'] = df['date_end'].apply(lambda x: x.year+1 if x.month > 6 else x.year )
+    df['date_cy'] = df['date_end'].apply(lambda x: x.strftime('%Y') if not pd.isnull(x) else '')
+    df['date_fy'] = df['date_end'].apply(lambda x: str(x.year+1) if x.month > 6 else str(x.year) if not pd.isnull(x) else '' )
+    df['date_start'] = df['date_start'].apply(lambda x: x.strftime('%m/%Y') if not pd.isnull(x) else '')
+    df['date_end'] = df['date_end'].apply(lambda x: x.strftime('%m/%Y') if not pd.isnull(x) else '')
 
     logging.info("Renaming cols to meet character limits")
     
@@ -482,16 +485,18 @@ def send_arcgis(mode=['completed'], **context):
 
     logging.info("Read in ESRI base file")
 
-    df = pd.read_csv(temp_gis,low_memory=False,dtype={'date_start':str,
-        'date_end':str,
-        'date_cy':str,
+    df = pd.read_csv(temp_gis,
+        low_memory=False,
+        dtype={'date_cy':str,
         'date_fy':str,
+        'date_start':str,
+        'date_end':str,
         'pve_id':str})
 
     logging.info(f"Divide {df.shape[0]} rows of data into layers")
 
     layer = df.loc[df['status'].isin(esri_layer[mode].get('selection')),:]
-    logging.info(f"Completed layer has {layer.shape[0]} rows")
+    logging.info(f"{mode} layer has {layer.shape[0]} rows")
 
     if not layer.empty:
 
@@ -513,14 +518,7 @@ def send_arcgis(mode=['completed'], **context):
 
         layer_merge = layer_merge.drop(columns={'seg_id'})
         layer_merge = layer_merge.rename(columns={'sapid':'seg_id'})
-
-        logging.info("Converting date to string")
-
-        date_cols = ['date_end','date_cy','date_fy', 'date_start']
-        for dc in date_cols:
-            logging.info(f"Converting {dc} from date to string")
-            layer_merge[dc] = layer_merge[dc].fillna('')
-            layer_merge[dc] = layer_merge[dc].astype(str)
+        
     
         logging.info("Writing layer to shapefile")
         layer_name = f'sd_paving_gis_{mode}'
@@ -558,7 +556,6 @@ def send_arcgis(mode=['completed'], **context):
 
         # Write to csv for QA
 
-        #final.to_csv(f"{conf['prod_data_dir']}/projects_for_gis_{mode}.csv")
 
         final.to_file(f"{shp_path}.shp")
 
@@ -569,7 +566,7 @@ def send_arcgis(mode=['completed'], **context):
         lyr_id = esri_layer[mode].get('feature_lyr')
         shape_file = arc_gis.content.get(lyr_id)
         streets_flayer_collection = FeatureLayerCollection.fromitem(shape_file)
-        #logging.info("Overwriting streets feature layer collection")
+        logging.info("Overwriting streets feature layer collection")
         overwrite = streets_flayer_collection.manager.overwrite(f"{shp_path}.zip")
 
         return overwrite
