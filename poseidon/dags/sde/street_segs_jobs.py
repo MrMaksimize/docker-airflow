@@ -15,7 +15,7 @@ dtypes = OrderedDict([
         ('objectid', 'int:9'),
         ('roadsegid', 'int:10'),
         ('sapid', 'str:9'),
-        ('road20full','str:23'),
+        ('rd20full','str:23'),
         ('xstrt1','str:23'),
         ('xstrt2','str:23'),
         ('llowaddr','int:10'),
@@ -37,10 +37,6 @@ def sde_to_shp():
                                      )
 
     logging.info('Processing {layername} df.'.format(layername=layername))
-
-    
-    logging.info(df.head())
-
     logging.info('Converting {layername} df to shapefile.'.format(
         layername=layername))
     geospatial.df2shp(df=df,
