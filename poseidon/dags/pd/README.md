@@ -32,3 +32,7 @@ A new Excel workbook containing hate crimes is provided by the department every 
 
 First, any new Excel files are downloaded from the datasd folder containing the department's manual uploads (sdpd/Hate_Crimes). The file with the latest date updated is used in the subsequent task to create the production file.
 
+### RIPA
+
+A new Excel workbook containing updated RIPA data is provided by the department on an irregular basis (the goal is quarterly). The workbook contains new data that needs to be appended to the production files. Each dataset is a sheet in the workbook.
+

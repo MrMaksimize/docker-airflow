@@ -33,6 +33,8 @@ oracle.zip
 .AppleDouble
 .DS_Store
 poseidon/dags/**/.DS_Store
+data/prod/.DS_Store
+data/temp/.DS_Store
 .localized
 .LSOverride
 .Spotlight-V100
