@@ -3,6 +3,7 @@ from __future__ import print_function
 from airflow.operators.python_operator import PythonOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
 from airflow.operators.subdag_operator import SubDagOperator
+from airflow.operators.python_operator import ShortCircuitOperator
 from trident.operators.poseidon_email_operator import PoseidonEmailFileUpdatedOperator
 from trident.operators.poseidon_sonar_operator import PoseidonSonarCreator
 from airflow.models import DAG
@@ -115,6 +116,18 @@ create_esri_file = PythonOperator(
     on_success_callback=notify,
     dag=dag)
 
+check_upload_time = ShortCircuitOperator(
+    task_id='check_upload_time',
+    provide_context=True,
+    python_callable=check_exec_time,
+    dag=dag)
+
+check_esri_time = ShortCircuitOperator(
+    task_id='check_esri_time',
+    provide_context=True,
+    python_callable=check_exec_time,
+    dag=dag)
+
 update_esri = SubDagOperator(
   task_id='write_esri_layers',
   subdag=esri_layer_subdag(),
@@ -122,16 +135,15 @@ update_esri = SubDagOperator(
   )
 
 #: send file update email to interested parties
-#send_last_file_updated_email = PoseidonEmailFileUpdatedOperator(
-    #task_id='send_last_file_updated',
-    #to='chudson@sandiego.gov',
-    #subject='IMCAT Streets File Updated',
-    #file_url='http://{}/{}'.format(conf['dest_s3_bucket'],
-                                   #'tsw/sd_paving_imcat_datasd_v1.csv'),
-    #on_failure_callback=notify,
-    #on_retry_callback=notify,
-    #on_success_callback=notify,
-    #dag=dag)
+send_last_file_updated_email = PoseidonEmailFileUpdatedOperator(
+    task_id='send_last_file_updated',
+    to='chudson@sandiego.gov',
+    subject='IMCAT Streets File Updated',
+    file_url=f"http://{conf['dest_s3_bucket']}/{'tsw/sd_paving_imcat_datasd_v1.csv'}",
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
 
 #: Update portal modified date
 update_streets_md = get_seaboard_update_dag('streets-repair-projects.md', dag)
@@ -142,7 +154,6 @@ get_streets_data >> base_data >> [portal_data,imcat_data]
 portal_data >> [upload_sdif_data, create_esri_file]
 imcat_data >> upload_imcat_data
 upload_sdif_data >> [update_json_date,update_streets_md]
-create_esri_file >> update_esri
+upload_sdif_data >> check_upload_time >> send_last_file_updated_email
+create_esri_file >> check_esri_time >> update_esri
 
-#: email notification is sent after the data was uploaded to S3
-#send_last_file_updated_email.set_upstream(upload_imcat_data)
