@@ -17,14 +17,16 @@ from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_upd
 # All times in Airflow UTC.  Set Start Time in PST?
 args = general.args
 conf = general.config
-schedule = general.schedule['streets']
-start_date = general.start_date['streets']
+schedule = general.schedule['sidewalks']
+start_date = general.start_date['sidewalks']
 
 #: Dag spec
-dag = DAG(dag_id='sidewalk', default_args=args, start_date=start_date, schedule_interval=schedule)
-
-#: Latest Only Operator for sdif
-sidewalk_latest_only = LatestOnlyOperator(task_id='sidewalk_latest_only', dag=dag)
+dag = DAG(dag_id='sidewalk', 
+    default_args=args, 
+    start_date=start_date, 
+    schedule_interval=schedule,
+    catchup=False
+    )
 
 #: Get sidewalk data from DB
 get_sidewalk_data = PythonOperator(
@@ -164,14 +166,8 @@ update_gis_md = get_seaboard_update_dag('sidewalk-gis.md', dag)
 
 #: Execution order
 
-#: Latest only operator must run before getting sidewalk data
-get_sidewalk_data.set_upstream(sidewalk_latest_only)
-
-#: Getting sidewalk data must run before uploading
-upload_oci_file.set_upstream(get_sidewalk_data)
-
-#: get_sidewalk_data must run before get shapefiles so they can be joined
-get_sw_shapefiles.set_upstream(sidewalk_latest_only)
+get_sidewalk_data >> upload_oci_file
+get_sidewalk_data >> get_sw_shapefiles
 
 #: get_sw_shapefiles must run before converting to geojson
 sidewalks_to_geojson.set_upstream(get_sw_shapefiles)

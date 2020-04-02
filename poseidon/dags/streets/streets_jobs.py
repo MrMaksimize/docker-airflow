@@ -575,4 +575,12 @@ def send_arcgis(mode=['completed'], **context):
 
         return f"{mode} could not update because the selection is empty"
 
+def check_exec_time(**context):
+    currTime = context['execution_date'].in_timezone('America/Los_Angeles')
+    if currTime.hour == 16:
+        logging.info(f'Calling downstream tasks, hour is: {currTime.hour}')
+        return True
+    else:
+        logging.info(f'Skipping downstream tasks, hour is: {currTime.hour}')
+        return False
     
