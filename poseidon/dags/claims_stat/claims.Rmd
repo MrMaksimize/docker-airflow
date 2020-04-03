@@ -22,10 +22,10 @@ library(rsconnect)
 library(shiny)
 
 #setwd("~/Documents/SD_data/TSW_dashboard_050719")
-# claims <- read.csv("/usr/local/airflow/poseidon/data/prod/claim_stat_datasd.csv", header=T, na.strings=c(""," ","NA"))
+claims <- read.csv("/usr/local/airflow/poseidon/data/prod/claim_stat_datasd.csv", header=T, na.strings=c(""," ","NA"))
 
 # CHANGE ME FOR PRODUCTION URL!!!!!!!
-claims <- read.csv("http://datasd-dev.s3.amazonaws.com/risk/claims_clean_datasd_v1.csv", header=T, na.strings=c("", " ", "NA"))
+# claims <- read.csv("http://datasd-dev.s3.amazonaws.com/risk/claims_clean_datasd_v1.csv", header=T, na.strings=c("", " ", "NA"))
 claims<-unique(claims)
 
 claims <-data.table(claims)
