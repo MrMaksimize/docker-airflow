@@ -135,6 +135,7 @@ def send_email_swu(to,
 
     # Dedupe all_receivers list
     all_receivers = list(set(all_receivers))
+    logging.info(payload)
 
     r = requests.post(
         request_url, auth=(api_key, ''), data=json.dumps(payload))
