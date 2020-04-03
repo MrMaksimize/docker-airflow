@@ -16,7 +16,8 @@ def afsys_send_email(to,
                      dryrun=False,
                      cc=None,
                      bcc=None,
-                     mime_subtype='mixed'):
+                     mime_subtype='mixed',
+                     **kwargs):
     """
     Override airflow internal mail system. Notify via email.
     :param to: comma separated string of email addresses
