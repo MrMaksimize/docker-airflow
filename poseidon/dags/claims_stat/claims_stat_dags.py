@@ -25,7 +25,10 @@ email_recips = conf['mail_notify_claims']
 
 
 #: Dag definition
-dag = DAG(dag_id='claims_stat', default_args=args, start_date=start_date, schedule_interval=schedule['claims_stat'])
+dag = DAG(dag_id='claims_stat',
+    default_args=args,
+    start_date=start_date,
+    schedule_interval=schedule['claims_stat'])
 
 
 #: Latest Only Operator for claims
@@ -78,7 +81,6 @@ upload_addresses_to_S3 = S3FileTransferOperator(
     on_success_callback=notify,
     replace=True,
     dag=dag)
-
 
 
 #: Deploy Dashboard

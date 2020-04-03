@@ -20,7 +20,8 @@ def get_claims_data():
     """Query an oracle database"""
     logging.info('Retrieving data from Oracle database')
     # This requires that otherwise optional credentials variable
-    db = cx_Oracle.connect(credentials)
+    # jdbc:oracle:thin:@//csdldcorcprd1:1521/glts
+    db = cx_Oracle.connect("panda","panda","csdldcorcprd1.sannet.gov:1521/glts", encoding="UTF-8")
     # Create a sql file containing query for the database
     # Save this file in a sql folder at the same level as the jobs file
     sql= general.file_to_string('./sql/claimstat_tsw.sql', __file__)

@@ -19,6 +19,8 @@ services:
             - AIRFLOW_CONN_S3DATA="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@S3"
             - AIRFLOW_CONN_S3LOG="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@poseidon-logs-${SD_ENV}"
             - PYTHONPATH="/usr/local/airflow/poseidon"
+            - AIRFLOW__EMAIL__EMAIL_BACKEND=trident.util.notifications.afsys_send_email
+            
         ports:
             - "1187:1187"
             - "8888:8888"
