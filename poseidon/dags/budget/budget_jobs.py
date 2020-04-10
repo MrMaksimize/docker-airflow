@@ -39,7 +39,7 @@ def get_accounts_chart():
         logging.info("Found file")
         return "Downloaded chart of accounts"
 
-def get_budget_files(mode='Budget', path='Capital/FY'):
+def get_budget_files(mode='', path=''):
     """Get latest actuals from shared drive."""
     logging.info(f'Retrieving {mode} for {path}')
     
