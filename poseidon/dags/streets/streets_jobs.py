@@ -578,8 +578,12 @@ def send_arcgis(mode=['completed'], **context):
 def check_exec_time(**context):
     currTime = context['execution_date'].in_timezone('America/Los_Angeles')
     if currTime.hour == 16:
-        logging.info(f'Calling downstream tasks, hour is: {currTime.hour}')
-        return True
+        if currTime.day_of_week <= 4 :
+            logging.info(f'Calling downstream tasks, hour is: {currTime.hour}')
+            return True
+        else:
+            logging.info(f'Skipping downstream tasks, day is: {currTime.day_of_week}')
+            return False
     else:
         logging.info(f'Skipping downstream tasks, hour is: {currTime.hour}')
         return False
