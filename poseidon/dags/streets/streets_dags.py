@@ -2,7 +2,8 @@
 from __future__ import print_function
 from airflow.operators.python_operator import PythonOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
-from airflow.operators.latest_only_operator import LatestOnlyOperator
+from airflow.operators.subdag_operator import SubDagOperator
+from airflow.operators.python_operator import ShortCircuitOperator
 from trident.operators.poseidon_email_operator import PoseidonEmailFileUpdatedOperator
 from trident.operators.poseidon_sonar_operator import PoseidonSonarCreator
 from airflow.models import DAG
@@ -12,6 +13,7 @@ from trident.util.notifications import notify
 from trident.util.seaboard_updates import *
 
 from dags.streets.streets_jobs import *
+from dags.streets.streets_subdags import *
 
 # All times in Airflow UTC.  Set Start Time in PST?
 args = general.args
@@ -20,11 +22,12 @@ schedule = general.schedule['streets']
 start_date = general.start_date['streets']
 
 #: Dag spec
-dag = DAG(dag_id='streets', default_args=args, start_date=start_date, schedule_interval=schedule)
-
-
-#: Latest Only Operator for imcat
-streets_latest_only = LatestOnlyOperator(task_id='streets_latest_only', dag=dag)
+dag = DAG(dag_id='streets', 
+    default_args=args, 
+    start_date=start_date, 
+    schedule_interval=schedule,
+    catchup=False
+    )
 
 #: Get streets data from DB
 get_streets_data = PythonOperator(
@@ -35,10 +38,19 @@ get_streets_data = PythonOperator(
     on_success_callback=notify,
     dag=dag)
 
+#: Get streets data from DB
+base_data = PythonOperator(
+    task_id='process_base_data',
+    python_callable=create_base_data,
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
+
 #: Process data for public
-process_data_sdif = PythonOperator(
+portal_data = PythonOperator(
     task_id='process_sdif',
-    python_callable=process_paving_data,
+    python_callable=create_mode_data,
     op_kwargs={'mode': 'sdif'},
     provide_context=True,
     on_failure_callback=notify,
@@ -47,9 +59,9 @@ process_data_sdif = PythonOperator(
     dag=dag)
 
 #: Process data for imcat
-process_data_imcat = PythonOperator(
+imcat_data = PythonOperator(
     task_id='process_imcat',
-    python_callable=process_paving_data,
+    python_callable=create_mode_data,
     op_kwargs={'mode': 'imcat'},
     provide_context=True,
     on_failure_callback=notify,
@@ -95,53 +107,53 @@ update_json_date = PythonOperator(
     on_success_callback=notify,
     dag=dag)
 
-send_esri_file = PythonOperator(
-    task_id='upload_streets_gis',
-    python_callable=send_arcgis,
+#: Get streets data from DB
+create_esri_file = PythonOperator(
+    task_id='create_esri_base',
+    python_callable=create_arcgis_base,
     on_failure_callback=notify,
     on_retry_callback=notify,
     on_success_callback=notify,
     dag=dag)
 
+check_upload_time = ShortCircuitOperator(
+    task_id='check_upload_time',
+    provide_context=True,
+    python_callable=check_exec_time,
+    dag=dag)
+
+check_esri_time = ShortCircuitOperator(
+    task_id='check_esri_time',
+    provide_context=True,
+    python_callable=check_exec_time,
+    dag=dag)
+
+update_esri = SubDagOperator(
+  task_id='write_esri_layers',
+  subdag=esri_layer_subdag(),
+  dag=dag,
+  )
+
 #: send file update email to interested parties
-#send_last_file_updated_email = PoseidonEmailFileUpdatedOperator(
-    #task_id='send_last_file_updated',
-    #to='chudson@sandiego.gov',
-    #subject='IMCAT Streets File Updated',
-    #file_url='http://{}/{}'.format(conf['dest_s3_bucket'],
-                                   #'tsw/sd_paving_imcat_datasd_v1.csv'),
-    #on_failure_callback=notify,
-    #on_retry_callback=notify,
-    #on_success_callback=notify,
-    #dag=dag)
+send_last_file_updated_email = PoseidonEmailFileUpdatedOperator(
+    task_id='send_last_file_updated',
+    to='chudson@sandiego.gov',
+    subject='IMCAT Streets File Updated',
+    file_url=f"http://{conf['dest_s3_bucket']}/{'tsw/sd_paving_imcat_datasd_v1.csv'}",
+    on_failure_callback=notify,
+    on_retry_callback=notify,
+    on_success_callback=notify,
+    dag=dag)
 
 #: Update portal modified date
 update_streets_md = get_seaboard_update_dag('streets-repair-projects.md', dag)
 
-#for i in ['total', 'overlay', 'slurry']:
-
-    #sonar_task = PoseidonSonarCreator(
-        #task_id='create_sdif_{}_miles_paved_sonar'.format(i),
-        #range_id='days_30',
-        #value_key='sdif_{}_miles'.format(i),
-        #value_desc='Miles Paved {}'.format(i),
-        #python_callable=build_sonar_miles_aggs,
-        #op_kwargs={'mode': 'sdif',
-                   #'pav_type': i},
-        #on_failure_callback=notify,
-        #on_retry_callback=notify,
-        #on_success_callback=notify,
-        #dag=dag)
-
-    #: Depends on successful run of get_streets_data
-    #sonar_task.set_upstream(process_data_sdif)
-
 #: Execution order
 
-streets_latest_only >> get_streets_data >> [process_data_sdif,process_data_imcat] 
-process_data_sdif >> [upload_sdif_data,send_esri_file]
-process_data_imcat >> upload_imcat_data
-[update_json_date,update_streets_md] << upload_sdif_data 
+get_streets_data >> base_data >> [portal_data,imcat_data] 
+portal_data >> [upload_sdif_data, create_esri_file]
+imcat_data >> upload_imcat_data
+upload_sdif_data >> [update_json_date,update_streets_md]
+upload_sdif_data >> check_upload_time >> send_last_file_updated_email
+create_esri_file >> check_esri_time >> update_esri
 
-#: email notification is sent after the data was uploaded to S3
-#send_last_file_updated_email.set_upstream(upload_imcat_data)

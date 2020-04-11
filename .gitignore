@@ -32,7 +32,9 @@ oracle.zip
 ._*
 .AppleDouble
 .DS_Store
-Poseidon/dags/**/.DS_Store
+poseidon/dags/**/.DS_Store
+data/prod/.DS_Store
+data/temp/.DS_Store
 .localized
 .LSOverride
 .Spotlight-V100
@@ -52,3 +54,6 @@ data/**/*.*
 secrets.json
 
 venv/*
+
+# R
+*.dcf

@@ -11,15 +11,14 @@ from trident.util.geospatial import spatial_join_pt
 
 conf = general.config
 
-temp_file_gid = conf['temp_data_dir'] + '/gid_temp.csv'
+temp_streets_gid = conf['temp_data_dir'] + '/gid_temp_streetdiv.csv'
+temp_other_gid = conf['temp_data_dir'] + '/gid_temp_other.csv'
 sname_file_gid = conf['temp_data_dir'] + '/gid_sname.csv'
 dates_file_gid = conf['temp_data_dir'] + '/gid_dates.csv'
 ref_file_gid = conf['temp_data_dir'] + '/gid_ref.csv'
-cd_file_gid = conf['temp_data_dir'] + '/gid_cd.csv'
-cp_file_gid = conf['temp_data_dir'] + '/gid_cp.csv'
-parks_file_gid = conf['temp_data_dir'] + '/gid_parks.csv'
 
 services_file = conf['temp_data_dir'] + '/gid_final.csv'
+full_file = conf['prod_data_dir'] + '/get_it_done_requests_datasd.csv'
 
 prod_file_base = conf['prod_data_dir'] + '/get_it_done_'
 prod_file_end = 'requests_datasd_v1.csv'
@@ -48,7 +47,27 @@ def sap_case_sub_type(row):
     else:
         return None
 
-def get_gid_requests():
+def get_gid_streets():
+    """Get requests from sf, creates prod file."""
+    username = conf['dpint_sf_user']
+    password = conf['dpint_sf_pass']
+    security_token = conf['dpint_sf_token']
+
+    report_id = "00Ot0000000ogtBEAQ"
+
+    # Init salesforce client
+    sf = Salesforce(username, password, security_token)
+
+    # Pull dataframe
+    logging.info('Pull report {} from SF'.format(report_id))
+
+    sf.get_report_csv(report_id, temp_streets_gid)
+
+    logging.info('Process report {} data.'.format(report_id))
+
+    return "Successfully pulled Salesforce report"
+
+def get_gid_other():
     """Get requests from sf, creates prod file."""
     username = conf['dpint_sf_user']
     password = conf['dpint_sf_pass']
@@ -62,7 +81,7 @@ def get_gid_requests():
     # Pull dataframe
     logging.info('Pull report {} from SF'.format(report_id))
 
-    sf.get_report_csv(report_id, temp_file_gid)
+    sf.get_report_csv(report_id, temp_other_gid)
 
     logging.info('Process report {} data.'.format(report_id))
 
@@ -70,13 +89,21 @@ def get_gid_requests():
 
 def update_service_name():
     """ Take various columns and merge for consistent case types"""
-    df = pd.read_csv(temp_file_gid,
+    df_streets = pd.read_csv(temp_streets_gid,
                      encoding='ISO-8859-1',
                      low_memory=False,
                      error_bad_lines=False,
                      )
 
-    logging.info("Read {} records from Salesforce report".format(df.shape[0]))
+    df_other = pd.read_csv(temp_other_gid,
+                     encoding='ISO-8859-1',
+                     low_memory=False,
+                     error_bad_lines=False,
+                     )
+
+    df = pd.concat([df_streets,df_other],ignore_index=True)
+
+    logging.info(f"Read {df.shape[0]} records from Salesforce report")
 
     df.columns = [x.lower().replace(' ','_').replace('/','_') 
         for x in df.columns]
@@ -84,6 +111,8 @@ def update_service_name():
     df = df.fillna('')
 
     logging.info('Prepped dataframe, fixing simple case record types')
+
+    # If the Case Record Type needs to be corrected, it is corrected in this block
 
     df.loc[(df['problem_category'] == 'Abandoned Vehicle'),'case_record_type'] = '72 Hour Report'
     
@@ -96,11 +125,16 @@ def update_service_name():
     df.loc[df['case_record_type'] == 'Traffic Engineering Closed Case'
         , 'case_record_type'] = 'Traffic Engineering'
 
+    # Next, we are creating two new fields: case_type_new and case_sub_type_new
+    # These two fields join with the crosswalk to get the final service_name field
+    # We start by creating subsets according to top-level case record type
+
     logging.info('Subsetting records to be able to fix more case types')
     
     case_types_correct = df.loc[(df['case_record_type'] == 'ESD Complaint/Report') |
         (df['case_record_type'] == 'Storm Water Code Enforcement') |
-        (df['case_record_type'] == 'TSW ROW')
+        (df['case_record_type'] == 'TSW ROW') |
+        (df['case_record_type'] == 'Neighborhood Policing')
         ,:]
 
     case_types_sap = df.loc[(df['case_record_type'] == 'TSW') |
@@ -112,6 +146,8 @@ def update_service_name():
     case_types_parking = df.loc[df['case_record_type'] == 'Parking',:]
 
     case_types_72hr = df.loc[df['case_record_type'] == '72 Hour Report',:]
+
+    # If it's easy to assign case type and case sub type, that's done here
 
     logging.info('Assigning case types for simple cases')
 
@@ -126,6 +162,8 @@ def update_service_name():
         case_sub_type_new='')
     parking_72hr_types = case_types_72hr.assign(case_type_new='72 Hour Violation',
         case_sub_type_new='')
+
+    # 72 hour parking stuff and sap stuff is done here
 
     logging.info('Correcting case record type for 72 hour violation')
 
@@ -194,7 +232,7 @@ def update_close_dates():
                      low_memory=False,
                      parse_dates=['date_time_opened','date_time_closed']
                      )
-
+    logging.info(f"Read {df.shape[0]} records")
     df['sap_notification_number'] = pd.to_numeric(df['sap_notification_number'],errors='coerce')
     
     orig_cols = df.columns.values.tolist()
@@ -386,6 +424,8 @@ def update_referral_col():
                      parse_dates=['date_time_opened','date_time_closed']
                      )
 
+    logging.info(f"Read {df.shape[0]} records")
+
     df['referred'] = ''
 
     df.loc[df['referral_email_list'].notnull(),
@@ -407,101 +447,37 @@ def update_referral_col():
 
     return "Successfully updated referral col" 
 
-def join_council_districts():
+def join_requests_polygons(tempfile='',
+    geofile='',
+    drop_cols=[],
+    outfile=''):
     """Spatially joins council districts data to GID data."""
-    cd_geojson = conf['prod_data_dir'] + '/council_districts_datasd.geojson'
-    gid_cd = spatial_join_pt(ref_file_gid,
-                             cd_geojson,
+    geojson = f"{conf['prod_data_dir']}/{geofile}_datasd.geojson"
+    df = f"{conf['temp_data_dir']}/{tempfile}.csv"
+    join = spatial_join_pt(df,
+                             geojson,
                              lat='lat',
                              lon='long')
     
-    cols = gid_cd.columns.values.tolist()
-    drop_cols = [
-        'objectid',
-        'area',
-        'perimeter',
-        'name',
-        'phone',
-        'website'
-        ]
+    cols = join.columns.values.tolist()
 
     if "level_0" in cols:
         drop_cols.append('level_0')
 
 
-    gid_cd = gid_cd.drop(drop_cols, axis=1)
-
-    gid_cd['district'] = gid_cd['district'].fillna('0')
-    gid_cd['district'] = gid_cd['district'].astype(int)
-    gid_cd['district'] = gid_cd['district'].astype(str)
-    gid_cd['district'] = gid_cd['district'].replace('0', '')
+    join = join.drop(drop_cols, axis=1)
 
     general.pos_write_csv(
-        gid_cd,
-        cd_file_gid,
+        join,
+        f"{conf['temp_data_dir']}/{outfile}.csv",
         date_format='%Y-%m-%dT%H:%M:%S%z')
 
-    return "Successfully joined council districts to GID data"
-
-def join_community_plan():
-    """Spatially joins community plan districts data to GID data."""
-    cp_geojson = conf['prod_data_dir'] + '/cmty_plan_datasd.geojson'
-    gid_cp = spatial_join_pt(cd_file_gid,
-                             cp_geojson,
-                             lat='lat',
-                             lon='long')
-
-    cols = gid_cp.columns.values.tolist()
-    drop_cols = [
-        'objectid',
-        'acreage',
-        ]
-
-    if "level_0" in cols:
-        drop_cols.append('level_0')
-
-    gid_cp = gid_cp.drop(drop_cols, axis=1)
-
-    general.pos_write_csv(
-        gid_cp,
-        cp_file_gid,
-        date_format='%Y-%m-%dT%H:%M:%S%z')
-
-    return "Successfully joined community plan districts to GID data"
-
-def join_parks():
-    """Spatially joins community plan districts data to GID data."""
-    parks_geojson = conf['prod_data_dir'] + '/parks_datasd.geojson'
-    gid_parks = spatial_join_pt(cp_file_gid,
-                             parks_geojson,
-                             lat='lat',
-                             lon='long')
-
-    cols = gid_parks.columns.values.tolist()
-    drop_cols = [
-        'objectid',
-        'gis_acres',
-        'location'
-    ]
-
-    if "level_0" in cols:
-        drop_cols.append('level_0')
-
-    gid_parks = gid_parks.drop(drop_cols, axis=1)
-
-    gid_parks = gid_parks.rename(columns={'name':'park_name'})
-
-    general.pos_write_csv(
-        gid_parks,
-        parks_file_gid,
-        date_format='%Y-%m-%dT%H:%M:%S%z')
-
-    return "Successfully joined parks to GID data"
+    return f"Successfully joined {geofile} to GID data"
 
 def create_prod_files():
     """ Map category columns and divide by year """
 
-    df = pd.read_csv(parks_file_gid, 
+    df = pd.read_csv(f"{conf['temp_data_dir']}/gid_parks.csv", 
         low_memory=False,
         parse_dates=['date_time_opened',
         'date_time_closed']
@@ -531,7 +507,7 @@ def create_prod_files():
         'district',
         'cpcode']].astype(str)
 
-    logging.info('Loaded {} total prod records'.format(df.shape[0]))
+    logging.info(f'Loaded {df.shape[0]} total prod records')
 
     logging.info('Loading in the crosswalk for one case category')
 
@@ -599,15 +575,24 @@ def create_prod_files():
     ]]
 
     final_reports = final_reports.sort_values(by=['service_request_id','date_requested','date_updated'])
-
+    
+    logging.info(f"Full dataset contains {final_reports.shape[0]} records")
+    
+    #Write services file to temp
     general.pos_write_csv(
         final_reports,
         services_file,
         date_format='%Y-%m-%dT%H:%M:%S%z')
+    
+    # Write full file to prod
+    general.pos_write_csv(
+        final_reports,
+        full_file,
+        date_format='%Y-%m-%d')
 
     logging.info("Creating new compressed json")
     #json_subset = final_reports.drop(['public_description'],axis=1)
-    final_json = final_reports.to_json(f'{conf["prod_data_dir"]}/get_it_done_reports.json',
+    final_json = final_reports.to_json(f'{conf["prod_data_dir"]}/get_it_done_requests_datasd.json',
         orient='records',
         compression='gzip'
         )
@@ -626,7 +611,7 @@ def create_prod_files():
             (final_reports['date_requested'] >= this_yr+'-01-01 00:00:00') &
             (final_reports['date_requested'] < next_yr+'-01-01 00:00:00')]
 
-        logging.info('Writing {} records to prod'.format(file_subset.shape[0]))
+        logging.info(f'Writing {file_subset.shape[0]} records to prod')
         general.pos_write_csv(
             file_subset,
             file_path,
@@ -656,50 +641,3 @@ def get_requests_service_name(service_name, machine_service_name):
 
     return "Successfully wrote {} records for gid {} prod file".format(
         data.shape[0], machine_service_name)
-
-
-def prepare_sonar_gid_data():
-    """Prepare GID Sonar data."""
-    potholes_file = prod_file_base + "pothole_" + prod_file_end
-
-    # Read CSV
-    gid = pd.read_csv(potholes_file)
-
-    # Set accepted fields
-    fields = ['service_request_id', 'date_requested', 'date_updated',
-              'case_origin', 'service_name', 'status', 'lat', 'lng']
-
-    # Filter on field
-    gid = gid[fields]
-
-    # Convert datetime columns
-    gid['date_requested'] = pd.to_datetime(gid['date_requested'])
-    gid['date_updated'] = pd.to_datetime(gid['date_updated'])
-
-    return gid
-
-def build_gid_sonar_ph_closed(**kwargs):
-    """Todo use filters for dynamic filtering from this data."""
-    range_start = kwargs['range_start']
-    gid = prepare_sonar_gid_data()
-
-    # Get only closed potholes
-    mask = (gid.service_name == 'Pothole') & \
-           (gid.status == 'Closed')
-
-    gid_ph_closed = gid[mask]
-    gid_ph_closed = gid_ph_closed.copy()
-
-    range_start_year = range_start.year
-    range_start_month = range_start.month
-    range_start_day = range_start.day
-
-    range_start_naive = dt.datetime(range_start_year,range_start_month,range_start_day)
-
-    # Get closed potholes, last x days
-    potholes_sub = gid_ph_closed.loc[gid_ph_closed['date_requested'] >= range_start_naive]
-
-    potholes_closed = potholes_sub.shape[0]
-
-    # Return expected dict
-    return {'value': potholes_closed}

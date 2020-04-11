@@ -2,7 +2,6 @@
 from airflow.operators.bash_operator import BashOperator
 from airflow.operators.python_operator import PythonOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
-from airflow.operators.latest_only_operator import LatestOnlyOperator
 from airflow.models import DAG
 from dags.pd.pd_hate_crimes_jobs import *
 from trident.util import general
@@ -15,12 +14,13 @@ schedule = general.schedule
 start_date = general.start_date['pd_hc']
 
 dag = DAG(
-    dag_id='pd_hate_crimes', default_args=args, start_date=start_date, schedule_interval=schedule['pd_hc'])
+    dag_id='pd_hate_crimes',
+    default_args=args,
+    start_date=start_date,
+    schedule_interval=schedule['pd_hc'],
+    catchup=False
+    )
 
-
-#: Latest Only Operator for pd_col
-pd_hc_latest_only = LatestOnlyOperator(
-    task_id='latest_only', dag=dag)
 
 #: Get collisions data from FTP and save to temp folder
 get_hc_data = BashOperator(
@@ -69,4 +69,4 @@ update_pd_hc_md = get_seaboard_update_dag('police-hate-crimes.md', dag)
 
 #: Execution rules:
 
-pd_hc_latest_only >> get_hc_data >> process_hc_data >> hc_to_S3 >> [update_hc_date, update_pd_hc_md]
+get_hc_data >> process_hc_data >> hc_to_S3 >> [update_hc_date, update_pd_hc_md]

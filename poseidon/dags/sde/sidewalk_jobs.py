@@ -1,4 +1,4 @@
-"""_jobs file for 'streets alleys walkways' layer sde extraction."""
+"""_jobs file for sidewalk oci."""
 from trident.util import general
 from trident.util import geospatial
 import pandas as pd
@@ -6,27 +6,27 @@ from collections import OrderedDict
 import logging
 
 conf = general.config
-table = 'STREET_ALLEY_WALKWAY'
+table = 'SIDEWALK'
 prod_dir = conf['prod_data_dir']
-layername = 'sd_paving_segs_datasd'
+layername = 'sidewalks_datasd'
 layer = prod_dir + '/' + layername
 
 dtypes = OrderedDict([
-        ('objectid', 'int:9'),
-        ('roadsegid', 'int:10'),
-        ('sapid', 'str:9'),
-        ('rd20full','str:23'),
-        ('xstrt1','str:23'),
-        ('xstrt2','str:23'),
-        ('llowaddr','int:10'),
-        ('lhighaddr','int:10'),
-        ('rlowaddr','int:10'),
-        ('rhighaddr','int:10'),
-        ('zip','int:10'),
+        ('seg_id', 'str'),
+        ('geojoin_id','str'),
+        ('fun_loc_id','str'),
+        ('loc_desc', 'str'),
+        ('xstrt1', 'str'),
+        ('xstrt2', 'str'),
+        ('strt_side', 'str'),
+        ('orientn', 'str'),
+        ('council', 'int'),
+        ('comm_plan', 'int'),
+        ('material','str'),
+        ('width', 'float')
     ])
 
 gtype = 'LineString'
-
 
 def sde_to_shp():
     """SDE table to Shapefile."""
@@ -37,6 +37,16 @@ def sde_to_shp():
                                      )
 
     logging.info('Processing {layername} df.'.format(layername=layername))
+
+    df = df.rename(columns={'sapid':'seg_id',
+        'cdcode':'council',
+        'cpcode':'comm_plan',
+        'legacy_id':'geojoin_id',
+        'iamfloc':'fun_loc_id',
+        'loc_descr':'loc_desc',
+        'orientation':'orientn'
+        })
+
     logging.info('Converting {layername} df to shapefile.'.format(
         layername=layername))
     geospatial.df2shp(df=df,
