@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import logging
 from airflow.hooks.mssql_hook import MsSqlHook
 import pymssql
+from trident.util import general
 
 
 conf = general.config

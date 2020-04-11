@@ -8,7 +8,7 @@ import logging
 conf = general.config
 table = 'SIDEWALK'
 prod_dir = conf['prod_data_dir']
-layername = 'sidewalks'
+layername = 'sidewalks_datasd'
 layer = prod_dir + '/' + layername
 
 dtypes = OrderedDict([
@@ -19,13 +19,11 @@ dtypes = OrderedDict([
         ('xstrt1', 'str'),
         ('xstrt2', 'str'),
         ('strt_side', 'str'),
+        ('orientn', 'str'),
         ('council', 'int'),
         ('comm_plan', 'int'),
         ('material','str'),
-        ('width', 'float'),
-        ('oci_yr', 'int'),
-        ('oci_desc', 'str'),
-        ('oci', 'float')
+        ('width', 'float')
     ])
 
 gtype = 'LineString'
@@ -45,7 +43,8 @@ def sde_to_shp():
         'cpcode':'comm_plan',
         'legacy_id':'geojoin_id',
         'iamfloc':'fun_loc_id',
-        'loc_descr':'loc_desc'
+        'loc_descr':'loc_desc',
+        'orientation':'orientn'
         })
 
     logging.info('Converting {layername} df to shapefile.'.format(

@@ -1,7 +1,7 @@
 """_dags file for 'transit routes' sde extraction."""
 from airflow.models import DAG
 from trident.util import general
-from dags.sde.street_segs_jobs import sde_to_shp
+from dags.sde.sidewalk_jobs import sde_to_shp
 from trident.util.sde_extract_tasks import create_sde_tasks
 
 
