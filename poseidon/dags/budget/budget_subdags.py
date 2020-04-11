@@ -49,9 +49,8 @@ def get_files_subdag():
 
       create_file = PythonOperator(
         task_id=f"create_{task}",
-        provide_context=True,
         python_callable=get_budget_files,
-        op_kwargs={'mode': mode, 'path':path},
+        op_kwargs={'mode': mode_str, 'path':path_str},
         on_failure_callback=notify,
         on_retry_callback=notify,
         on_success_callback=notify,

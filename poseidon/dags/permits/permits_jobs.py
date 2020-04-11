@@ -449,11 +449,11 @@ def create_pw_sap_subset():
 
     appr_types = ['Right Of Way Permit-Const Plan',
     'Construction Change - Eng.',
+    'Construction Change - Building',
     'Right Of Way Permit',
     'Grading + Right of Way Permit',
     'ROW Permit-Traffic Control',
-    'Traffic Control Plan-Permit'
-                     ]
+    'Traffic Control Plan-Permit']
 
     status_types = ['Issued','Completed']
 

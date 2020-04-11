@@ -272,8 +272,7 @@ def _clean_pts_violations():
         'LOCATION_NOTE',
         'CONSTRUCTION_NOTE'
         ],dtype={'LONGITUDE':np.float64,
-        'LATITUDE':np.float64,
-        'PARCEL_APN':str
+        'LATITUDE':np.float64
         })
 
     ptsv['PARCEL_APN'] = ptsv.ASSESSOR_PARCEL_10
