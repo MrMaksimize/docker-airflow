@@ -144,3 +144,43 @@ def get_email_address_list(address_string):
             address_string = [address_string]
 
     return address_string
+
+#def notify(context):
+    """Dispatch payload notification."""
+    # Check local and test mode
+    #task_instance = context['task_instance']
+    #payload = {
+        #"run_date": context['execution_date'].isoformat(),
+        #"dag_id": task_instance.dag_id,
+        #"task_id": task_instance.task_id,
+        #"test_mode": task_instance.test_mode,
+        #"try_number": task_instance.try_number,
+        #"duration": task_instance.duration,
+        #"state": task_instance.state,
+        #"operator": task_instance.operator,
+        #"job_id": task_instance.job_id
+    #}
+    #notify_keen(payload, conf['keen_ti_collection'])
+
+
+#def notify_keen(payload, collection, raise_for_status = False):
+    """ TODO - move this to keen operator """
+    #if conf['keen_notify'] == 1:
+        #url = 'https://api.keen.io/3.0/projects/{}/events/{}'.format(
+            #conf['keen_project_id'], collection)
+
+        #headers = {
+            #'Authorization': conf['keen_write_key'],
+            #'Content-Type': 'application/json'
+        #}
+
+        #request = requests.post(url, headers=headers, json=payload)
+
+        # Raise for status if requested
+        #if (raise_for_status is True):
+            #request.raise_for_status()
+
+        #logging.info("Dispatched keen notification to {} collection".format(collection))
+    #else:
+        #logging.info("Keen notifications to {} collection disabled".format(collection))
+

@@ -3,7 +3,6 @@
 # Required imports
 
 from airflow.models import DAG
-from airflow.operators.latest_only_operator import LatestOnlyOperator
 from airflow.operators.python_operator import PythonOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
 from trident.util.seaboard_updates import *
@@ -11,12 +10,21 @@ from trident.util import general
 from trident.util.notifications import afsys_send_email
 
 
-# - You must replace this with the path to the corresponding jobs file
+#### You must replace this with the path to the corresponding jobs file ####
 from dags.templates.template_jobs import *
+from dags.templates.template_subdags import *
 
 # Optional imports
-
+from airflow.operators.python_operator import BranchPythonOperator
 from trident.operators.poseidon_sonar_operator import PoseidonSonarCreator
+from airflow.operators.bash_operator import BashOperator
+from airflow.operators.subdag_operator import SubDagOperator
+from airflow.operators.python_operator import ShortCircuitOperator
+from trident.operators.r_operator import RScriptOperator
+from trident.operators.r_operator import RShinyDeployOperator
+from trident.operators.poseidon_email_operator import PoseidonEmailFileUpdatedOperator
+from trident.operators.poseidon_email_operator import PoseidonEmailWithPythonOperator
+
 
 import re
 import glob
@@ -25,129 +33,152 @@ import glob
 
 args = general.args
 conf = general.config
-# You must replace this with actual schedule
-schedule = general.schedule['get_it_done']
-# You must replace this with actual start date
-start_date = general.start_date['get_it_done']
+schedule = general.schedule['']
+start_date = general.start_date['']
 
-#: Dag spec
-# Replace this dag id with actual dag id
-dag = DAG(dag_id='template_dag',
+# Optional variable
+email_recips = conf['mail_notify']
+
+#: Required DAG definition
+dag = DAG(dag_id='template',
         default_args=args,
         schedule_interval=schedule,
-        start_date=start_date)
+        start_date=start_date,
+        catchup=False
+        )
 
-# You must have a latest only task
-template_latest_only = LatestOnlyOperator(task_id='template_latest_only', dag=dag)
+#: Optional tasks. Use what you need.
 
-#: Call a python function from the jobs file example
-second_template_task = PythonOperator(
-    task_id='template_python_task', # This is a task name you choose
-    python_callable=template_python_task, # This must match the function from jobs
+#: Python operator
+template_task_basic = PythonOperator(
+    task_id='python_task_basic',
+    python_callable=python_basic,
     on_failure_callback=afsys_send_email,
-    
-    
     dag=dag)
 
-#: Execute a bash command function from the jobs file example
-third_template_task = BashOperator(
+#: Python operator
+template_task_context = PythonOperator(
+    task_id='python_task_context',
+    provide_context=True,
+    python_callable=python_context,
+    on_failure_callback=afsys_send_email,
+    dag=dag)
+
+# The following two tasks call the same jobs function
+# But pass in different arguments
+
+#: Python operator with kwargs
+template_task_kwargs1 = PythonOperator(
+    task_id='python_task_kwarg1',
+    op_kwargs={'mode': 'mode1'},
+    python_callable=python_kwarg,
+    on_failure_callback=afsys_send_email,
+    dag=dag)
+
+#: Python operator with kwargs
+template_task_kwargs2 = PythonOperator(
+    task_id='python_task_kwarg2',
+    op_kwargs={'mode': 'mode2'},
+    python_callable=python_kwarg,
+    on_failure_callback=afsys_send_email,
+    dag=dag)
+
+#: Python operator with context and kwargs
+template_task_both = PythonOperator(
+    task_id='python_task_both',
+    op_kwargs={'mode': 'mode1'},
+    provide_context=True,
+    python_callable=python_both,
+    on_failure_callback=afsys_send_email,
+    dag=dag)
+
+#: Bash operator
+template_bash_task = BashOperator(
     task_id='template_bash_task',
-    bash_command=ftp_download_wget(), # Matches function from jobs file
+    bash_command=bash_task(),
     on_failure_callback=afsys_send_email,
-    
-    
     dag=dag)
 
-#: Send Sonar report example
+#: Sonar email
 template_sonar = PoseidonSonarCreator(
     task_id='template_sonar_task',
-    range_id='days_30',
-    value_key='gid_potholes_closed',
-    value_desc='Potholes Closed',
-    python_callable=build_gid_sonar_ph_closed,
+    range_id='', # must be one of: today, days_7, or days_30
+    value_key='',
+    value_desc='',
+    python_callable=sonar_task,
     on_failure_callback=afsys_send_email,
-    
-    
     dag=dag)
 
-#: Send an email with info example
+#: An email with other info
 template_email_report = PoseidonEmailWithPythonOperator(
-    task_id='send_report',
-    to='abower@sandiego.gov',
-    subject='Your report',
-    template_id='tem_7xCrDCTyvjMGS9VpBM8rRmwD',
-    dispatch_type='sonar_dispatch',
-    python_callable=send_comm_report, # Replace with jobs function
+    task_id='template_email',
+    to='',
+    subject='',
+    template_id='',
+    dispatch_type='',
+    python_callable=email_task,
     on_failure_callback=afsys_send_email,
-    
-    
     dag=dag)
 
+#: Send an email a file was updated
+template_email_updated = PoseidonEmailFileUpdatedOperator(
+    task_id='template_send_updated',
+    to=email_recips,
+    subject='File Updated',
+    file_url="http://seshat.datasd.org/dsd/dsd_permits_all_pts.csv",
+    message='<p>DSD permits have been updated.</p>' \
+            + '<p>Please follow the link below to download.</p>',
+    on_failure_callback=afsys_send_email,
+    dag=dag)
 
+#: Shortcircuit operator
+template_short_circuit = ShortCircuitOperator(
+    task_id='template_short_circuit',
+    provide_context=True,
+    python_callable=short_circuit_task,
+    dag=dag)
 
-# An example of using a loop to create tasks
+#: Branch operator
+template_branch = BranchPythonOperator(
+    task_id='check_for_template',
+    provide_context=True,
+    python_callable=template_check,
+    dag=dag)
 
-loop_tasks = []
+#: Subdag operator
+template_subdag = SubDagOperator(
+    task_id='template_subdag',
+    subdag=create_subdag_operators(),
+    dag=dag,
+  )
 
-for i in a_list:
-    
-    template_loop_task = PythonOperator(
-        task_id=f'get_{i}',
-        python_callable=template_loop_task, # Again, this must match a function from jobs
-        op_kwargs={},
-        on_failure_callback=afsys_send_email,
-        
-        
-        dag=dag)
+#: Upload to S3
+upload_data = S3FileTransferOperator(
+    task_id='template_upload',
+    source_base_path=conf['prod_data_dir'],
+    source_key='',
+    dest_s3_conn_id=conf['default_s3_conn_id'],
+    dest_s3_bucket=conf['dest_s3_bucket'],
+    dest_s3_key='/',
+    on_failure_callback=afsys_send_email,
+    replace=True,
+    dag=dag)
 
-    loop_tasks.append(template_loop_task)
+#: Update a dataset page
+update_md = get_seaboard_update_dag('', dag)
 
-    #: Explain what task is upstream
-    template_loop_task.set_upstream(task_to_precede)
-    #: Explain any tasks that need to occur downstream
-    template_loop_task.set_downstream(task_to_follow)
+#: Update data catalog json
+update_json_date = PythonOperator(
+    task_id='update_json_date',
+    python_callable=update_json_date,
+    provide_context=True,
+    op_kwargs={'ds_fname': ''},
+    on_failure_callback=afsys_send_email,
+    dag=dag)
 
-# An example of upload and update tasks based on a loop
-
-# This one uses a wildcard pattern to search prod
-# Good for data separated by calendar year
-file_name = f"{conf['prod_data_dir']}/file_name_*.csv"
-files = [os.path.basename(x) for x in glob.glob(file_name)]
-
-for index, file_ in enumerate(files):
-    name = file_.split('.')[0]
-    name_parts = name.split('_')
-    # Isolate parts of file name for task name
-    task_name = '_'.join(name_parts[3:-2])
-    # Isolate parts of file name for md name
-    md_name = '-'.join(name_parts[3:-2])
-
-    #: Upload prod file to S3
-    template_upload_task = S3FileTransferOperator(
-        task_id='upload_' + task_name,
-        source_base_path=conf['prod_data_dir'],
-        source_key=f'file_name_{task_name}_datasd.csv',
-        dest_s3_conn_id=conf['default_s3_conn_id'],
-        dest_s3_bucket=conf['dest_s3_bucket'],
-        dest_s3_key=f'folder/file_name_{task_name}_datasd.csv',
-        on_failure_callback=afsys_send_email,
-        
-        
-        replace=True,
-        dag=dag)
-    
-    #: Explain what task is upstream, probably the last task
-    template_upload_task.set_upstream(third_template_task)
-
-    
-    template_md_update_task = get_seaboard_update_dag(md_name, dag)
-        
-    #: update md task must run after the upload task
-    template_md_update_task.set_upstream(template_upload_task)
-
-#: Execution rules
-#: latest_only must run before anything else
-second_template_task.set_upstream(template_latest_only)
-#: second_template_task must run before third_template_task
-third_template_task.set_upstream(second_template_task)
-
+#: Required execution rules
+template_task_basic >> template_task_context >> template_branch
+template_branch >> [template_email_updated, template_task_both] 
+template_task_both >> template_short_circuit >> [template_task_kwargs1,template_task_kwargs2]
+template_task_kwargs2 >> template_subdag >> [template_sonar,template_email_report]
+template_task_kwargs1 >> [update_md,update_json_date]

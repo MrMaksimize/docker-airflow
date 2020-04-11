@@ -81,6 +81,11 @@ class PoseidonSonarCreator(BaseOperator):
             'range_id': range_id
         }
 
+        #notify_keen(
+            #self.sonar,
+            #'sonar_pings_{}'.format(conf['env']).lower(),
+            #raise_for_status=True)
+
     def execute(self, context):
         if self.provide_context:
             context.update(self.op_kwargs)

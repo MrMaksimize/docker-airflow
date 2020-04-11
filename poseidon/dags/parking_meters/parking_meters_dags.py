@@ -35,8 +35,6 @@ get_parking_files = PythonOperator(
     python_callable=download_latest,
     provide_context=True,
     on_failure_callback=afsys_send_email,
-    
-    
     dag=dag)
 
 #: Joins downloaded files from ftp to production

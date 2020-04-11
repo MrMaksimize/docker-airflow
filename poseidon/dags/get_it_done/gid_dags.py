@@ -5,7 +5,6 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.operators.subdag_operator import SubDagOperator
 from airflow.models import DAG
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
-from trident.operators.poseidon_sonar_operator import PoseidonSonarCreator
 
 from trident.util import general
 from trident.util.notifications import afsys_send_email
