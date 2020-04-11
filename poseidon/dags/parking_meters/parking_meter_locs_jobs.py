@@ -6,7 +6,7 @@ import logging
 import numpy as np
 import pendulum
 from trident.util import general
-from airflow.models import DAG
+from shlex import quote
 
 conf = general.config
 portal_fname = conf['prod_data_dir'] +'/treas_parking_meters_loc_datasd_v1.csv'
@@ -32,6 +32,8 @@ def ftp_download(**context):
     f"-o {fpath} " \
     f"ftp://ftp.datasd.org/uploads/IPS/" \
     f"{fpath} -sk"
+
+    command = command.format(quote(command))
 
     p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
     output, error = p.communicate()
@@ -161,6 +163,8 @@ def clean_files(**context):
     f'ftp://ftp.datasd.org/uploads/IPS ' \
     f'-Q "DELE {fpath}"'
 
+    ftp_command = ftp_command.format(quote(ftp_command))
+
     try:
         p = subprocess.check_output(ftp_command, shell=True, stderr=subprocess.STDOUT)
         logging.info('Deleted file from ftp')
@@ -172,6 +176,8 @@ def clean_files(**context):
 
     temp_command = f"cd {conf['temp_data_dir']} && " \
         f"rm {fpath}"
+
+    temp_command = temp_command.format(quote(temp_command))
 
     try:
         p = subprocess.check_output(temp_command, shell=True, stderr=subprocess.STDOUT)
