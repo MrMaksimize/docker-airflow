@@ -193,7 +193,7 @@ schedule = {
     'onbase_test': '*/15 * * * *',
     'gis_tree_canopy': None,
     'parking_meter_locs': '0 19 * * *', # daily at 7pm UTC
-    'sidewalks': '@weekly'
+    'sidewalks': '@monthly'
 }
 
 default_date = datetime(2019, 10, 8)
