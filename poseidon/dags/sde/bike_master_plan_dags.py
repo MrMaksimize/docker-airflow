@@ -13,9 +13,9 @@ folder = 'bike_master_plan'
 layer = 'bike_master_plan'
 datasd_name = 'bike_master_plan_datasd'
 md = 'bike-master-plan'
-path_to_file = conf['prod_data_dir'] + '/' + datasd_name
+path_to_file = f"{conf['prod_data_dir']}/{datasd_name}"
 
-dag = DAG(dag_id='gis_{layer}'.format(layer=layer),
+dag = DAG(dag_id=f'gis_{layer}',
           default_args=args,
           start_date=start_date,
           schedule_interval=schedule,

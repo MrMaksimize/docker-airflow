@@ -3,7 +3,8 @@ from __future__ import print_function
 from airflow.operators.python_operator import PythonOperator
 from airflow.models import DAG
 from trident.util import general
-from trident.util.notifications import notify
+from trident.util.notifications import afsys_send_email
+
 
 from dags.streets.streets_jobs import *
 
@@ -36,9 +37,7 @@ def esri_layer_subdag():
         provide_context=True,
         python_callable=send_arcgis,
         op_kwargs={'mode': file},
-        on_failure_callback=notify,
-        on_retry_callback=notify,
-        on_success_callback=notify,
+        on_failure_callback=afsys_send_email,
         dag=dag_subdag,
       )
 

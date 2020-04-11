@@ -13,9 +13,9 @@ folder = 'council'
 layer = 'council_districts'
 datasd_name = 'council_districts_datasd'
 md = 'city-council-districts'
-path_to_file = conf['prod_data_dir'] + '/' + datasd_name
+path_to_file = f"{conf['prod_data_dir']}/{datasd_name}"
 
-dag = DAG(dag_id='gis_{layer}'.format(layer=layer),
+dag = DAG(dag_id=f'gis_{layer}',
           default_args=args,
           start_date=start_date,
           schedule_interval=schedule,

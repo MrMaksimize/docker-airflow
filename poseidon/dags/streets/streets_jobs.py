@@ -261,8 +261,7 @@ def create_base_data():
 
     spot_unknown = df[mask]
 
-    logging.info('Found {} records with no activity, type or status'.format(
-        spot_unknown.shape[0]))
+    logging.info(f'Found {spot_unknown.shape[0]} records with no activity, type or status')
 
     # Remove unknown
     df = df[~mask]

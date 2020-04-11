@@ -3,12 +3,11 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.operators.python_operator import PythonOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
 
-from airflow.operators.latest_only_operator import LatestOnlyOperator
 
 from airflow.models import DAG
-from trident.util.notifications import notify
+from trident.util.notifications import afsys_send_email
 
-from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag
+from trident.util.seaboard_updates import *
 
 from trident.util.geospatial import *
 
@@ -70,27 +69,21 @@ def create_sde_tasks(dag,
     to_shp = PythonOperator(
         task_id=f'{layer}_to_shp',
         python_callable=sde_to_shp,
-        on_failure_callback=notify,
-        on_retry_callback=notify,
-        on_success_callback=notify,
+        on_failure_callback=afsys_send_email,
         dag=dag)
 
     #: Convert shapefile to GeoJSON format
     to_geojson = BashOperator(
         task_id=f'{layer}_to_geojson',
         bash_command=shp_to_geojson(path_to_file),
-        on_failure_callback=notify,
-        on_retry_callback=notify,
-        on_success_callback=notify,
+        on_failure_callback=afsys_send_email,
         dag=dag)
 
     #: Convert shapefile to TopoJSON format
     to_topojson = BashOperator(
         task_id=f'{layer}_to_topojson',
         bash_command=shp_to_topojson(path_to_file),
-        on_failure_callback=notify,
-        on_retry_callback=notify,
-        on_success_callback=notify,
+        on_failure_callback=afsys_send_email,
         dag=dag)
 
     #: Compress shapefile components
@@ -98,9 +91,7 @@ def create_sde_tasks(dag,
         task_id=f'{layer}_shp_to_zip',
         python_callable=shp_to_zip,
         op_kwargs={'datasd_name': datasd_name},
-        on_failure_callback=notify,
-        on_retry_callback=notify,
-        on_success_callback=notify,
+        on_failure_callback=afsys_send_email,
         dag=dag)
 
     #: Upload shapefile to S3
@@ -111,9 +102,7 @@ def create_sde_tasks(dag,
         dest_s3_conn_id=conf['default_s3_conn_id'],
         dest_s3_bucket=conf['dest_s3_bucket'],
         dest_s3_key=f'sde/{folder}/{datasd_name}.zip',
-        on_failure_callback=notify,
-        on_retry_callback=notify,
-        on_success_callback=notify,
+        on_failure_callback=afsys_send_email,
         replace=True,
         dag=dag)
 
@@ -125,9 +114,7 @@ def create_sde_tasks(dag,
         dest_s3_conn_id=conf['default_s3_conn_id'],
         dest_s3_bucket=conf['dest_s3_bucket'],
         dest_s3_key=f'sde/{folder}/{datasd_name}.geojson',
-        on_failure_callback=notify,
-        on_retry_callback=notify,
-        on_success_callback=notify,
+        on_failure_callback=afsys_send_email,
         replace=True,
         dag=dag)
 
@@ -139,9 +126,7 @@ def create_sde_tasks(dag,
         dest_s3_conn_id=conf['default_s3_conn_id'],
         dest_s3_bucket=conf['dest_s3_bucket'],
         dest_s3_key=f'sde/{folder}/{datasd_name}.topojson',
-        on_failure_callback=notify,
-        on_retry_callback=notify,
-        on_success_callback=notify,
+        on_failure_callback=afsys_send_email,
         replace=True,
         dag=dag)
 
@@ -154,9 +139,7 @@ def create_sde_tasks(dag,
             task_id=f'{layer}_to_geobuf',
             python_callable=geojson_to_geobuf,
             op_kwargs={'path_to_file': path_to_file},
-            on_failure_callback=notify,
-            on_retry_callback=notify,
-            on_success_callback=notify,
+            on_failure_callback=afsys_send_email,
             dag=dag)
 
         #: Convert geobuf to gzipped geobuf
@@ -164,9 +147,7 @@ def create_sde_tasks(dag,
             task_id=f'{layer}_geobuf_to_gzip',
             python_callable=geobuf_to_gzip,
             op_kwargs={'datasd_name': datasd_name},
-            on_failure_callback=notify,
-            on_retry_callback=notify,
-            on_success_callback=notify,
+            on_failure_callback=afsys_send_email,
             dag=dag)
 
         #: Upload geobuf to S3
@@ -177,9 +158,7 @@ def create_sde_tasks(dag,
             dest_s3_conn_id=conf['default_s3_conn_id'],
             dest_s3_bucket=conf['dest_s3_bucket'],
             dest_s3_key=f'sde/{folder}/{datasd_name}.pbf',
-            on_failure_callback=notify,
-            on_retry_callback=notify,
-            on_success_callback=notify,
+            on_failure_callback=afsys_send_email,
             replace=True,
             use_gzip=True,
             dag=dag)

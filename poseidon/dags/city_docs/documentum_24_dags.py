@@ -6,7 +6,8 @@ from airflow.operators.subdag_operator import SubDagOperator
 from airflow.models import DAG
 
 from trident.util import general
-from trident.util.notifications import notify
+from trident.util.notifications import afsys_send_email
+
 import dags.city_docs.documentum_name as dn
 
 from dags.city_docs.city_docs_jobs import *
@@ -43,18 +44,14 @@ get_doc_tables = PythonOperator(
     op_kwargs={'mode': schedule_mode,
     'test':False,
     'conn_id':'docm_sql'},
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    on_failure_callback=afsys_send_email,
     dag=dag)
 
 div_doc_table = PythonOperator(
     task_id='divide_doc_other',
     python_callable=split_reso_ords,
     op_kwargs={'filename': 'documentum_scs_council_reso_ordinance_v'},
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    on_failure_callback=afsys_send_email,
     dag=dag)
 
 upload_div_files = SubDagOperator(
@@ -73,5 +70,6 @@ upload_files = SubDagOperator(
   dag=dag,
   )
 
+#: Execution rules
 get_doc_tables >> div_doc_table >> upload_div_files
 get_doc_tables >> upload_files

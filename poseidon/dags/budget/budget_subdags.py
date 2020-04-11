@@ -3,8 +3,9 @@ from airflow.operators.python_operator import PythonOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
 from airflow.models import DAG
 from trident.util import general
+from trident.util.notifications import afsys_send_email
 from dags.budget.budget_jobs import *
-from trident.util.notifications import notify
+
 import os
 conf = general.config
 args = general.args
@@ -51,9 +52,7 @@ def get_files_subdag():
         task_id=f"create_{task}",
         python_callable=get_budget_files,
         op_kwargs={'mode': mode_str, 'path':path_str},
-        on_failure_callback=notify,
-        on_retry_callback=notify,
-        on_success_callback=notify,
+        on_failure_callback=afsys_send_email,
         dag=dag_subdag,
       )
 
@@ -87,9 +86,7 @@ def create_files_subdag():
         task_id=f'create_{mode_str}_{path_str}',
         python_callable=create_file,
         op_kwargs={'mode': mode_str, 'path':path_str},
-        on_failure_callback=notify,
-        on_retry_callback=notify,
-        on_success_callback=notify,
+        on_failure_callback=afsys_send_email,
         dag=dag_subdag)
 
   return dag_subdag
@@ -127,9 +124,7 @@ def upload_files_subdag():
           dest_s3_conn_id=conf['default_s3_conn_id'],
           dest_s3_bucket=conf['dest_s3_bucket'],
           dest_s3_key=f'budget/{task}_datasd.csv',
-          on_failure_callback=notify,
-          on_retry_callback=notify,
-          on_success_callback=notify,
+          on_failure_callback=afsys_send_email,
           replace=True,
           dag=dag_subdag)
 
@@ -158,9 +153,7 @@ def upload_ref_files_subdag():
       dest_s3_conn_id=conf['default_s3_conn_id'],
       dest_s3_bucket=conf['dest_s3_bucket'],
       dest_s3_key=f'budget/budget_reference_{ref}_datasd_v1.csv',
-      on_failure_callback=notify,
-      on_retry_callback=notify,
-      on_success_callback=notify,
+      on_failure_callback=afsys_send_email,
       replace=True,
       dag=dag_subdag)
 

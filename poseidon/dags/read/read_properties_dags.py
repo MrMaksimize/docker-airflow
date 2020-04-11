@@ -14,7 +14,7 @@ conf = general.config
 schedule = general.schedule
 start_date = general.start_date['read']
 
-dag = DAG(dag_id='read_leases',
+dag = DAG(dag_id='read_properties',
     default_args=args,
     start_date=start_date,
     schedule_interval=schedule['read'],
@@ -22,42 +22,42 @@ dag = DAG(dag_id='read_leases',
     )
 
 #: Retrieve READ leases data from FTP
-get_leases = PythonOperator(
-    task_id='get_leases',
+get_properties_details = PythonOperator(
+    task_id='get_properties',
     python_callable=get_file,
-    op_kwargs={'mode':'leases'},
+    op_kwargs={'mode':'properties'},
     on_failure_callback=afsys_send_email,
     dag=dag)
 
-#: Process leases data
-process_leases = PythonOperator(
-    task_id='process_leases',
-    python_callable=process_leases,
+#: Process properties details data
+process_properties_details = PythonOperator(
+    task_id='process_properties_details',
+    python_callable=process_properties_details,
     on_failure_callback=afsys_send_email,
     dag=dag)
 
-#: Upload leases data to S3
-leases_to_S3 = S3FileTransferOperator(
-    task_id='leases_to_S3',
+#: Upload properties details data to S3
+properties_details_to_S3 = S3FileTransferOperator(
+    task_id='properties_details_to_S3',
     source_base_path=conf['prod_data_dir'],
-    source_key='city_property_leases_datasd_v1.csv',
+    source_key='city_property_details_datasd_v1.csv',
     dest_s3_bucket=conf['dest_s3_bucket'],
     dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_key='read/city_property_leases_datasd_v1.csv',
+    dest_s3_key='read/city_property_details_datasd_v1.csv',
     on_failure_callback=afsys_send_email,
     dag=dag)
 
 update_json = PythonOperator(
-    task_id=f"update_json_date_leases_city_owned_properties",
+    task_id=f"update_json_date_city_owned_properties",
     python_callable=update_json_date,
     provide_context=True,
-    op_kwargs={'ds_fname': 'leases_city_owned_properties'},
+    op_kwargs={'ds_fname': 'city_owned_properties'},
     on_failure_callback=afsys_send_email,
     dag=dag)
 
 #: Update leases portal modified date
 update_leases_md = get_seaboard_update_dag('city-owned-properties-leases.md', dag)
 
-
 #: Execution Rules
-get_leases >> process_leases >> leases_to_S3 >> [update_json,update_leases_md]
+
+get_properties_details >> process_properties_details >> properties_details_to_S3 >> [update_json,update_leases_md]

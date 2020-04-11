@@ -8,7 +8,8 @@ from airflow.operators.python_operator import PythonOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
 from trident.util.seaboard_updates import *
 from trident.util import general
-from trident.util.notifications import notify
+from trident.util.notifications import afsys_send_email
+
 
 # - You must replace this with the path to the corresponding jobs file
 from dags.templates.template_jobs import *
@@ -43,18 +44,18 @@ template_latest_only = LatestOnlyOperator(task_id='template_latest_only', dag=da
 second_template_task = PythonOperator(
     task_id='template_python_task', # This is a task name you choose
     python_callable=template_python_task, # This must match the function from jobs
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    on_failure_callback=afsys_send_email,
+    
+    
     dag=dag)
 
 #: Execute a bash command function from the jobs file example
 third_template_task = BashOperator(
     task_id='template_bash_task',
     bash_command=ftp_download_wget(), # Matches function from jobs file
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    on_failure_callback=afsys_send_email,
+    
+    
     dag=dag)
 
 #: Send Sonar report example
@@ -64,9 +65,9 @@ template_sonar = PoseidonSonarCreator(
     value_key='gid_potholes_closed',
     value_desc='Potholes Closed',
     python_callable=build_gid_sonar_ph_closed,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    on_failure_callback=afsys_send_email,
+    
+    
     dag=dag)
 
 #: Send an email with info example
@@ -77,9 +78,9 @@ template_email_report = PoseidonEmailWithPythonOperator(
     template_id='tem_7xCrDCTyvjMGS9VpBM8rRmwD',
     dispatch_type='sonar_dispatch',
     python_callable=send_comm_report, # Replace with jobs function
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    on_failure_callback=afsys_send_email,
+    
+    
     dag=dag)
 
 
@@ -94,9 +95,9 @@ for i in a_list:
         task_id=f'get_{i}',
         python_callable=template_loop_task, # Again, this must match a function from jobs
         op_kwargs={},
-        on_failure_callback=notify,
-        on_retry_callback=notify,
-        on_success_callback=notify,
+        on_failure_callback=afsys_send_email,
+        
+        
         dag=dag)
 
     loop_tasks.append(template_loop_task)
@@ -129,9 +130,9 @@ for index, file_ in enumerate(files):
         dest_s3_conn_id=conf['default_s3_conn_id'],
         dest_s3_bucket=conf['dest_s3_bucket'],
         dest_s3_key=f'folder/file_name_{task_name}_datasd.csv',
-        on_failure_callback=notify,
-        on_retry_callback=notify,
-        on_success_callback=notify,
+        on_failure_callback=afsys_send_email,
+        
+        
         replace=True,
         dag=dag)
     

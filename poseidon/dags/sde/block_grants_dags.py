@@ -13,9 +13,9 @@ folder = 'block_grants'
 layer = 'block_grants'
 datasd_name = 'block_grants_datasd'
 md = 'community-block-grants'
-path_to_file = conf['prod_data_dir'] + '/' + datasd_name
+path_to_file = f"{conf['prod_data_dir']}/{datasd_name}"
 
-dag = DAG(dag_id='gis_{layer}'.format(layer=layer),
+dag = DAG(dag_id=f'gis_{layer}',
           default_args=args,
           start_date=start_date,
           schedule_interval=schedule,

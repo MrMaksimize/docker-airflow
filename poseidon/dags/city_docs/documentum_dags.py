@@ -6,7 +6,8 @@ from airflow.operators.subdag_operator import SubDagOperator
 from airflow.models import DAG
 
 from trident.util import general
-from trident.util.notifications import notify
+from trident.util.notifications import afsys_send_email
+
 import dags.city_docs.documentum_name as dn
 
 from dags.city_docs.city_docs_jobs import *
@@ -24,8 +25,7 @@ dag = DAG(dag_id='documentum_hourly_30',
 	default_args=args,
 	start_date=start_date,
 	schedule_interval=schedule,
-    catchup=False
-    )
+  catchup=False)
 
 schedule_mode = 'schedule_hourly_30'
 
@@ -36,18 +36,14 @@ get_doc_tables = PythonOperator(
     op_kwargs={'mode': schedule_mode,
     'test':False,
     'conn_id':'docm_sql'},
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    on_failure_callback=afsys_send_email,
     dag=dag)
 
 div_doc_table = PythonOperator(
     task_id='divide_doc_latest',
     python_callable=latest_res_ords,
     op_kwargs={'filename': 'documentum_scs_council_reso_ordinance_v'},
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    on_failure_callback=afsys_send_email,
     dag=dag)
 
 upload_reso_ord = S3FileTransferOperator(
@@ -57,9 +53,7 @@ upload_reso_ord = S3FileTransferOperator(
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_bucket=conf['dest_s3_bucket'],
     dest_s3_key='city_docs/documentum_scs_council_reso_ordinance_v_2016_current.csv',
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    on_failure_callback=afsys_send_email,
     replace=True,
     dag=dag)
 

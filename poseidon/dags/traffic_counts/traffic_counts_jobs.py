@@ -30,16 +30,14 @@ def get_traffic_counts(out_fname='traffic_counts_file'):
     if p.returncode != 0:
         raise Exception(output)
     else:
-        return 'Successfully retrieved {} data.'.format(fy)
+        return f'Successfully retrieved {fy} data.'
 
 
 def clean_traffic_counts(src_fname='traffic_counts_file',
                          out_fname='traffic_counts_raw_clean'):
     """Clean traffic counts data."""
-    xlsx_file = "{0}/{1}.xlsx"\
-        .format(conf['temp_data_dir'], src_fname)
-    out_csv_file = "{0}/{1}.csv"\
-        .format(conf['temp_data_dir'], out_fname)
+    xlsx_file = f"{conf['temp_data_dir']}/{src_fname}.xlsx"
+    out_csv_file = f"{conf['temp_data_dir']}/{out_fname}.csv"
 
     names = ['street_name',
              'limits',
@@ -70,11 +68,8 @@ def clean_traffic_counts(src_fname='traffic_counts_file',
 def build_traffic_counts(src_fname='traffic_counts_raw_clean',
                          out_fname='traffic_counts_datasd_v1'):
     """Build traffic counts production data."""
-    src_file = "{0}/{1}.csv"\
-        .format(conf['temp_data_dir'], src_fname)
-
-    out_file = "{0}/{1}.csv"\
-        .format(conf['prod_data_dir'], out_fname)
+    src_file = f"{conf['temp_data_dir']}/{src_fname}.csv"
+    out_file = f"{conf['prod_data_dir']}/{out_fname}.csv"
 
     # read in csv from temp
     counts = pd.read_csv(src_file)

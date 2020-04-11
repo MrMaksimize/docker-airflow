@@ -6,7 +6,6 @@ import numpy as np
 from trident.util import general
 import logging
 from subprocess import Popen, PIPE
-from trident.util.geospatial import *
 
 conf = general.config
 
