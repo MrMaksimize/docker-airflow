@@ -20,7 +20,8 @@ dag = DAG(
     dag_id='indicator_bacteria_tests',
     default_args=args,
     start_date=start_date,
-    schedule_interval=general.schedule['indicator_bacteria_tests'])
+    schedule_interval=general.schedule['indicator_bacteria_tests'],
+    catchup=False)
 
 
 #: Latest Only Operator for traffic_counts

@@ -17,7 +17,9 @@ dag = DAG(
     dag_id='cityiq',
     default_args=args, 
     start_date=start_date, 
-    schedule_interval=general.schedule['cityiq'])
+    schedule_interval=general.schedule['cityiq'],
+    catchup=False
+    )
 
 #: Latest Only Operator for cityiq
 cityiq_latest_only = LatestOnlyOperator(

@@ -28,7 +28,9 @@ email_recips = conf['mail_notify_claims']
 dag = DAG(dag_id='claims_stat',
     default_args=args,
     start_date=start_date,
-    schedule_interval=schedule['claims_stat'])
+    schedule_interval=schedule['claims_stat'],
+    catchup=False
+    )
 
 
 #: Latest Only Operator for claims

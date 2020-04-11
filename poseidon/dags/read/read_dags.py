@@ -15,7 +15,12 @@ conf = general.config
 schedule = general.schedule
 start_date = general.start_date['read']
 
-dag = DAG(dag_id='read', default_args=args, start_date=start_date, schedule_interval=schedule['read'])
+dag = DAG(dag_id='read',
+    default_args=args,
+    start_date=start_date,
+    schedule_interval=schedule['read'],
+    catchup=False
+    )
 
 
 #: Latest Only Operator for read

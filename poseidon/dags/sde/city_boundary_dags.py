@@ -18,7 +18,8 @@ path_to_file = conf['prod_data_dir'] + '/' + datasd_name
 dag = DAG(dag_id='gis_{layer}'.format(layer=layer),
 		  start_date=start_date,
           default_args=args,
-          schedule_interval=schedule)
+          schedule_interval=schedule,
+          catchup=False)
 
 
 #: Create tasks dynamically

@@ -21,7 +21,12 @@ start_date = general.start_date['campaign_fin']
 cur_yr = general.get_year()
 
 #: Dag spec
-dag = DAG(dag_id='campaign_fin_reports', default_args=args, start_date=start_date, schedule_interval=schedule)
+dag = DAG(dag_id='campaign_fin_reports',
+    default_args=args,
+    start_date=start_date,
+    schedule_interval=schedule,
+    catchup=False
+    )
 
 campaign_fin_latest_only = LatestOnlyOperator(task_id='campaign_fin_latest_only', dag=dag)
 

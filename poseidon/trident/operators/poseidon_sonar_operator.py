@@ -26,9 +26,6 @@ from trident.util.general import merge_dicts
 
 from trident.util.general import config as conf
 
-from trident.util.notifications import notify_keen
-
-
 
 def get_ranges(kwargs):
     today = kwargs['execution_date']
@@ -84,8 +81,6 @@ class PoseidonSonarCreator(BaseOperator):
             'range_id': range_id
         }
 
-
-
     def execute(self, context):
         if self.provide_context:
             context.update(self.op_kwargs)
@@ -105,12 +100,6 @@ class PoseidonSonarCreator(BaseOperator):
         self.sonar['range_start'] = range_start_dt.strftime(conf[
             'date_format_keen'])
         self.sonar = merge_dicts(self.sonar, sonar_data)
-
-
-        notify_keen(
-            self.sonar,
-            'sonar_pings_{}'.format(conf['env']).lower(),
-            raise_for_status=True)
 
 
     def build_sonar_meta(self, context):

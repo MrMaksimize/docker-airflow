@@ -34,10 +34,11 @@ other_file_list = dn.table_name('schedule_daily')+dn.table_name('schedule_hourly
 
 #: Dag spec
 dag = DAG(dag_id='documentum_test',
-    catchup=False,
     default_args=args,
     start_date=start_date,
-    schedule_interval=schedule)
+    schedule_interval=schedule,
+    catchup=False
+    )
 
 schedule_mode = 'schedule_hourly_30'
 

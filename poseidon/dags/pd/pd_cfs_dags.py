@@ -17,7 +17,12 @@ schedule = general.schedule
 start_date = general.start_date['pd_cfs']
 
 dag = DAG(
-    dag_id='pd_cfs', default_args=args, start_date=start_date, schedule_interval=schedule['pd_cfs'])
+    dag_id='pd_cfs',
+    default_args=args,
+    start_date=start_date,
+    schedule_interval=schedule['pd_cfs'],
+    catchup=False
+    )
 
 
 #: Get CFS data from FTP and save to temp folder

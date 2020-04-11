@@ -19,7 +19,8 @@ dag = DAG(
     dag_id='traffic_counts',
     default_args=args,
     start_date=start_date,
-    schedule_interval=schedule)
+    schedule_interval=schedule,
+    catchup=False)
 
 
 #: Latest Only Operator for traffic_counts

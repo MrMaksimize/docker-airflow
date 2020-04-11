@@ -19,7 +19,12 @@ start_date = general.start_date['fd_incidents']
 cur_yr = general.get_year()
 
 #: Dag spec
-dag = DAG(dag_id='fd_incidents', default_args=args, start_date=start_date, schedule_interval=schedule)
+dag = DAG(dag_id='fd_incidents',
+    default_args=args,
+    start_date=start_date,
+    schedule_interval=schedule,
+    catchup=False
+    )
 
 #: Latest Only Operator for fd
 fd_latest_only = LatestOnlyOperator(task_id='fd_latest_only', dag=dag)

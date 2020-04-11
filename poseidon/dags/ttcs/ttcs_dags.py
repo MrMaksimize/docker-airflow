@@ -19,7 +19,12 @@ start_date = general.start_date['ttcs']
 
 
 #: Dag definition
-dag = DAG(dag_id='ttcs', default_args=args, start_date=start_date, schedule_interval=schedule['ttcs'])
+dag = DAG(dag_id='ttcs',
+    default_args=args,
+    start_date=start_date,
+    schedule_interval=schedule['ttcs'],
+    catchup=False
+    )
 
 
 #: Latest Only Operator for ttcs

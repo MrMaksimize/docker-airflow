@@ -18,7 +18,12 @@ schedule = general.schedule['onbase']
 start_date = general.start_date['onbase']
 
 #: Dag spec
-dag = DAG(dag_id='obdocs', catchup=False, default_args=args, start_date=start_date, schedule_interval=schedule)
+dag = DAG(dag_id='obdocs',
+    default_args=args,
+    start_date=start_date,
+    schedule_interval=schedule,
+    catchup=False,
+    )
 
 #: Get onbase tables
 get_doc_tables = PythonOperator(

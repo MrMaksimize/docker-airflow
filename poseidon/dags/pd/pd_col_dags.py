@@ -15,7 +15,12 @@ schedule = general.schedule
 start_date = general.start_date['pd_col']
 
 dag = DAG(
-    dag_id='pd_col', default_args=args, start_date=start_date, schedule_interval=schedule['pd_col'])
+    dag_id='pd_col',
+    default_args=args,
+    start_date=start_date,
+    schedule_interval=schedule['pd_col'],
+    catchup=False
+    )
 
 
 #: Latest Only Operator for pd_col

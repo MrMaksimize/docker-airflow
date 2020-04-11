@@ -19,7 +19,8 @@ start_date = general.start_date['special_events']
 dag = DAG(dag_id='special_events',
           default_args=args,
           start_date=start_date,
-          schedule_interval=schedule)
+          schedule_interval=schedule,
+          catchup=False)
 
 
 #: Latest Only Operator for special events

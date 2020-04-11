@@ -18,7 +18,12 @@ fiscal_yr = general.get_FY_year()
 
 
 #: Dag spec
-dag = DAG(dag_id='cip', default_args=args, start_date=start_date, schedule_interval=schedule)
+dag = DAG(dag_id='cip',
+    default_args=args,
+    start_date=start_date,
+    schedule_interval=schedule,
+    catchup=False
+    )
 
 #: Latest Only Operator for CIP
 cip_latest_only = LatestOnlyOperator(task_id='cip_latest_only', dag=dag)

@@ -21,10 +21,11 @@ start_date = general.start_date['documentum_hr_30']
 
 #: Dag spec
 dag = DAG(dag_id='documentum_hourly_30',
-	catchup=False,
 	default_args=args,
 	start_date=start_date,
-	schedule_interval=schedule)
+	schedule_interval=schedule,
+    catchup=False
+    )
 
 schedule_mode = 'schedule_hourly_30'
 
