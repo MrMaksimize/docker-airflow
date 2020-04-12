@@ -10,11 +10,11 @@ from trident.util import general
 from trident.util.notifications import afsys_send_email
 
 
-#### You must replace this with the path to the corresponding jobs file ####
+#### You must update these with the paths to the corresponding files ####
 from dags.templates.template_jobs import *
 from dags.templates.template_subdags import *
 
-# Optional imports
+# Optional operator imports
 from airflow.operators.python_operator import BranchPythonOperator
 from trident.operators.poseidon_sonar_operator import PoseidonSonarCreator
 from airflow.operators.bash_operator import BashOperator
@@ -24,10 +24,6 @@ from trident.operators.r_operator import RScriptOperator
 from trident.operators.r_operator import RShinyDeployOperator
 from trident.operators.poseidon_email_operator import PoseidonEmailFileUpdatedOperator
 from trident.operators.poseidon_email_operator import PoseidonEmailWithPythonOperator
-
-
-import re
-import glob
 
 # Required variables
 
@@ -47,16 +43,16 @@ dag = DAG(dag_id='template',
         catchup=False
         )
 
-#: Optional tasks. Use what you need.
+# Optional tasks. Use what you need.
 
-#: Python operator
+#: Basic Python operator
 template_task_basic = PythonOperator(
     task_id='python_task_basic',
     python_callable=python_basic,
     on_failure_callback=afsys_send_email,
     dag=dag)
 
-#: Python operator
+#: Python operator with context
 template_task_context = PythonOperator(
     task_id='python_task_context',
     provide_context=True,
@@ -99,7 +95,7 @@ template_bash_task = BashOperator(
     on_failure_callback=afsys_send_email,
     dag=dag)
 
-#: Sonar email
+#: Sonar - calc a metric for a day, week, or month
 template_sonar = PoseidonSonarCreator(
     task_id='template_sonar_task',
     range_id='', # must be one of: today, days_7, or days_30
@@ -109,13 +105,13 @@ template_sonar = PoseidonSonarCreator(
     on_failure_callback=afsys_send_email,
     dag=dag)
 
-#: An email with other info
+#: An email with a list of info
 template_email_report = PoseidonEmailWithPythonOperator(
     task_id='template_email',
     to='',
     subject='',
-    template_id='',
-    dispatch_type='',
+    template_id='', # from Send With Us
+    dispatch_type='sonar_dispatch',
     python_callable=email_task,
     on_failure_callback=afsys_send_email,
     dag=dag)

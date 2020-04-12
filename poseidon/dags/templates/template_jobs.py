@@ -46,7 +46,7 @@ from datetime import datetime as dt
 from datetime import timedelta
 import time
 from dateutil.parser import parse
-import pendulum # This is the date library Airflow uses
+import pendulum # This is the date library Airflow uses with context
 
 from shapely.geometry import Point
 from trident.util import geospatial
@@ -186,7 +186,7 @@ def template_check(**context):
     # In this example, we check an output from a previous task
     # Then use that to determine which path to go down
     # It can only return other task ids
-    
+
     trigger = context['task_instance'].xcom_pull(key='temp_check', task_ids='python_task_basic')
     
     if trigger:
