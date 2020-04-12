@@ -20,8 +20,7 @@ def get_claims_data():
     """Query an oracle database"""
     logging.info('Retrieving data from Oracle database')
     # This requires that otherwise optional credentials variable
-    # jdbc:oracle:thin:@//csdldcorcprd1:1521/glts
-    db = cx_Oracle.connect("panda","panda","csdldcorcprd1.sannet.gov:1521/glts", encoding="UTF-8")
+    db = cx_Oracle.connect(credentials)
     # Create a sql file containing query for the database
     # Save this file in a sql folder at the same level as the jobs file
     sql= general.file_to_string('./sql/claimstat_tsw.sql', __file__)
@@ -30,7 +29,7 @@ def get_claims_data():
 
     general.pos_write_csv(
         df,
-        "{}/claimstat_raw.csv".format(tmp))
+        f"{tmp}/claimstat_raw.csv")
 
     return 'Successfully retrieved Oracle data.'
 
@@ -39,7 +38,7 @@ def clean_geocode_claims():
 
     # Load the raw data and prepare it for geocoding
     logging.info('Reading query output')
-    df = pd.read_csv("{}/claimstat_raw.csv".format(tmp))
+    df = pd.read_csv(f"{tmp}/claimstat_raw.csv")
 
     #Keep unique claim numbers only 
     #(they will have the same address, only different claimants)
@@ -138,7 +137,7 @@ def clean_geocode_claims():
         logging.info('Writing address book')
         # Write new address book to temp directory
         general.pos_write_csv(new_add_book,
-        "{}/claims_address_book.csv".format(tmp))
+        f"{tmp}/claims_address_book.csv")
 
         logging.info('merging lat lngs to final data')
 
@@ -162,7 +161,7 @@ def clean_geocode_claims():
 
     # Write clean data
     general.pos_write_csv(updated_df,
-        "{}/claim_stat_datasd.csv".format(prod))
+        f"{prod}/claim_stat_datasd.csv")
 
     return "Successfully generated claims stat prod file"
 

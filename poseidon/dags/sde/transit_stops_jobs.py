@@ -9,7 +9,7 @@ conf = general.config
 table = 'TRANSIT_STOPS_GTFS'
 prod_dir = conf['prod_data_dir']
 layername = 'transit_stops_datasd'
-layer = prod_dir + '/' + layername
+layer = f"{prod_dir}/{layername}"
 
 dtypes = OrderedDict([
         ('objectid', 'int:6'),
@@ -31,11 +31,10 @@ gtype = 'Point'
 
 def sde_to_shp():
     """SDE table to Shapefile."""
-    logging.info('Extracting {layername} layer from SDE.'.format(
-        layername=layername))
+    logging.info(f'Extracting {layername} layer from SDE.')
     df = geospatial.extract_sde_data(table=table)
 
-    logging.info('Processing {layername} df.'.format(layername=layername))
+    logging.info(f'Processing {layername} df.')
 
     df = df.rename(columns={
             'stop_agency': 'stop_agncy',
@@ -45,13 +44,11 @@ def sde_to_shp():
 
     df = df.fillna('')
 
-    logging.info('Converting {layername} df to shapefile.'.format(
-        layername=layername))
+    logging.info(f'Converting {layername} df to shapefile.')
     geospatial.df2shp(df=df,
                       folder=prod_dir,
                       layername=layername,
                       dtypes=dtypes,
                       gtype=gtype,
                       epsg=2230)
-    return 'Successfully converted {layername} to shapefile.'.format(
-           layername=layername)
+    return f'Successfully converted {layername} to shapefile.'

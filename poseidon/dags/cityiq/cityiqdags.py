@@ -2,7 +2,8 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.models import DAG
 from dags.cityiq.cityiqjobs import *
 from trident.util import general
-from trident.util.notifications import notify
+from trident.util.notifications import afsys_send_email
+
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
 from airflow.operators.latest_only_operator import LatestOnlyOperator
 from datetime import datetime
@@ -17,27 +18,21 @@ dag = DAG(
     dag_id='cityiq',
     default_args=args, 
     start_date=start_date, 
-    schedule_interval=general.schedule['cityiq'])
-
-#: Latest Only Operator for cityiq
-cityiq_latest_only = LatestOnlyOperator(
-    task_id='cityiq_latest_only', dag=dag)
+    schedule_interval=general.schedule['cityiq'],
+    catchup=False
+    )
 
 get_token_response = PythonOperator(
     task_id = 'get_token_response',
     python_callable=get_token_response,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    on_failure_callback=afsys_send_email,
     dag=dag)
 
 get_parking_bbox = PythonOperator(
     task_id='get_parking_bbox',
     provide_context=True,
     python_callable=get_events,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    on_failure_callback=afsys_send_email,
     dag=dag)
 
 event_files = ["pkin","pkout"]
@@ -52,22 +47,13 @@ for file in event_files:
         dest_s3_conn_id=conf['default_s3_conn_id'],
         dest_s3_bucket=conf['dest_s3_bucket'],
         dest_s3_key=f'cityiq/{file_name}',
-        on_failure_callback=notify,
-        on_retry_callback=notify,
-        on_success_callback=notify,
+        on_failure_callback=afsys_send_email,
         replace=True,
         dag=dag)
 
     #: Upload after getting events
-    s3_upload.set_upstream(get_parking_bbox)
+    get_parking_bbox >> s3_upload
     
 
 #: Execution Rules
-
-#: Must get token after latest only operator
-get_token_response.set_upstream(cityiq_latest_only)
-#: Get events after getting token
-get_parking_bbox.set_upstream(get_token_response)
-
-
-    
+get_token_response >> get_parking_bbox

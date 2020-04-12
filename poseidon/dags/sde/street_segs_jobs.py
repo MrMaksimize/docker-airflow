@@ -9,7 +9,7 @@ conf = general.config
 table = 'STREET_ALLEY_WALKWAY'
 prod_dir = conf['prod_data_dir']
 layername = 'sd_paving_segs_datasd'
-layer = prod_dir + '/' + layername
+layer = f"{prod_dir}/{layername}"
 
 dtypes = OrderedDict([
         ('objectid', 'int:9'),
@@ -30,20 +30,17 @@ gtype = 'LineString'
 
 def sde_to_shp():
     """SDE table to Shapefile."""
-    logging.info('Extracting {layername} layer from SDE.'.format(
-        layername=layername))
+    logging.info(f'Extracting {layername} layer from SDE.')
     df = geospatial.extract_sde_data(table=table
                                      #where="OWNERSHIP = 'City of San Diego'"
                                      )
 
-    logging.info('Processing {layername} df.'.format(layername=layername))
-    logging.info('Converting {layername} df to shapefile.'.format(
-        layername=layername))
+    logging.info(f'Processing {layername} df.')
+    logging.info(f'Converting {layername} df to shapefile.')
     geospatial.df2shp(df=df,
                       folder=prod_dir,
                       layername=layername,
                       dtypes=dtypes,
                       gtype=gtype,
                       epsg=2230)
-    return 'Successfully converted {layername} to shapefile.'.format(
-           layername=layername)
+    return f'Successfully converted {layername} to shapefile.'

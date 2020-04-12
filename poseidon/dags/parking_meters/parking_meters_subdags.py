@@ -3,9 +3,10 @@ from airflow.operators.python_operator import PythonOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
 from airflow.models import DAG
 from trident.util import general
+from trident.util.notifications import afsys_send_email
 from dags.parking_meters.parking_meters_jobs import *
-from trident.util.notifications import notify
-from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag, update_json_date
+
+from trident.util.seaboard_updates import *
 conf = general.config
 args = general.args
 schedule = general.schedule['parking_meters']
@@ -35,9 +36,7 @@ def create_current_subdag(year):
 		    python_callable=build_aggregation,
 		    op_kwargs={'agg_type': agg,'agg_year':year},
 		    provide_context=True,
-		    on_failure_callback=notify,
-		    on_retry_callback=notify,
-		    on_success_callback=notify,
+		    on_failure_callback=afsys_send_email,
 		    dag=dag_subdag)
 
 	return dag_subdag
@@ -67,9 +66,7 @@ def create_prev_subdag(year):
 		    python_callable=build_aggregation,
 		    op_kwargs={'agg_type': agg,'agg_year':year},
 		    provide_context=True,
-		    on_failure_callback=notify,
-		    on_retry_callback=notify,
-		    on_success_callback=notify,
+		    on_failure_callback=afsys_send_email,
 		    dag=dag_subdag)
 
 	return dag_subdag
@@ -105,9 +102,7 @@ def upload_curr_files(year):
 		dest_s3_conn_id=conf['default_s3_conn_id'],
 		dest_s3_key=f'parking_meters/{file_list.get(file)}',
 		replace=True,
-		on_failure_callback=notify,
-		on_retry_callback=notify,
-		on_success_callback=notify,
+		on_failure_callback=afsys_send_email,
 		dag=dag_subdag)
 
 	return dag_subdag
@@ -143,9 +138,7 @@ def upload_prev_files(year):
 		dest_s3_conn_id=conf['default_s3_conn_id'],
 		dest_s3_key=f'parking_meters/{file_list.get(file)}',
 		replace=True,
-		on_failure_callback=notify,
-		on_retry_callback=notify,
-		on_success_callback=notify,
+		on_failure_callback=afsys_send_email,
 		dag=dag_subdag)
 
 	return dag_subdag

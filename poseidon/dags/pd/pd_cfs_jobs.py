@@ -7,6 +7,7 @@ import subprocess
 import glob
 from subprocess import Popen, PIPE
 from trident.util import general
+from shlex import quote
 
 conf = general.config
 
@@ -34,7 +35,7 @@ def get_cfs_data(**context):
     f"ftp://ftp.datasd.org/uploads/sdpd/calls_for_service/" \
     f"{fpath} -sk"
 
-    logging.info(command)
+    command = command.format(quote(command))
 
     p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
     output, error = p.communicate()
