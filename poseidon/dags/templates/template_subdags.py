@@ -32,10 +32,10 @@ def create_subdag_operators():
   for index, task in enumerate(tasks):
 
     set_of_tasks = PythonOperator(
-        task_id=f"subdag_tasks_{i}",
+        task_id=f"subdag_tasks_{index}",
         provide_context=True,
         python_callable=task_for_subdag,
-        op_kwargs={'mode': i},
+        op_kwargs={'mode': index},
         on_failure_callback=afsys_send_email,
         dag=dag_subdag,
       )

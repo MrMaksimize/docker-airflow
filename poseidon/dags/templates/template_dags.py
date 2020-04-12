@@ -29,8 +29,8 @@ from trident.operators.poseidon_email_operator import PoseidonEmailWithPythonOpe
 
 args = general.args
 conf = general.config
-schedule = general.schedule['']
-start_date = general.start_date['']
+schedule = '@daily' # Replace
+start_date = general.default_date # Replace
 
 # Optional variable
 email_recips = conf['mail_notify']
@@ -174,7 +174,8 @@ update_json_date = PythonOperator(
 
 #: Required execution rules
 template_task_basic >> template_task_context >> template_branch
-template_branch >> [template_email_updated, template_task_both] 
+template_branch >> [template_email_updated, template_task_both]
+template_email_updated >> template_bash_task >> upload_data
 template_task_both >> template_short_circuit >> [template_task_kwargs1,template_task_kwargs2]
 template_task_kwargs2 >> template_subdag >> [template_sonar,template_email_report]
 template_task_kwargs1 >> [update_md,update_json_date]
