@@ -6,7 +6,7 @@ import numpy as np
 from trident.util import general
 import logging
 from subprocess import Popen, PIPE
-from trident.util.geospatial import *
+from shlex import quote
 
 conf = general.config
 
@@ -32,6 +32,8 @@ def get_tags_file(**context):
     f"-o {fpath} " \
     f"ftp://ftp.datasd.org/uploads/dsd/tags/" \
     f"{fpath} -sk"
+
+    command = command.format(quote(command))
 
     p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
     output, error = p.communicate()

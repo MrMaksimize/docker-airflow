@@ -24,8 +24,8 @@ def get_sire():
     logging.info('Getting files sire')
     for root, dirs, files in os.walk('./poseidon/dags/city_docs/sql/sire'):
         for name in files:
-            logging.info('Querying for '+name)
-            path = './sql/sire/{}'.format(name)
+            logging.info(f'Querying for {name}')
+            path = f'./sql/sire/{name}'
             query_string = general.file_to_string(path, __file__)
             logging.info('Connecting to MS Database')
             sire_conn = MsSqlHook(mssql_conn_id='sire_sql')
@@ -37,7 +37,7 @@ def get_sire():
             df['TITLE'] = fix_title(df[['TITLE','OBJECT_NAME']])
 
             logging.info('Write Production file')
-            save_path = '{}/sire_{}.csv'.format(conf['prod_data_dir'],table_type)
+            save_path = f"{conf['prod_data_dir']}/sire_{table_type}.csv"
             general.pos_write_csv(df, save_path)
 
     return "Successfully retrieved Sire tables"
@@ -47,8 +47,8 @@ def get_onbase():
     logging.info('Getting files from onbase')
     for root, dirs, files in os.walk('./poseidon/dags/city_docs/sql/onbase'):
         for name in files:
-            logging.info('Querying for '+name)
-            path = './sql/onbase/{}'.format(name)
+            logging.info(f'Querying for {name}')
+            path = f'./sql/onbase/{name}'
             query_string = general.file_to_string(path, __file__)
             logging.info('Connecting to MS Database')
             onbase_conn = MsSqlHook(mssql_conn_id='onbase_sql')
@@ -59,7 +59,7 @@ def get_onbase():
             logging.info('Correcting title column')
             df['TITLE'] = fix_title(df[['TITLE','OBJECT_NAME']])
 
-            save_path =  '{0}/onbase_{1}.csv'.format(conf['prod_data_dir'],table_type)
+            save_path =  f"{conf['prod_data_dir']}/onbase_{table_type}.csv"
             logging.info('Writting Production file')
             general.pos_write_csv(df, save_path)
 
@@ -70,8 +70,8 @@ def get_onbase_test():
     logging.info('Getting files from onbase')
     for root, dirs, files in os.walk('./poseidon/dags/city_docs/sql/onbase'):
         for name in files:
-            logging.info('Querying for '+name)
-            path = './sql/onbase/{}'.format(name)
+            logging.info(f'Querying for {name}')
+            path = f'./sql/onbase/{name}'
             query_string = general.file_to_string(path, __file__)
             logging.info('Connecting to MS Database')
             onbase_conn = MsSqlHook(mssql_conn_id='onbase_test_sql')
@@ -82,7 +82,7 @@ def get_onbase_test():
             logging.info('Correcting title column')
             df['TITLE'] = fix_title(df[['TITLE','OBJECT_NAME']])
 
-            save_path =  '{0}/onbase_test_{1}.csv'.format(conf['prod_data_dir'],table_type)
+            save_path =  f"{conf['prod_data_dir']}/onbase_test_{table_type}.csv"
             logging.info('Writting Production file')
             general.pos_write_csv(df, save_path)
 
@@ -100,8 +100,8 @@ def get_documentum(mode, test=False, conn_id='docm_sql', **kwargs):
     save_path_pre = f"{conf['prod_data_dir']}/documentum_"
     
     for name in table_name:
-        logging.info('Querying for {0} table'.format(name))
-        query_string = 'SELECT * FROM SCSLEGIS.dbo.{0};'.format(name)
+        logging.info(f'Querying for {name} table')
+        query_string = f'SELECT * FROM SCSLEGIS.dbo.{name};'
         logging.info('Connecting to MS Database')
         documentum_conn = MsSqlHook(mssql_conn_id=conn_id)
         logging.info('Reading data to Pandas DataFrame')

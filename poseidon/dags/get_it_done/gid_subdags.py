@@ -3,9 +3,10 @@ from airflow.operators.python_operator import PythonOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
 from airflow.models import DAG
 from trident.util import general
+from trident.util.notifications import afsys_send_email
 from dags.get_it_done.gid_jobs import *
 from trident.util.seaboard_updates import get_seaboard_update_dag
-from trident.util.notifications import notify
+
 from datetime import date
 
 args = general.args
@@ -39,9 +40,7 @@ def spatial_join_subdag():
         'phone',
         'website'],
     'outfile':'gid_cd'},
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    on_failure_callback=afsys_send_email,
     dag=dag_subdag)
 
   join_community_plan = PythonOperator(
@@ -52,9 +51,7 @@ def spatial_join_subdag():
     'drop_cols':['objectid',
           'acreage'],
     'outfile':'gid_cp'},
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    on_failure_callback=afsys_send_email,
     dag=dag_subdag)
 
   join_parks = PythonOperator(
@@ -66,9 +63,7 @@ def spatial_join_subdag():
           'gis_acres',
           'location'],
     'outfile':'gid_parks'},
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    on_failure_callback=afsys_send_email,
     dag=dag_subdag)
 
   join_council_districts >> join_community_plan >> join_parks
@@ -108,9 +103,7 @@ def service_name_subdag():
                 'service_name': service_name,
                 'machine_service_name': machine_service_name
             },
-            on_failure_callback=notify,
-            on_retry_callback=notify,
-            on_success_callback=notify,
+            on_failure_callback=afsys_send_email,
             dag=dag_subdag)
 
         upload_task = S3FileTransferOperator(
@@ -120,9 +113,7 @@ def service_name_subdag():
             dest_s3_conn_id=conf['default_s3_conn_id'],
             dest_s3_bucket=conf['dest_s3_bucket'],
             dest_s3_key=f"get_it_done_311/{machine_service_name}_requests_datasd_v1.csv",
-            on_failure_callback=notify,
-            on_retry_callback=notify,
-            on_success_callback=notify,
+            on_failure_callback=afsys_send_email,
             replace=True,
             dag=dag_subdag)
 
@@ -156,9 +147,7 @@ def upload_files_subdag():
             dest_s3_conn_id=conf['default_s3_conn_id'],
             dest_s3_bucket=conf['dest_s3_bucket'],
             dest_s3_key=f'get_it_done_311/get_it_done_{year}_requests_datasd_v1.csv',
-            on_failure_callback=notify,
-            on_retry_callback=notify,
-            on_success_callback=notify,
+            on_failure_callback=afsys_send_email,
             replace=True,
             dag=dag_subdag)
 
@@ -169,9 +158,7 @@ def upload_files_subdag():
         dest_s3_conn_id=conf['default_s3_conn_id'],
         dest_s3_bucket=conf['dest_s3_bucket'],
         dest_s3_key=f'get_it_done_311/get_it_done_requests_datasd.csv',
-        on_failure_callback=notify,
-        on_retry_callback=notify,
-        on_success_callback=notify,
+        on_failure_callback=afsys_send_email,
         replace=True,
         dag=dag_subdag)
 
@@ -182,9 +169,7 @@ def upload_files_subdag():
         dest_s3_conn_id=conf['default_s3_conn_id'],
         dest_s3_bucket=conf['dest_s3_bucket'],
         dest_s3_key=f'get_it_done_311/get_it_done_requests_datasd.json',
-        on_failure_callback=notify,
-        on_retry_callback=notify,
-        on_success_callback=notify,
+        on_failure_callback=afsys_send_email,
         replace=True,
         dag=dag_subdag)
 

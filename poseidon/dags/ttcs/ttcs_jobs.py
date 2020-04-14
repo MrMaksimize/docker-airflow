@@ -29,7 +29,7 @@ def get_active_businesses():
     sql = general.file_to_string('./sql/ttcs_biz.sql', __file__)
     df = pd.read_sql_query(sql, db)
     df_rows = df.shape[0]
-    logging.info('Query returned {} results'.format(df_rows))
+    logging.info(f'Query returned {df_rows} results')
     general.pos_write_csv(
         df,
         temp_all,
@@ -58,7 +58,7 @@ def clean_data():
 
     df_rows = df.shape[0]
 
-    logging.info('Processed {} businesses'.format(df_rows))
+    logging.info(f'Processed {df_rows} businesses')
 
     logging.info('Sorting by dba name active date')
 
@@ -74,7 +74,7 @@ def clean_data():
 
     total_rows = df_dedupe.shape[0]
 
-    logging.info('Deduped for {} total records'.format(total_rows))
+    logging.info(f'Deduped for {total_rows} total records')
 
     df_dedupe = df_dedupe.sort_values(by=['account_key',
         'creation_dt'],
@@ -204,7 +204,7 @@ def geocode_data():
                 'state',
                 'zip_short'])
                         
-            logging.info('Need to geocode {}'.format(geocode_dedupe.shape[0]))
+            logging.info(f'Need to geocode {geocode_dedupe.shape[0]}')
         
             geocoder_results = geocode_dedupe.apply(lambda x: geospatial.census_address_geocoder(address_line=x['address_full'],locality=x['city'],state=x['state'],zip=x['zip_short']), axis=1)
 
@@ -265,7 +265,7 @@ def geocode_data():
                 'state',
                 'zip_short'])
 
-            logging.info("Adding {} new locations to address book".format(adds_book_dedupe.shape[0]))
+            logging.info(f"Adding {adds_book_dedupe.shape[0]} new locations to address book")
             add_book_new = pd.concat([add_book,
                 adds_book_dedupe],
                 ignore_index=True)
@@ -276,7 +276,7 @@ def geocode_data():
                 add_book_new,
                 f"{conf['prod_data_dir']}/ttcs_address_book.csv")
 
-            logging.info("Writing file with {} rows.".format(geocoded_all.shape[0]))
+            logging.info(f"Writing file with {geocoded_all.shape[0]} rows.")
 
             general.pos_write_csv(
                 geocoded_all,
@@ -385,7 +385,7 @@ def make_prod_files():
 
     active_rows = df_active.shape[0]
 
-    logging.info('Found {} active businesses'.format(active_rows))
+    logging.info(f'Found {active_rows} active businesses')
 
     logging.info('Writing active businesses set 1')
 
@@ -406,7 +406,7 @@ def make_prod_files():
     df_inactive = df_prod[df_prod['account_status'] == "Inactive"].reset_index(drop=True)
     inactive_rows = df_inactive.shape[0]
 
-    logging.info('Found {} inactive businesses'.format(inactive_rows))
+    logging.info(f'Found {inactive_rows} inactive businesses')
 
     subset_no = np.ceil((curr_yr - 1990)/10.0)
 
@@ -426,7 +426,7 @@ def make_prod_files():
         logging.info('Writing file '+filename)
         general.pos_write_csv(
             subset_prod,
-            conf['prod_data_dir']+'/sd_businesses_{}_datasd_v1.csv'.format(filename),
+            f"{conf['prod_data_dir']}/sd_businesses_{filename}_datasd_v1.csv",
             date_format=conf['date_format_ymd'])
 
         sub_yr_start += 10

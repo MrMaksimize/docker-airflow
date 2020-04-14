@@ -6,7 +6,8 @@ from airflow.operators.subdag_operator import SubDagOperator
 from airflow.models import DAG
 
 from trident.util import general
-from trident.util.notifications import notify
+from trident.util.notifications import afsys_send_email
+
 import dags.city_docs.documentum_name as dn
 
 from dags.city_docs.city_docs_jobs import *
@@ -19,10 +20,10 @@ start_date = general.start_date['documentum_hr_15']
 
 #: Dag spec
 dag = DAG(dag_id='documentum_hourly_15', 
-    catchup=False, 
     default_args=args, 
     start_date=start_date, 
-    schedule_interval=schedule)
+    schedule_interval=schedule,
+    catchup=False)
 
 schedule_mode = 'schedule_hourly_15'
 
@@ -33,9 +34,7 @@ get_doc_tables = PythonOperator(
     op_kwargs={'mode': schedule_mode,
     'test':False,
     'conn_id':'docm_sql'},
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    on_failure_callback=afsys_send_email,
     dag=dag)
 
 upload_files = SubDagOperator(
@@ -46,5 +45,6 @@ upload_files = SubDagOperator(
   dag=dag,
   )
 
+#: Execution rules
 get_doc_tables >> upload_files
 

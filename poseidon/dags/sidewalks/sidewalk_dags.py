@@ -5,7 +5,8 @@ from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
 from airflow.models import DAG
 
 from trident.util import general
-from trident.util.notifications import notify
+from trident.util.notifications import afsys_send_email
+
 
 from dags.sidewalks.sidewalk_jobs import *
 
@@ -27,9 +28,7 @@ dag = DAG(dag_id='sidewalk',
 get_sidewalk_data = PythonOperator(
     task_id='get_sidewalk_oci',
     python_callable=get_sidewalk_data,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    on_failure_callback=afsys_send_email,
     dag=dag)
 
 #: Upload OCI file to S3
@@ -40,9 +39,7 @@ upload_oci_file = S3FileTransferOperator(
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_bucket=conf['dest_s3_bucket'],
     dest_s3_key='tsw/sidewalk_cond_datasd_v1.csv',
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    on_failure_callback=afsys_send_email,
     replace=True,
     dag=dag)
 

@@ -3,8 +3,9 @@ from airflow.operators.python_operator import PythonOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
 from airflow.models import DAG
 from trident.util import general
+from trident.util.notifications import afsys_send_email
 from dags.permits.permits_jobs import *
-from trident.util.notifications import notify
+
 conf = general.config
 args = general.args
 schedule = general.schedule['dsd_approvals']
@@ -37,9 +38,7 @@ def create_file_subdag():
         provide_context=True,
         python_callable=build_pts,
         op_kwargs={'mode': mode},
-        on_failure_callback=notify,
-        on_retry_callback=notify,
-        on_success_callback=notify,
+        on_failure_callback=afsys_send_email,
         dag=dag_subdag,
       )
 
@@ -50,9 +49,7 @@ def create_file_subdag():
         provide_context=True,
         python_callable=build_accela,
         op_kwargs={'mode': mode},
-        on_failure_callback=notify,
-        on_retry_callback=notify,
-        on_success_callback=notify,
+        on_failure_callback=afsys_send_email,
         dag=dag_subdag,
       )
 
@@ -80,9 +77,7 @@ def join_bids_subdag():
         provide_context=True,
         python_callable=join_bids_permits,
         op_kwargs={'pt_file': file},
-        on_failure_callback=notify,
-        on_retry_callback=notify,
-        on_success_callback=notify,
+        on_failure_callback=afsys_send_email,
         dag=dag_subdag,
       )
 
@@ -112,9 +107,7 @@ def upload_files_subdag():
       dest_s3_conn_id=conf['default_s3_conn_id'],
       dest_s3_key=f"dsd/permits_{file}_datasd.csv",
       replace=True,
-      on_failure_callback=notify,
-      on_retry_callback=notify,
-      on_success_callback=notify,
+      on_failure_callback=afsys_send_email,
       dag=dag_subdag,
     )
 
@@ -126,9 +119,7 @@ def upload_files_subdag():
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_key="dsd/dsd_permits_all_pts.csv",
     replace=True,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    on_failure_callback=afsys_send_email,
     dag=dag_subdag,
     )
 
@@ -140,9 +131,7 @@ def upload_files_subdag():
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_key="dsd/dsd_permits_all_accela.csv",
     replace=True,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    on_failure_callback=afsys_send_email,
     dag=dag_subdag,
     )
 

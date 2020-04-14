@@ -11,7 +11,7 @@ from trident.util import general
 
 conf = general.config
 
-cond_file = conf['prod_data_dir'] + '/sidewalk_cond_datasd_v1.csv'
+cond_file = f"{conf['prod_data_dir']}/sidewalk_cond_datasd_v1.csv"
 
 
 def get_sidewalk_data(**kwargs):

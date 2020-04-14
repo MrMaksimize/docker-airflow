@@ -10,7 +10,7 @@ from airflow.operators.python_operator import PythonOperator
 
 from trident.util import general
 
-from trident.util.notifications import notify
+from trident.util.notifications import afsys_send_email
 
 
 conf = general.config
@@ -125,9 +125,7 @@ def get_seaboard_update_dag(ds_fname, dag):
         python_callable=update_seaboard_date,
         provide_context=True,
         op_kwargs={'ds_fname': ds_fname},
-        on_failure_callback=notify,
-        on_retry_callback=notify,
-        on_success_callback=notify,
+        on_failure_callback=afsys_send_email,
         dag=dag)
 
     return task
