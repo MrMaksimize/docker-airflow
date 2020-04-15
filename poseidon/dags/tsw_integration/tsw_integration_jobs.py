@@ -254,6 +254,10 @@ def _clean_pts_violations():
     latest_file = max(list_of_files, key=os.path.getmtime)
     logging.info(f"Reading in {latest_file}")
 
+    dtypes = {'LONGITUDE':np.float64,
+    'LATITUDE':np.float64
+        }
+
     ptsv = pd.read_csv(latest_file,names=['INSP_ID',
         'ASSESSOR_PARCEL_10',
         'LATITUDE',
@@ -268,9 +272,7 @@ def _clean_pts_violations():
         'SCOPE',
         'LOCATION_NOTE',
         'CONSTRUCTION_NOTE'
-        ],dtype={'LONGITUDE':np.float64,
-        'LATITUDE':np.float64
-        })
+        ])
 
     ptsv['PARCEL_APN'] = ptsv.ASSESSOR_PARCEL_10
     ptsv['LON'] = ptsv.LONGITUDE

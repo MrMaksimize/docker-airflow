@@ -4,6 +4,7 @@ import pandas as pd
 import string
 import numpy as np
 from trident.util import general
+from trident.util.geospatial import spatial_join_pt
 import logging
 from subprocess import Popen, PIPE
 from shlex import quote

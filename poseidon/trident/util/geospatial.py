@@ -578,6 +578,6 @@ def get_address_for_apn(apn):
 
     if response.status_code == requests.codes.ok:
         apn_info = data['features'][0]['attributes']
-        return "{} {} {}".format(apn_info['SITUS_ADDR'], apn_info['SITUS_STRE'], apn_info['SITUS_SUFF'])
+        return "{} {} {}".format(apn_info['SITUS_ADDRESS'], apn_info['SITUS_STREET'], apn_info['SITUS_SUFFIX'])
     else:
         return f"APN: {apn}"
