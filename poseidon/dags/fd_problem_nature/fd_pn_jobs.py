@@ -25,7 +25,7 @@ def get_fd_data(**kwargs):
 		'response_year':'year_response'
 		})
 
-	logging.info("Writing {} rows to prod".format(df.shape[0]))
+	logging.info(f"Writing {df.shape[0]} rows to prod")
 
 	# Write csv
 	general.pos_write_csv(df, prod_file)

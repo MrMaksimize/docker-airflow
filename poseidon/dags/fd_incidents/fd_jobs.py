@@ -9,7 +9,7 @@ from trident.util import general
 
 conf = general.config
 cur_yr = general.get_year()
-prod_file = conf['prod_data_dir'] + '/fd_incidents_{0}_datasd_v1.csv'.format(cur_yr)
+prod_file = f"{conf['prod_data_dir']}/fd_incidents_{cur_yr}_datasd_v1.csv"
             
 def get_fd_data( **kwargs):
 	"""Get fire department data from Data Base."""

@@ -10,7 +10,7 @@ conf = general.config
 table = 'ECO_TCANOPY_2014_SANDIEGO'
 prod_dir = conf['prod_data_dir']
 layername = 'tree_canopy_datasd'
-layer = prod_dir + '/' + layername
+layer = f"{prod_dir}/{layername}"
 prod_file = f"{prod_dir}/tree_canopy_tab_datasd.csv"
 
 dtypes = OrderedDict([
@@ -22,8 +22,7 @@ gtype = 'Polygon'
 
 def sde_to_shp():
     """SDE table to Shapefile."""
-    logging.info('Extracting {layername} layer from SDE.'.format(
-        layername=layername))
+    logging.info(f'Extracting {layername} layer from SDE.')
     
 
     sde_server = conf['sde_server']
@@ -42,10 +41,9 @@ def sde_to_shp():
     df.columns = [x.lower() for x in df.columns]
     df = df.drop('shape', 1)
 
-    logging.info('Processing {layername} df.'.format(layername=layername))
+    logging.info(f'Processing {layername} df.')
 
-    logging.info('Converting {layername} df to shapefile.'.format(
-        layername=layername))
+    logging.info(f'Converting {layername} df to shapefile.')
     geospatial.df2shp(df=df,
                       folder=prod_dir,
                       layername=layername,
@@ -53,8 +51,7 @@ def sde_to_shp():
                       gtype=gtype,
                       epsg=2230)
 
-    return 'Successfully converted {layername} to shapefile.'.format(
-           layername=layername)
+    return f'Successfully converted {layername} to shapefile.'
 
 def shp_to_geojson():
     """Shapefile to GeoJSON."""
