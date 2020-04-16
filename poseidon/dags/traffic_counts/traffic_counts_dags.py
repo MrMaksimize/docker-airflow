@@ -28,7 +28,8 @@ dag = DAG(
 get_traffic_counts = PythonOperator(
     task_id='get_traffic_counts',
     python_callable=get_traffic_counts,
-    on_failure_callback=afsys_send_email,
+    email=['data@sandiego.gov'],
+    email_on_failure=True,
     dag=dag)
 
 #: Cleans the downloaded XLSX file, converts it to CSV data.
