@@ -15,8 +15,9 @@ def get_tags_file(**context):
     """ Get permit file from ftp site. """
     logging.info('Retrieving project tags from ftp.')
 
-    exec_date = context['execution_date']
+    exec_date = context['next_execution_date'].in_tz(tz='US/Pacific')
     # Exec date returns a Pendulum object
+    # Runs on Monday for data extracted Sunday
     file_date = exec_date.subtract(days=1)
 
     # Need zero-padded month and date

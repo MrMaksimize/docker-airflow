@@ -166,7 +166,7 @@ schedule = {
     'pd_hc': None,
     'ttcs': '0 10 * * *', # daily at 10 am UTC / 3am PST
     'indicator_bacteria_tests': "0 8 * * *", # daily at 8am UTC / 1am PST
-    'parking_meters': '0 19 * * *', # daily at 7pm UTC
+    'parking_meters': '0 19 * * *', # daily at 7pm UTC, Noon PST
     'traffic_counts': "@weekly",
     'read': "0 8 * * *", # daily at 8am UTC / 1am PST
     'dsd_approvals': "0 16 * * 1", # Weekly on Monday at 4p UTC / 9a PST
@@ -192,7 +192,7 @@ schedule = {
 	'cityiq': '@daily',
     'onbase_test': '*/15 * * * *',
     'gis_tree_canopy': None,
-    'parking_meter_locs': '0 19 * * *', # daily at 7pm UTC
+    'parking_meter_locs': '0 19 * * *', # daily at 7pm UTC, Noon PST
     'sidewalks': '@monthly'
 }
 
@@ -256,7 +256,7 @@ args = {
     'email': config['mail_default_receivers'],
     'email_on_failure': True,
     'email_on_retry': False,
-    'retries': 1,
+    'retries': 2,
     'retry_delay': timedelta(minutes=5),
     'retry_exponential_backoff': True,
     'max_retry_delay': timedelta(minutes=120)

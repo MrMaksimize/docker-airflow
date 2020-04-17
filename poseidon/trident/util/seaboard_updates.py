@@ -20,7 +20,7 @@ def update_json_date(ds_fname, **kwargs):
 
     repo_name = "DataSD/data-inventory"
     commit_branch = "master"
-    exec_date = kwargs['execution_date'].strftime("%Y-%m-%d")
+    exec_date = kwargs['next_execution_date'].in_tz(tz='US/Pacific').strftime("%Y-%m-%d")
 
     #: Auth to github
     tokens = conf["gh_tokens"]
@@ -59,7 +59,7 @@ def update_seaboard_date(ds_fname, **kwargs):
     fpath_pre = "src/_datasets/"
     commit_branch = "production"
     date_search_re = "(?<=date_modified\: \\\')\d{4}-\d{2}-\d{2}"
-    exec_date = kwargs['execution_date'].strftime("%Y-%m-%d")
+    exec_date = kwargs['next_execution_date'].in_tz(tz='US/Pacific').strftime("%Y-%m-%d")
     test_mode = kwargs['test_mode']
 
     #: Auth to github
