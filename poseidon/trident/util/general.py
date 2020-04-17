@@ -149,7 +149,8 @@ def buildConfig(env):
         'sde_server': os.environ.get("SDE_SERVER"),
         'shiny_acct_name': os.environ.get("SHINY_ACCT_NAME"),
         'shiny_token': os.environ.get("SHINY_TOKEN"),
-        'shiny_secret': os.environ.get("SHINY_SECRET")
+        'shiny_secret': os.environ.get("SHINY_SECRET"),
+        'amcs_ip': os.environ.get("AMCS_IP_ADDRESS")
     }
     return config
 
@@ -172,8 +173,6 @@ schedule = {
     'dsd_approvals': "0 16 * * 1", # Weekly on Monday at 4p UTC / 9a PST
     'streets':"0 0,1,2,3,4,13,14,15,16,17,18,19,20,21,22,23 * * 1-6", # every hour, 7am to 7pm, Mon-Fri PST
     'get_it_done': "0 7 * * *", # daily at 7am UTC / 11pm PST
-    'gid_potholes': "0 12 * * *",
-    'gid_ava': "0 12 * * *",
     'special_events': "0 8 * * *", # daily at 8am UTC / 1am PST
     'waze': "*/5 * * * *",  # every 5 minutes
     'inventory': "@monthly",  # Run 1x a month at 00:00 of the 1st day of mo
@@ -193,7 +192,8 @@ schedule = {
     'onbase_test': '*/15 * * * *',
     'gis_tree_canopy': None,
     'parking_meter_locs': '0 19 * * *', # daily at 7pm UTC
-    'sidewalks': '@monthly'
+    'sidewalks': '@monthly',
+    'amcs': "0 12 * * *", # Daily at 4p UTC / 5a PST
 }
 
 default_date = datetime(2019, 10, 8)
@@ -239,7 +239,8 @@ start_date = {
     'onbase_test': default_date,
     'gis_tree_canopy': default_date,
     'parking_meter_locs': datetime(2019, 12, 25),
-    'sidewalks':  default_date
+    'sidewalks':  default_date,
+    'amcs': datetime(2020, 4, 14)
 }
 
 

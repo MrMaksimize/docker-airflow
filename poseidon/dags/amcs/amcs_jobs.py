@@ -5,13 +5,13 @@ import os.path
 import datetime
 import hashlib
 import shutil
+from shlex import quote
 
 import subprocess
 from trident.util import general
 from trident.util.sf_client import Salesforce
 
 conf = general.config
-fy = general.get_FY_year()
 
 previous_run_temp_file1 = conf['temp_data_dir'] + '/amcs_previous_run.csv'
 temp_file1 = conf['temp_data_dir'] + '/amcs_sites_temp.csv'
@@ -21,23 +21,18 @@ temp_file3 = conf['temp_data_dir'] + '/all_columns_amcs_sites.csv'
 final_file = conf['temp_data_dir'] + '/final_amcs_sites.csv'
 
 # If the server IP ever changes, the smbclient command might fail with NT_STATUS_UNSUCCESSFUL errors
-server_ip = '10.68.8.140'
+server_ip = conf['amcs_ip']
 
 
 def write_to_shared_drive():
     """Write the file to the share location"""
     logging.info('Retrieving data for current FY.')
     command = "smbclient //csdsdcamcsappt/TOWER7 -W ad -mSMB3 " \
-        + "--user={adname}%{adpass} --ip-address={server_ip} " \
-        + "--directory='Tower7Train/EPACS Import' -c '" \
-        + " put {out_f} sites_export.csv'"
+        + f"--user={conf['svc_acct_user']}%{conf['svc_acct_pass']} --ip-address={server_ip} " \
+        + f"--directory='Tower7Train/EPACS Import' -c '" \
+        + f" put {final_file} sites_export.csv'"
 
-    command = command.format(adname=conf['svc_acct_user'],
-                             adpass=conf['svc_acct_pass'],
-                             out_f=final_file,
-                             server_ip=server_ip)
-
-    logging.info(command)
+    command = command.format(quote(command))
 
     p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, error = p.communicate()
@@ -45,7 +40,7 @@ def write_to_shared_drive():
     if p.returncode != 0:
         raise Exception(output)
     else:
-        return 'Successfully retrieved {} data.'.format(fy)
+        return 'Successfully retrieved Tower data.'
 
 
 def get_sites():
@@ -276,34 +271,38 @@ def get_diff(previous_file, current_file, output_file):
     """Use diff command to find changes"""
 
     # put the header in the output file
-    command = "head -n +1 {} > {}".format(current_file, output_file)
+    command = f"head -n +1 {current_file} > {output_file}"
+    command = command.format(quote(command))
     return_code = subprocess.call(command, shell=True)
-    logging.info(command)
 
     if return_code != 0:
         raise Exception('Could not add headers to output file')
 
     # skip the header and sort the previous file
-    previous_file_sorted = '{}.sorted'.format(previous_file)
+    previous_file_sorted = f'{previous_file}.sorted'
 
-    command = "tail -n +2 {} | sort > {}".format(previous_file, previous_file_sorted)
+    command = f"tail -n +2 {previous_file} | sort > {previous_file_sorted}"
+    command = command.format(quote(command))
     return_code = subprocess.call(command, shell=True)
-    logging.info(command)
+    
     if return_code != 0:
-        raise Exception('Could not sort {}'.format(previous_file))
+        raise Exception(f'Could not sort {previous_file}')
 
     # skip the header and sort the current file
-    current_file_sorted = '{}.sorted'.format(current_file)
-    command = "tail -n +2 {} | sort > {}".format(current_file, current_file_sorted)
+    current_file_sorted = f'{current_file}.sorted'
+    
+    command = f"tail -n +2 {current_file} | sort > {current_file_sorted}"
+    command = command.format(quote(command))
     return_code = subprocess.call(command, shell=True)
-    logging.info(command)
+    
     if return_code != 0:
-        raise Exception('Could sort {}'.format(current_file))
+        raise Exception(f'Could sort {current_file}')
 
     # diff the files and save the changes and new additions in the output file
-    command = "diff {} {} | grep '> ' | awk '{{print substr($0,3)}}' >> {}".format(previous_file_sorted, current_file_sorted, output_file)
-    logging.info(command)
-
+    command = f"diff {previous_file_sorted} {current_file_sorted}" \
+    +" | grep '> ' | awk '{{print substr($0,3)}}'" \
+    +f" >> {output_file}"
+    command = command.format(quote(command))
     return_code = subprocess.call(command, shell=True)
     
     if return_code != 0:
