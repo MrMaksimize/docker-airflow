@@ -65,7 +65,7 @@ def upload_files_subdag(files,parent_dag,test):
       dest_s3_conn_id=conf['default_s3_conn_id'],
       dest_s3_key=f"city_docs/documentum_{filename}.csv",
       replace=True,
-      on_failure_callback=afsys_send_email,
+      
       dag=dag_subdag,
     )
 
@@ -99,7 +99,7 @@ def upload_div_files_subdag(files,parent_dag,test):
       dest_s3_conn_id=conf['default_s3_conn_id'],
       dest_s3_key=f"city_docs/{filename}.csv",
       replace=True,
-      on_failure_callback=afsys_send_email,
+      
       dag=dag_subdag,
     )
 

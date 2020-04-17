@@ -30,7 +30,7 @@ dag = DAG(dag_id='obdocs_test',
 get_doc_tables = PythonOperator(
     task_id='get_onbase_tables',
     python_callable=get_onbase_test,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 files = [f for f in os.listdir(conf['prod_data_dir'])]
@@ -46,7 +46,7 @@ for f in files:
             dest_s3_conn_id=conf['default_s3_conn_id'],
             dest_s3_bucket=conf['dest_s3_bucket'],
             dest_s3_key=f'city_docs/{file_name}.csv',
-            on_failure_callback=afsys_send_email,
+            
             replace=True,
             dag=dag)
 

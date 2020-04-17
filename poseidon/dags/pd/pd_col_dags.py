@@ -27,14 +27,14 @@ dag = DAG(
 get_collisions_data = PythonOperator(
     task_id='get_collisions_data',
     python_callable=get_collisions_data,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Process collisions data and save result to prod folder
 process_collisions_data = PythonOperator(
     task_id='process_collisions_data',
     python_callable=process_collisions_data,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Upload prod file to S3
@@ -45,7 +45,7 @@ collisions_to_S3 = S3FileTransferOperator(
     dest_s3_bucket=conf['dest_s3_bucket'],
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_key='pd/pd_collisions_datasd_v1.csv',
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Update data inventory json
@@ -54,7 +54,7 @@ update_json_date = PythonOperator(
     python_callable=update_json_date,
     provide_context=True,
     op_kwargs={'ds_fname': 'traffic_collisions'},
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Update portal modified date

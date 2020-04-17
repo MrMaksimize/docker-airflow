@@ -28,14 +28,14 @@ dag = DAG(dag_id='special_events',
 get_special_events = PythonOperator(
     task_id='get_special_events',
     python_callable=get_special_events,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Process and geocode raw special events file
 process_special_events = PythonOperator(
     task_id='process_special_events',
     python_callable=process_special_events,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Process and geocode raw special events file
@@ -46,7 +46,7 @@ addresses_to_S3 = S3FileTransferOperator(
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_bucket=conf['ref_s3_bucket'],
     dest_s3_key='events_address_book.csv',
-    on_failure_callback=afsys_send_email,
+    
     replace=True,
     dag=dag)
 
@@ -58,7 +58,7 @@ upload_special_events_web = S3FileTransferOperator(
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_bucket=conf['dest_s3_bucket'],
     dest_s3_key='special_events/special_events_list_datasd.csv',
-    on_failure_callback=afsys_send_email,
+    
     replace=True,
     dag=dag)
 
@@ -70,7 +70,7 @@ upload_special_events = S3FileTransferOperator(
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_bucket=conf['dest_s3_bucket'],
     dest_s3_key='special_events/special_events_list_datasd_v1.csv',
-    on_failure_callback=afsys_send_email,
+    
     replace=True,
     dag=dag)
 
@@ -79,7 +79,7 @@ update_json_date = PythonOperator(
     python_callable=update_json_date,
     provide_context=True,
     op_kwargs={'ds_fname': 'special_events'},
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Update portal modified date

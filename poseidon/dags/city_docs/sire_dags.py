@@ -29,7 +29,7 @@ dag = DAG(dag_id='sire_docs',
 get_doc_tables = PythonOperator(
     task_id='get_sire_tables',
     python_callable=get_sire,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 files = [f for f in os.listdir(conf['prod_data_dir'])]
@@ -43,7 +43,7 @@ for f in files:
             dest_s3_conn_id=conf['default_s3_conn_id'],
             dest_s3_bucket=conf['dest_s3_bucket'],
             dest_s3_key=f'city_docs/{f}',
-            on_failure_callback=afsys_send_email,
+            
             replace=True,
             dag=dag)
 

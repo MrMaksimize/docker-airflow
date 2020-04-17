@@ -28,7 +28,7 @@ get_parking_files = PythonOperator(
     task_id='get_meter_loc_files',
     provide_context=True,
     python_callable=ftp_download,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Joins downloaded files from ftp to production
@@ -36,14 +36,14 @@ build_prod_file = PythonOperator(
     task_id='build_prod_file',
     provide_context=True,
     python_callable=build_prod_file,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 clean_daily_files = PythonOperator(
     task_id='clean_files',
     provide_context=True,
     python_callable=clean_files,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag
     )
 
@@ -56,7 +56,7 @@ upload_prod_file = S3FileTransferOperator(
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_key='parking_meters/treas_parking_meters_loc_datasd_v1.csv',
     replace=True,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Update data inventory json
@@ -65,7 +65,7 @@ update_json_date = PythonOperator(
     python_callable=update_json_date,
     provide_context=True,
     op_kwargs={'ds_fname': 'parking_meters_locations'},
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Update portal modified date

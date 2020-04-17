@@ -36,7 +36,7 @@ def create_current_subdag(year):
 		    python_callable=build_aggregation,
 		    op_kwargs={'agg_type': agg,'agg_year':year},
 		    provide_context=True,
-		    on_failure_callback=afsys_send_email,
+		    
 		    dag=dag_subdag)
 
 	return dag_subdag
@@ -66,7 +66,7 @@ def create_prev_subdag(year):
 		    python_callable=build_aggregation,
 		    op_kwargs={'agg_type': agg,'agg_year':year},
 		    provide_context=True,
-		    on_failure_callback=afsys_send_email,
+		    
 		    dag=dag_subdag)
 
 	return dag_subdag
@@ -102,7 +102,7 @@ def upload_curr_files(year):
 		dest_s3_conn_id=conf['default_s3_conn_id'],
 		dest_s3_key=f'parking_meters/{file_list.get(file)}',
 		replace=True,
-		on_failure_callback=afsys_send_email,
+		
 		dag=dag_subdag)
 
 	return dag_subdag
@@ -138,7 +138,7 @@ def upload_prev_files(year):
 		dest_s3_conn_id=conf['default_s3_conn_id'],
 		dest_s3_key=f'parking_meters/{file_list.get(file)}',
 		replace=True,
-		on_failure_callback=afsys_send_email,
+		
 		dag=dag_subdag)
 
 	return dag_subdag

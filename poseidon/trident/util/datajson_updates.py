@@ -45,7 +45,7 @@ def update_datajson_dag(ds_fname, dag):
         python_callable=update_json_date,
         provide_context=True,
         op_kwargs={'ds_fname': ds_fname},
-        on_failure_callback=afsys_send_email,
+        
         on_retry_callback=notify,
         on_success_callback=notify,
         dag=dag)

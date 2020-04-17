@@ -34,14 +34,14 @@ get_indicator_bac_tests = PythonOperator(
         'date_end': (datetime.now() + timedelta(days=5)).strftime('%d-%b-%Y')
     },
     provide_context=True,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 # Get last bacteria tests for any given point.
 get_latest_bac_tests = PythonOperator(
     task_id='get_latest_bac_tests',
     python_callable=get_latest_bac_tests,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 # Uploads the indicator bacteria tests full result.
@@ -53,7 +53,7 @@ upload_indicator_bac_tests = S3FileTransferOperator(
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_key='water_testing/indicator_bacteria_tests_datasd_v1.csv',
     replace=True,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 # Uploads the latest indicator bacteria tests.
@@ -64,7 +64,7 @@ upload_latest_indicator_bac_tests = S3FileTransferOperator(
     dest_s3_bucket=conf['dest_s3_bucket'],
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_key='water_testing/latest_indicator_bac_tests_datasd_v1.csv',
-    on_failure_callback=afsys_send_email,
+    
     replace=True,
     dag=dag)
 
@@ -73,7 +73,7 @@ update_json_date = PythonOperator(
     python_callable=update_json_date,
     provide_context=True,
     op_kwargs={'ds_fname': 'indicator_bacteria_monitoring'},
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Update portal modified date
