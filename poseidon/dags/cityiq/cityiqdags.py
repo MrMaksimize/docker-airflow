@@ -25,14 +25,14 @@ dag = DAG(
 get_token_response = PythonOperator(
     task_id = 'get_token_response',
     python_callable=get_token_response,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 get_parking_bbox = PythonOperator(
     task_id='get_parking_bbox',
     provide_context=True,
     python_callable=get_events,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 event_files = ["pkin","pkout"]
@@ -47,7 +47,7 @@ for file in event_files:
         dest_s3_conn_id=conf['default_s3_conn_id'],
         dest_s3_bucket=conf['dest_s3_bucket'],
         dest_s3_key=f'cityiq/{file_name}',
-        on_failure_callback=afsys_send_email,
+        
         replace=True,
         dag=dag)
 

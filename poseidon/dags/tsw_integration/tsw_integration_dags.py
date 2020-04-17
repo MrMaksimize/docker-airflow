@@ -34,7 +34,7 @@ dag = DAG(dag_id='tsw_integration',
 get_vpm_violations = BashOperator(
     task_id='get_vpm_violations',
     bash_command=get_vpm_violations_wget(),
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 
@@ -42,7 +42,7 @@ get_vpm_violations = BashOperator(
 #get_vpm_dump = BashOperator(
 #    task_id='get_vpm_dump',
 #    bash_command=ftp_download_wget(),
-#    on_failure_callback=afsys_send_email,
+#    
 #    
 #    
 #    dag=dag)
@@ -52,7 +52,7 @@ get_vpm_violations = BashOperator(
 #extract_vpm_dump = BashOperator(
 #    task_id='extract_vpm_dump',
 #    bash_command=get_tar_command(),
-#    on_failure_callback=afsys_send_email,
+#    
 #    
 #    
 #    dag=dag)
@@ -63,7 +63,7 @@ get_vpm_violations = BashOperator(
 #    task_id='drop_vpm_temp_db',
 #    mysql_conn_id='VPM_TEMP',
 #    sql='DROP DATABASE IF EXISTS vpm_temp',
-#    on_failure_callback=afsys_send_email,
+#    
 #    
 #    
 #    dag=dag)
@@ -74,7 +74,7 @@ get_vpm_violations = BashOperator(
 #    task_id='create_vpm_temp_db',
 #    mysql_conn_id='VPM_TEMP',
 #    sql='CREATE DATABASE vpm_temp',
-#    on_failure_callback=afsys_send_email,
+#    
 #    
 #    
 #    dag=dag)
@@ -85,7 +85,7 @@ get_vpm_violations = BashOperator(
 #    task_id='populate_vpm_temp_db',
 #    mysql_conn_id='VPM_TEMP',
 #    sql=get_vpm_populate_sql(),
-#    on_failure_callback=afsys_send_email,
+#    
 #    
 #    
 #    dag=dag)
@@ -97,7 +97,7 @@ get_vpm_violations = BashOperator(
 #get_vpm_violations = PythonOperator(
 #    task_id='get_vpm_violations',
 #    python_callable=get_vpm_violations,
-#    on_failure_callback=afsys_send_email,
+#    
 #    
 #    
 #    dag=dag)
@@ -109,7 +109,7 @@ get_vpm_violations = BashOperator(
 get_sf_violations = PythonOperator(
     task_id='get_sf_violations',
     python_callable=get_sf_violations,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 
@@ -117,7 +117,7 @@ get_sf_violations = PythonOperator(
 #get_pts_violations = PythonOperator(
     #task_id='get_pts_violations',
     #python_callable=get_pts_violations,
-    #on_failure_callback=afsys_send_email,
+    #
     #
     #
     #dag=dag)
@@ -125,7 +125,7 @@ get_sf_violations = PythonOperator(
 get_pts_violations = BashOperator(
     task_id='get_pts_violations',
     bash_command=get_pts_violations(),
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 
@@ -133,7 +133,7 @@ get_pts_violations = BashOperator(
 combine_sw_violations = PythonOperator(
     task_id='combine_sw_violations',
     python_callable=combine_violations,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 
@@ -146,7 +146,7 @@ violations_csv_to_s3 = S3FileTransferOperator(
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_bucket=conf['dest_s3_bucket'],
     dest_s3_key='tsw_int/stormwater_violations_merged.csv',
-    on_failure_callback=afsys_send_email,
+    
     replace=True,
     dag=dag)
 
@@ -159,7 +159,7 @@ violations_csv_null_geos_to_s3 = S3FileTransferOperator(
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_bucket=conf['dest_s3_bucket'],
     dest_s3_key='tsw_int/stormwater_violations_merged_null_geos.csv',
-    on_failure_callback=afsys_send_email,
+    
     replace=True,
     dag=dag)
 
@@ -172,7 +172,7 @@ violations_geojson_to_s3 = S3FileTransferOperator(
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_bucket=conf['dest_s3_bucket'],
     dest_s3_key='tsw_int/stormwater_violations_merged.geojson',
-    on_failure_callback=afsys_send_email,
+    
     replace=True,
     dag=dag)
 
@@ -184,7 +184,7 @@ addresses_to_S3 = S3FileTransferOperator(
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_bucket=conf['ref_s3_bucket'],
     dest_s3_key='sw_viols_address_book.csv',
-    on_failure_callback=afsys_send_email,
+    
     replace=True,
     dag=dag)
 

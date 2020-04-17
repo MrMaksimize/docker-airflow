@@ -31,7 +31,7 @@ get_cfs_data = PythonOperator(
     task_id='get_cfs_data',
     python_callable=get_cfs_data,
     provide_context=True,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Process CFS data and save result to prod folder
@@ -39,7 +39,7 @@ process_cfs_data = PythonOperator(
     task_id='process_cfs_data',
     python_callable=process_cfs_data,
     provide_context=True,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Update data inventory json
@@ -48,7 +48,7 @@ update_json_date = PythonOperator(
     python_callable=update_json_date,
     provide_context=True,
     op_kwargs={'ds_fname': 'police_calls_for_service'},
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Update portal modified date
@@ -76,7 +76,7 @@ for index, file in enumerate(updated):
         dest_s3_bucket=conf['dest_s3_bucket'],
         dest_s3_conn_id=conf['default_s3_conn_id'],
         dest_s3_key=f'pd/pd_calls_for_service_{file_year[0]}_datasd.csv',
-        on_failure_callback=afsys_send_email,
+        
         dag=dag)
 
     cfs_to_S3 << process_cfs_data

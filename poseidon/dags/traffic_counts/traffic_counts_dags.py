@@ -36,7 +36,7 @@ get_traffic_counts = PythonOperator(
 clean_traffic_counts = PythonOperator(
     task_id='clean_traffic_counts',
     python_callable=clean_traffic_counts,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag
 )
 
@@ -44,7 +44,7 @@ clean_traffic_counts = PythonOperator(
 build_traffic_counts = PythonOperator(
     task_id='build_traffic_counts',
     python_callable=build_traffic_counts,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag
 )
 
@@ -57,7 +57,7 @@ upload_traffic_counts = S3FileTransferOperator(
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_key='traffic_counts/traffic_counts_datasd_v1.csv',
     replace=True,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 update_json_date = PythonOperator(
@@ -65,7 +65,7 @@ update_json_date = PythonOperator(
     python_callable=update_json_date,
     provide_context=True,
     op_kwargs={'ds_fname': 'traffic_volumes'},
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Update portal modified date

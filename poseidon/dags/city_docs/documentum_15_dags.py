@@ -34,7 +34,7 @@ get_doc_tables = PythonOperator(
     op_kwargs={'mode': schedule_mode,
     'test':False,
     'conn_id':'docm_sql'},
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 upload_files = SubDagOperator(

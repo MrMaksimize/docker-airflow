@@ -30,7 +30,7 @@ get_fd_data = PythonOperator(
     task_id='get_fd_data',
     python_callable=get_fd_data,
     provide_context=True,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Upload prod fire_department_SD.csv file to S3
@@ -41,7 +41,7 @@ upload_fd_data = S3FileTransferOperator(
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_bucket=conf['dest_s3_bucket'],
     dest_s3_key=f'fd_cad/fd_incidents_{cur_yr}_datasd_v1.csv',
-    on_failure_callback=afsys_send_email,
+    
     replace=True,
     dag=dag)
 
@@ -51,7 +51,7 @@ update_json_date = PythonOperator(
     python_callable=update_json_date,
     provide_context=True,
     op_kwargs={'ds_fname': 'fire_ems_incidents'},
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 

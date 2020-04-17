@@ -26,14 +26,14 @@ get_leases = PythonOperator(
     task_id='get_leases',
     python_callable=get_file,
     op_kwargs={'mode':'leases'},
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Process leases data
 process_leases = PythonOperator(
     task_id='process_leases',
     python_callable=process_leases,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Upload leases data to S3
@@ -44,7 +44,7 @@ leases_to_S3 = S3FileTransferOperator(
     dest_s3_bucket=conf['dest_s3_bucket'],
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_key='read/city_property_leases_datasd_v1.csv',
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 update_json = PythonOperator(
@@ -52,7 +52,7 @@ update_json = PythonOperator(
     python_callable=update_json_date,
     provide_context=True,
     op_kwargs={'ds_fname': 'leases_city_owned_properties'},
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Update leases portal modified date

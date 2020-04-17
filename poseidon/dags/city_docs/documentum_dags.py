@@ -36,14 +36,14 @@ get_doc_tables = PythonOperator(
     op_kwargs={'mode': schedule_mode,
     'test':False,
     'conn_id':'docm_sql'},
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 div_doc_table = PythonOperator(
     task_id='divide_doc_latest',
     python_callable=latest_res_ords,
     op_kwargs={'filename': 'documentum_scs_council_reso_ordinance_v'},
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 upload_reso_ord = S3FileTransferOperator(
@@ -53,7 +53,7 @@ upload_reso_ord = S3FileTransferOperator(
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_bucket=conf['dest_s3_bucket'],
     dest_s3_key='city_docs/documentum_scs_council_reso_ordinance_v_2016_current.csv',
-    on_failure_callback=afsys_send_email,
+    
     replace=True,
     dag=dag)
 

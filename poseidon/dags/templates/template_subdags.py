@@ -36,7 +36,7 @@ def create_subdag_operators():
         provide_context=True,
         python_callable=task_for_subdag,
         op_kwargs={'mode': index},
-        on_failure_callback=afsys_send_email,
+        
         dag=dag_subdag,
       )
 

@@ -32,7 +32,7 @@ dag = DAG(dag_id='claims_stat',
 get_claims_data = PythonOperator(
     task_id='get_claims_data',
     python_callable=get_claims_data,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 
@@ -40,7 +40,7 @@ get_claims_data = PythonOperator(
 clean_geocode = PythonOperator(
     task_id='clean_geocode_claims',
     python_callable=clean_geocode_claims,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 
@@ -52,7 +52,7 @@ upload_claimstat_clean = S3FileTransferOperator(
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_bucket=conf['dest_s3_bucket'],
     dest_s3_key='risk/claims_clean_datasd_v1.csv',
-    on_failure_callback=afsys_send_email,
+    
     replace=True,
     dag=dag)
 
@@ -63,7 +63,7 @@ upload_addresses_to_S3 = S3FileTransferOperator(
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_bucket=conf['ref_s3_bucket'],
     dest_s3_key='claims_address_book.csv',
-    on_failure_callback=afsys_send_email,
+    
     replace=True,
     dag=dag)
 
@@ -72,7 +72,7 @@ upload_addresses_to_S3 = S3FileTransferOperator(
 deploy_dashboard = BashOperator(
     task_id='deploy_dashboard',
     bash_command=deploy_dashboard(),
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 
@@ -84,7 +84,7 @@ send_last_file_updated_email = PoseidonEmailFileUpdatedOperator(
     file_url=f"https://sandiego-panda.shinyapps.io/claims_{conf['env'].lower()}/",
     message='<p>The ClaimStat tool has been updated.</p>' \
             + '<p>Please follow the link below to view the tool.</p>',
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 get_claims_data >> clean_geocode >> [upload_claimstat_clean,upload_addresses_to_S3]

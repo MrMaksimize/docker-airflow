@@ -28,7 +28,7 @@ dag = DAG(dag_id='inventory',
 inventory_to_csv = PythonOperator(
     task_id='inventory_to_csv',
     python_callable=inventory_to_csv,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Upload Inventory CSV to S3
@@ -39,7 +39,7 @@ upload_inventory = S3FileTransferOperator(
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_bucket=conf['dest_s3_bucket'],
     dest_s3_key='inventory/inventory_datasd_v1.csv',
-    on_failure_callback=afsys_send_email,
+    
     replace=True,
     dag=dag)
 

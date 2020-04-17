@@ -28,7 +28,7 @@ dag = DAG(dag_id='sidewalk',
 get_sidewalk_data = PythonOperator(
     task_id='get_sidewalk_oci',
     python_callable=get_sidewalk_data,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Upload OCI file to S3
@@ -39,7 +39,7 @@ upload_oci_file = S3FileTransferOperator(
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_bucket=conf['dest_s3_bucket'],
     dest_s3_key='tsw/sidewalk_cond_datasd_v1.csv',
-    on_failure_callback=afsys_send_email,
+    
     replace=True,
     dag=dag)
 
