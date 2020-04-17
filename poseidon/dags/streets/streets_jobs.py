@@ -286,7 +286,7 @@ def create_mode_data(mode='sdif', **context):
 
     df = pd.read_csv(temp_file,low_memory=False,parse_dates=date_cols)
 
-    exec_date = context['execution_date'].in_tz(tz='US/Pacific')
+    exec_date = context['next_execution_date'].in_tz(tz='US/Pacific')
 
     five_yrs_ago = exec_date.subtract(years=5).strftime('%Y-%m-%d')
     three_yrs_ago = exec_date.subtract(years=3).strftime('%Y-%m-%d')
