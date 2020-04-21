@@ -6,6 +6,7 @@ from trident.util import general
 import subprocess
 from subprocess import Popen, PIPE
 from shlex import quote
+import logging
 
 conf = general.config
 

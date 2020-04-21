@@ -3,7 +3,6 @@
 # Required imports
 
 from trident.util import general
-from trident.util.notifications import afsys_send_email
 import logging
 
 # Required variables

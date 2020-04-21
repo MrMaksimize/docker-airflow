@@ -34,7 +34,7 @@ def get_accounts_chart():
     output, error = p.communicate()
     
     if p.returncode != 0:
-        raise Exception(p.returncode)
+        raise Exception(error)
     else:
         logging.info("Found file")
         return "Downloaded chart of accounts"
@@ -59,7 +59,7 @@ def get_budget_files(mode='', path=''):
     output, error = p.communicate()
     
     if p.returncode != 0:
-        raise Exception(p.returncode)
+        raise Exception(error)
     else:
         logging.info("Found file")
         return f"Downloaded {mode} {path}"
