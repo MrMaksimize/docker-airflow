@@ -51,8 +51,7 @@ def get_files_subdag():
       create_file = PythonOperator(
         task_id=f"create_{task}",
         python_callable=get_budget_files,
-        op_kwargs={'mode': mode_str, 'path':path_str},
-        
+        op_kwargs={'mode': mode, 'path':path},
         dag=dag_subdag,
       )
 
