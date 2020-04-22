@@ -69,7 +69,7 @@ def build_tags(**context):
 
     df.columns = [x.lower() for x in df.columns]
 
-    df = df.rename(columns={'devel_id':'development_id',
+    df = df.rename(columns={'devel_num':'development_id',
         'proj_id':'project_id',
         'proj_scope':'project_scope',
         'proj_tag_id':'project_tag_id',
