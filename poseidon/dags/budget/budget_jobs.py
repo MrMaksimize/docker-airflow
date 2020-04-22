@@ -102,12 +102,7 @@ def get_ref_sets():
     funds = files[0].loc[:, "Fund Type":"(code)"]
     assets_depts_subset = files[1].loc[:, ["Asset Owning Department","(code)"]]
     assets_types_subset = files[2].loc[:, "Asset Type/Project":"(code)"]
-    depts = files[3].loc[:, ["Department Group",
-    "Department",
-    "Division",
-    "Section",
-    "Fund Center",
-    "(code)"]]
+    depts = files[3].loc[:, "Department Group":"(code)"]
     exp_subset = files[4].loc[:, "Object Type":"(code)"]
     rev_subset = files[5].loc[:, "Object Type":"(code)"]
 
