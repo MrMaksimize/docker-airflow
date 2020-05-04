@@ -256,7 +256,7 @@ args = {
     'email': config['mail_default_receivers'],
     'email_on_failure': True,
     'email_on_retry': False,
-    'retries': 0,
+    'retries': 1,
     'retry_delay': timedelta(minutes=5),
     'retry_exponential_backoff': True,
     'max_retry_delay': timedelta(minutes=120)
