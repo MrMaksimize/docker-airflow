@@ -31,7 +31,6 @@ get_cfs_data = PythonOperator(
     task_id='get_cfs_data',
     python_callable=get_cfs_data,
     provide_context=True,
-    
     dag=dag)
 
 #: Process CFS data and save result to prod folder
@@ -39,7 +38,7 @@ process_cfs_data = PythonOperator(
     task_id='process_cfs_data',
     python_callable=process_cfs_data,
     provide_context=True,
-    
+    depends_on_past=True,
     dag=dag)
 
 #: Update data inventory json

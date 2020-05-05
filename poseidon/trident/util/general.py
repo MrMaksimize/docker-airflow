@@ -161,8 +161,8 @@ schedule = {
     'fd_incidents' : "0 8 * * *", # daily at 8am UTC / 1am PST
     'claims_stat': "@monthly",
     'pd_ripa': None,
-    'pd_cfs': "0 8 * * *", # daily at 8am UTC / 1am PST
-    'pd_col': "0 8 * * *", # daily at 8am UTC / 1am PST
+    'pd_cfs': "0 0 * * *", # daily at 12am UTC / 5pm PST
+    'pd_col': "0 0 * * *", # daily at 12am UTC / 5pm PST
     'pd_hc': None,
     'ttcs': '0 10 * * *', # daily at 10 am UTC / 3am PST
     'indicator_bacteria_tests': "0 8 * * *", # daily at 8am UTC / 1am PST
@@ -256,7 +256,7 @@ args = {
     'email': config['mail_default_receivers'],
     'email_on_failure': True,
     'email_on_retry': False,
-    'retries': 2,
+    'retries': 1,
     'retry_delay': timedelta(minutes=5),
     'retry_exponential_backoff': True,
     'max_retry_delay': timedelta(minutes=120)
