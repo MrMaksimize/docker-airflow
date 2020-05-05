@@ -7,12 +7,11 @@ Data sources: PowerFactors API
 Owning department: Sustainability
 SMEs: Shannon Sales, SSalese@sandiego.gov, and Bryan Olson, OlsonB@sandiego.gov
 
-Date last updated: February 2020
+Date last updated: May 2020
 
 ## To Dos
 
 - Add functionality for trident.util.seaboard_updates.update_json_date
-- Add Malcolm X Library, Point Loma Library once systems are repaired
 
 ## Data transformations
 
@@ -20,9 +19,9 @@ The source of the data is a REST API with Power Factors, who have been contracte
 
 ### get_pv_data_write_temp
 
-This function orchestrates calls to the Power Factor API, by utilizing two helper functions: API_to_csv and get_data. API_to_csv utilizes the get_data helper function to make calls, and stores the returned values to csv files in /data/temp. This function store the information to make both hourly and daily calls. get_data is a function that creates the proper HTTP request for the API.
+This function orchestrates calls to the Power Factor API, by utilizing two helper functions: API_to_csv and get_data. API_to_csv utilizes the get_data helper function to make calls, and stores the returned values to csv files in /data/temp. This function stores the information to make both hourly and daily calls. get_data is a function that creates the proper HTTP request for the API.
 
-Daily calls pull 3 days worth of data. This overlap is necessary to ensure all interval data is included because the API is unreliable in the data it returns. Daily data is appended to production file and deduplicated.
+Daily calls pull 3 days worth of data. This overlap is necessary to ensure all interval data is included because the API may be unreliable in the data it returns. Daily data is appended to production file and deduplicated.
 
 ### update_pv_prod
 

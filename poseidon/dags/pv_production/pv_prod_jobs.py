@@ -27,10 +27,12 @@ pv_meters = {'2000.05.066.SWG01.MTR01': 'Carmel Valley Rec Center',
 					'2000.06.029.SWG01.MTR01': 'Police Station Central Division', 
 					'2000.06.046.SWG01.MTR01': 'Mission Trails Regional Park', 
 					'2000.06.047.SWG01.MTR01': 'Balboa Park Inspiration Point', 
-					'2000.06.053.SWG01.MTR01': 'Park De La Cruz Rec Center'}
+					'2000.06.053.SWG01.MTR01': 'Park De La Cruz Rec Center',
+					'2000.05.073.SWG01.MTR01': 'Malcolm X Library',
+					'2000.06.006.SWG01.MTR01':'Point Loma Library'}
 
 daily_pv_meters = [*pv_meters]
-hourly_pv_meters = ['2000.05.088.SWG01.MTR01']
+hourly_pv_meters = ['2000.05.088.SWG01.MTR01','2000.05.073.SWG01.MTR01','2000.06.006.SWG01.MTR01']
 
 #: DAG Function
 def get_pv_data_write_temp(**context):
@@ -38,8 +40,8 @@ def get_pv_data_write_temp(**context):
 	#currTime = currTime.replace(tzinfo=None)
 	
 	API_to_csv(hourly_pv_meters, 'hourly', currTime)	
-	
-	if currTime.hour in [15,16]:
+
+	if currTime.hour in [15,16]:	
 		API_to_csv(daily_pv_meters, 'daily', currTime)		
 	
 	return f"Successfully wrote temp files"
@@ -49,18 +51,21 @@ def API_to_csv(elem_paths, interval, execution_date):
 	if interval == 'hourly':
 		temp_file = conf['temp_data_dir'] + '/pv_hourly_results.csv'
 		endDate = execution_date.subtract(minutes=30)
-		startDate = endDate.subtract(hours=3)
+		startDate = endDate.subtract(hours=3)		
 
 	elif interval == 'daily':
 		temp_file = conf['temp_data_dir'] + '/pv_daily_results.csv'
 		endDate = execution_date.subtract(minutes=30)
-		startDate = endDate.subtract(days=3)
+		startDate = endDate.subtract(days=6)
 	
 	logging.info(f'Calling API with: {startDate}, {endDate}, # of elements: {len(elem_paths)} ')
 	df_5min = get_data(startDate, endDate, elem_paths, 'AC_POWER', True)
 	df_5min = df_5min.rename(columns=pv_meters)
 	df_5min.index.name = 'Timestamp'
+	df_5min.index = df_5min.index.round('5min')
+	df_5min = df_5min.div(12)
 	df_5min = df_5min.round(decimals=3)
+
 	logging.info(f"Writing {interval} data to temp")
 	general.pos_write_csv(df_5min, temp_file, index=True, date_format=conf['date_format_ymd_hms'])
 
@@ -122,8 +127,8 @@ def update_pv_prod(**context):
 #: Helper Function
 def build_production_files(prod_file, temp_file, **context):
 	logging.info("Reading prod and temp files")
-	df_prod = pd.read_csv(prod_file,low_memory=False,index_col=0)
-	df_temp = pd.read_csv(temp_file,low_memory=False,index_col=0)
+	df_prod = pd.read_csv(prod_file,low_memory=False,index_col=0,parse_dates=True)
+	df_temp = pd.read_csv(temp_file,low_memory=False,index_col=0,parse_dates=True)
 	df_prod = pd.concat([df_prod,df_temp])
 	# Index is timestamp
 	# Group by timestamp to deduplicate by keeping first
@@ -148,20 +153,46 @@ def get_lucid_token(**context):
 
 #: DAG Function
 def push_lucid_data(**context):
-	df_payload=pd.read_csv(conf['temp_data_dir'] + '/pv_hourly_results.csv')
-	temp = df_payload.values.tolist()
-	payload = """{\"meta\":{\"naive_timestamp_utc\":false},\"data\":{\"90822aa2575a11ea978002420aff27ae\":"""
-	payload_f = payload+str(json.dumps(temp))+'}}'
+
+	meter_credentials_list = [
+					("90822aa2575a11ea978002420aff27ae",'34893','Serra Mesa-Kearny Mesa Library'),
+					("b49fced28f1111ea84e802420aff2b28",'37643','Malcolm X Library'),
+					("4131e5c68f1a11eaa69002420aff2b29",'37693','Point Loma Library')
+					  ]	
 
 	task_instance = context['task_instance']
 	token = task_instance.xcom_pull(task_ids='get_lucid_token')
+	logging.info('Lucid token is {}'.format(token))
 
-	url = "https://api.buildingos.com/gateways/34893/data/"
-	headers = {'Content-Type': 'application/json','Authorization': f'Bearer {token}'}
-	response = requests.request("POST", url, headers=headers, data = payload_f)
-	results = df_payload.shape[0]
-	logging.info('Writing to Lucid ' + str(results) + ' rows of data')
-	return f"Successfully wrote to Lucid with {results} records"
+	response_logged = []
+	response_flag = False
+
+	for meter_credentials in meter_credentials_list:
+		payload_str, meter_url, meter_name = meter_credentials
+		df_payload = pd.read_csv(conf['temp_data_dir'] + '/pv_hourly_results.csv')
+		df_payload = df_payload[['Timestamp',meter_name]]
+		logging.info("df payload is {}".format(df_payload))
+		temp = df_payload.values.tolist()		
+		payload = ("""{\"meta\":{\"naive_timestamp_utc\":false},\"data\":{\"""" + '{}'.format(payload_str) +'\":')
+		payload_f = payload+str(json.dumps(temp))+'}}'
+		url = ("https://api.buildingos.com/gateways/" + '{}'.format(meter_url) + '/data/')
+		headers = {'Content-Type': 'application/json','Authorization': f'Bearer {token}'}
+		response = requests.request("POST", url, headers=headers, data = payload_f)
+		results = df_payload.shape[0]
+		logging.info("Response was {}".format(response))
+		response_logged.append([meter_name,response.status_code])
+		logging.info('Attempting to write to Lucid ' + str(results) + ' rows of data')
+
+	for responses in response_logged:
+		logging.info('Respones for {} was {}\n'.format(responses[0],responses[1]))
+		if responses[1] != 200:
+			response_flag = responses[1]
+			logging.info("Failed to upload data for {}".format(responses[0]))
+
+	if response_flag == True:		
+		pass
+	else:
+		return f"Successfully wrote to Lucid with {results} records"
 
 #: DAG Function
 def check_upload_time(**context):
