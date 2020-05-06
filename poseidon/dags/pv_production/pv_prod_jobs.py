@@ -29,7 +29,7 @@ pv_meters = {'2000.05.066.SWG01.MTR01': 'Carmel Valley Rec Center',
 					'2000.06.047.SWG01.MTR01': 'Balboa Park Inspiration Point', 
 					'2000.06.053.SWG01.MTR01': 'Park De La Cruz Rec Center',
 					'2000.05.073.SWG01.MTR01': 'Malcolm X Library',
-					'2000.06.006.SWG01.MTR01':'Point Loma Library'}
+					'2000.06.006.SWG01.MTR01': 'Point Loma Library'}
 
 daily_pv_meters = [*pv_meters]
 hourly_pv_meters = ['2000.05.088.SWG01.MTR01','2000.05.073.SWG01.MTR01','2000.06.006.SWG01.MTR01']
@@ -40,7 +40,7 @@ def get_pv_data_write_temp(**context):
 	#currTime = currTime.replace(tzinfo=None)
 	
 	API_to_csv(hourly_pv_meters, 'hourly', currTime)	
-
+	
 	if currTime.hour in [15,16]:	
 		API_to_csv(daily_pv_meters, 'daily', currTime)		
 	
@@ -51,7 +51,8 @@ def API_to_csv(elem_paths, interval, execution_date):
 	if interval == 'hourly':
 		temp_file = conf['temp_data_dir'] + '/pv_hourly_results.csv'
 		endDate = execution_date.subtract(minutes=30)
-		startDate = endDate.subtract(hours=3)		
+		#startDate = endDate.subtract(hours=3)
+		startDate = endDate.subtract(days=2)			
 
 	elif interval == 'daily':
 		temp_file = conf['temp_data_dir'] + '/pv_daily_results.csv'
@@ -154,11 +155,9 @@ def get_lucid_token(**context):
 #: DAG Function
 def push_lucid_data(**context):
 
-	meter_credentials_list = [
-					("90822aa2575a11ea978002420aff27ae",'34893','Serra Mesa-Kearny Mesa Library'),
-					("b49fced28f1111ea84e802420aff2b28",'37643','Malcolm X Library'),
-					("4131e5c68f1a11eaa69002420aff2b29",'37693','Point Loma Library')
-					  ]	
+	meter_credentials_list = [("90822aa2575a11ea978002420aff27ae",'34893','Serra Mesa-Kearny Mesa Library'),
+		("b49fced28f1111ea84e802420aff2b28",'37643','Malcolm X Library'),
+		("4131e5c68f1a11eaa69002420aff2b29",'37693','Point Loma Library')]	
 
 	task_instance = context['task_instance']
 	token = task_instance.xcom_pull(task_ids='get_lucid_token')
@@ -186,7 +185,7 @@ def push_lucid_data(**context):
 	for responses in response_logged:
 		logging.info('Respones for {} was {}\n'.format(responses[0],responses[1]))
 		if responses[1] != 200:
-			response_flag = responses[1]
+			response_flag = True
 			logging.info("Failed to upload data for {}".format(responses[0]))
 
 	if response_flag == True:		
