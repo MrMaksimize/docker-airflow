@@ -35,6 +35,8 @@ OR wo.id LIKE 's1%'
 OR wo.id LIKE 's2%'
 OR wo.id LIKE 'SP17%'
 OR wo.id LIKE 'pcc%'
+OR wo.id LIKE 'B1%'
+OR wo.id LIKE 'B2%'
 OR wo.id = 'DMP1A'
 OR wo.id = 'TSW'
 OR wo.id = 'utly')

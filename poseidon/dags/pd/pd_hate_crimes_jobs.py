@@ -19,7 +19,7 @@ def get_data():
         + "--password='$ftp_pass' " \
         + "--directory-prefix=$temp_dir " \
         + "ftp://ftp.datasd.org/uploads/sdpd/" \
-        + "Hate_Crimes/Hate_Crimes_Data_Portal_SDPD_*.xlsx"
+        + "Hate_Crimes/Hate_Crimes_Data_Portal_SDPD*.xlsx"
 
     tmpl = string.Template(wget_str)
     command = tmpl.substitute(
@@ -34,7 +34,7 @@ def get_data():
 def process_data():
     """Process hate crimes data."""
     
-    filename = conf['temp_data_dir'] + "/Hate_Crimes_Data_Portal_SDPD_*.xlsx"
+    filename = conf['temp_data_dir'] + "/Hate_Crimes_Data_Portal_SDPD*.xlsx"
     list_of_files = glob.glob(filename)
     latest_file = max(list_of_files, key=os.path.getmtime)
     logging.info(f"Reading in {latest_file}")
