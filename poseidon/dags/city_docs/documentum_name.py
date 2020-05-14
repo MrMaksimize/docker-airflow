@@ -54,7 +54,7 @@ def table_name(mode):
         'CITY_CHARTER',
         'SCS_REPORTSTOCOUNCIL_V',
         'SCS_REPORTSTOCOUNCIL_ATTATCH_V',
-        #'SCS_SPEAKERSLIPS_V',
+        'SCS_SPEAKERSLIPS_V',
         'SCS_MUNICODE_V',
         'SCS_MUNICODE_HISTORY_V',
         'SCS_COUNCILPOLICIES_V']}
