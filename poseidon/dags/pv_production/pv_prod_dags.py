@@ -3,7 +3,6 @@ from airflow.operators import ShortCircuitOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
 from airflow.models import DAG
 from trident.util import general
-from trident.util.notifications import notify
 
 from dags.pv_production.pv_prod_jobs import *
 
@@ -27,9 +26,6 @@ get_pv_data_write_temp = PythonOperator(
     task_id='get_pv_data_write_temp',
     python_callable=get_pv_data_write_temp,
     provide_context=True,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
     dag=dag)
 
 #: Joins downloaded files from API to production
@@ -37,9 +33,6 @@ update_pv_prod = PythonOperator(
     task_id='update_pv_prod',
     python_callable=update_pv_prod,
     provide_context=True,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
     dag=dag)
 
 #: TODO
@@ -47,9 +40,6 @@ get_lucid_token = PythonOperator(
     task_id='get_lucid_token',
     python_callable=get_lucid_token,
     provide_context=True,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
     dag=dag)
 
 #: TODO
@@ -57,9 +47,6 @@ push_lucid_data = PythonOperator(
     task_id='push_lucid_data',
     python_callable=push_lucid_data,
     provide_context=True,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
     dag=dag)
 
 #: Operator to control only one S3 upload a day
@@ -77,9 +64,6 @@ s3_upload = S3FileTransferOperator( # creating a different upload object for eac
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_bucket=conf['dest_s3_bucket'],
     dest_s3_key=f'pv_production/pv_production.csv',
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
     replace=True,
     dag=dag)
 
