@@ -45,7 +45,7 @@ upload_file = S3FileTransferOperator(
   
   dag=dag)
 
-update_tags_md = get_seaboard_update_dag('project-tags-dsd.md', dag)
+update_tags_md = get_seaboard_update_dag('development-permits-tags.md', dag)
 
 #: Update data inventory json
 update_json_date = PythonOperator(

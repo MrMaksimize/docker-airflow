@@ -39,13 +39,12 @@ build_prod_file = PythonOperator(
     
     dag=dag)
 
-clean_daily_files = PythonOperator(
-    task_id='clean_files',
-    provide_context=True,
-    python_callable=clean_files,
-    
-    dag=dag
-    )
+#clean_daily_files = PythonOperator(
+    #task_id='clean_files',
+    #provide_context=True,
+    #python_callable=clean_files,
+    #dag=dag
+    #)
 
 #: Uploads the generated production file
 upload_prod_file = S3FileTransferOperator(
@@ -56,7 +55,6 @@ upload_prod_file = S3FileTransferOperator(
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_key='parking_meters/treas_parking_meters_loc_datasd_v1.csv',
     replace=True,
-    
     dag=dag)
 
 #: Update data inventory json
@@ -65,11 +63,10 @@ update_json_date = PythonOperator(
     python_callable=update_json_date,
     provide_context=True,
     op_kwargs={'ds_fname': 'parking_meters_locations'},
-    
     dag=dag)
 
 #: Update portal modified date
-update_parking_trans_md = get_seaboard_update_dag('parking_meters_locations.md', dag)
+update_parking_trans_md = get_seaboard_update_dag('parking-meters-locations.md', dag)
 
 #: Execution Rules
 get_parking_files >> build_prod_file >> upload_prod_file >> [update_parking_trans_md, update_json_date]

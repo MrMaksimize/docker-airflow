@@ -33,8 +33,7 @@ def get_file(mode=''):
     """Get READ billing data from FTP."""
     
     mode_files = datasets.get(mode)
-    logging.info(mode_files)
-    out_file = f"{conf['temp_data_dir']}/{mode_files.get('prod')}"
+    out_file = f"{conf['temp_data_dir']}/{mode_files.get('prod')}.csv"
     fpath = f"ToSanDiego/{mode_files['ftp']}"
     
     command = f"curl -o {out_file} " \
