@@ -761,7 +761,7 @@ def find_new_committees():
 
   committees_missing_unique = pd.Series(committees_missing['recipient_id'].unique())
   no_missing = len(committees_missing_unique)
-  logging.info("Found " +str(no_missing)+ " missing committees")
+  logging.info(f"Found {no_missing} missing committees")
 
   return committees_missing_unique
 

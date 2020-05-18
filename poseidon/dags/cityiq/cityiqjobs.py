@@ -59,7 +59,7 @@ def get_events(**kwargs):
 	logging.info(f"Starting at {start} and ending at {end}")
 
 	headers = {
-	'Authorization': "Bearer {}".format(token),
+	'Authorization': f"Bearer {token}",
 	'predix-zone-id': "SD-IE-PARKING",
 	'cache-control': "no-cache"
 	}

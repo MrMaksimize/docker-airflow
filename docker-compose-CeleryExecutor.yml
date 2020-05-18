@@ -39,6 +39,7 @@ services:
             - AWS_REGION=${AWS_REGION}
             - AIRFLOW_CONN_S3DATA="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@S3"
             - AIRFLOW_CONN_S3LOG="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@poseidon-logs-${SD_ENV}"
+            - AIRFLOW__EMAIL__EMAIL_BACKEND=trident.util.notifications.afsys_send_email
 
         volumes:
             - ./poseidon:/usr/local/airflow/poseidon
@@ -73,6 +74,7 @@ services:
             - AWS_REGION=${AWS_REGION}
             - AIRFLOW_CONN_S3DATA="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@S3"
             - AIRFLOW_CONN_S3LOG="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@poseidon-logs-${SD_ENV}"
+            - AIRFLOW__EMAIL__EMAIL_BACKEND=trident.util.notifications.afsys_send_email
         ports:
             - "5555:5555"
         command: flower
@@ -101,6 +103,7 @@ services:
             - AWS_REGION=${AWS_REGION}
             - AIRFLOW_CONN_S3DATA="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@S3"
             - AIRFLOW_CONN_S3LOG="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@poseidon-logs-${SD_ENV}"
+            - AIRFLOW__EMAIL__EMAIL_BACKEND=trident.util.notifications.afsys_send_email
 
         command: scheduler
 
@@ -128,4 +131,5 @@ services:
             - AWS_REGION=${AWS_REGION}
             - AIRFLOW_CONN_S3DATA="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@S3"
             - AIRFLOW_CONN_S3LOG="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@poseidon-logs-${SD_ENV}"
+            - AIRFLOW__EMAIL__EMAIL_BACKEND=trident.util.notifications.afsys_send_email
         command: worker

@@ -7,15 +7,17 @@ import subprocess
 import glob
 from subprocess import Popen, PIPE
 from trident.util import general
+from shlex import quote
 
 conf = general.config
 
 def get_cfs_data(**context):
     """Download daily raw cfs data from FTP."""
 
-    exec_date = context['execution_date']
+    exec_date = context['next_execution_date'].in_tz(tz='US/Pacific')
     # Exec date returns a Pendulum object
-    # Running this job at 5p should capture files for day of exec
+    # Running this job at 5p should capture files for the day
+    # the dag runs
 
     # File name does not have zero-padded numbers
     # But month is spelled, abbreviated
@@ -34,7 +36,7 @@ def get_cfs_data(**context):
     f"ftp://ftp.datasd.org/uploads/sdpd/calls_for_service/" \
     f"{fpath} -sk"
 
-    logging.info(command)
+    command = command.format(quote(command))
 
     p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
     output, error = p.communicate()

@@ -32,12 +32,15 @@ oracle.zip
 ._*
 .AppleDouble
 .DS_Store
-Poseidon/dags/**/.DS_Store
+poseidon/dags/**/.DS_Store
+data/prod/.DS_Store
+data/temp/.DS_Store
 .localized
 .LSOverride
 .Spotlight-V100
 .Trashes
 Icon
+*.DS_Store
 
 # data
 *.csv
@@ -47,6 +50,9 @@ Icon
 data/temp/*.geojson
 data/**/*.json
 data/**/*.*
+data/temp/
+data/prod/
+pgdata/
 
 # Secrets
 secrets.json
