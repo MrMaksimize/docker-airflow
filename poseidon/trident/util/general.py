@@ -149,7 +149,10 @@ def buildConfig(env):
         'sde_server': os.environ.get("SDE_SERVER"),
         'shiny_acct_name': os.environ.get("SHINY_ACCT_NAME"),
         'shiny_token': os.environ.get("SHINY_TOKEN"),
-        'shiny_secret': os.environ.get("SHINY_SECRET")
+        'shiny_secret': os.environ.get("SHINY_SECRET"),
+        'pf_api_key': os.environ.get("PF_API_KEY"),
+        'lucid_api_user': os.environ.get("LUCID_USER"),
+        'lucid_api_pass': os.environ.get("LUCID_PASS")
     }
     return config
 
@@ -192,6 +195,7 @@ schedule = {
 	'cityiq': '@daily',
     'onbase_test': '*/15 * * * *',
     'gis_tree_canopy': None,
+    'pv_prod':'@hourly',
     'parking_meter_locs': '0 19 * * *', # daily at 7pm UTC, Noon PST
     'sidewalks': '@monthly'
 }
@@ -239,6 +243,7 @@ start_date = {
     'onbase_test': default_date,
     'gis_tree_canopy': default_date,
     'parking_meter_locs': datetime(2019, 12, 25),
+    'pv_prod': datetime(2020, 2, 26)
     'sidewalks':  default_date
 }
 
