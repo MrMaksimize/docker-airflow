@@ -88,9 +88,7 @@ update_json_date = PythonOperator(
     task_id='update_json_date',
     python_callable=update_json_date,
     provide_context=True,
-    op_kwargs={'ds_fname': 'parking_meters_transactions'},
-    trigger_rule='none_failed',
-    
+    op_kwargs={'ds_fname': 'parking_meters_transactions'},    
     dag=dag)
 
 
