@@ -22,7 +22,6 @@ SELECT
          pve.lastupdateddate as job_updated_dt,
          pvm.placedinservice as seg_placed_in_srvc,
          pvm.functionalclassification as seg_func_class,
-         pvm.placedinservice as seg_placed_in_service,
          pvm.district as seg_council_district,
          pvm.length as seg_length_ft,
          pvm.pavementwidth as seg_width_ft
@@ -31,8 +30,14 @@ LEFT OUTER JOIN [dbo].pvevents pve ON wo.id = pve.workorder
 INNER JOIN [dbo].pvmaingeneral pvm ON pve.pvmaingeneraloid = pvm.pvmaingeneraloid
 WHERE (wo.id LIKE 'FY1%' 
 OR wo.id LIKE 'AC%'
+OR wo.id LIKE 'ACR%'
 OR wo.id LIKE 's1%'
+OR wo.id LIKE 's2%'
+OR wo.id LIKE 'SP17%'
 OR wo.id LIKE 'pcc%'
+OR wo.id LIKE 'B1%'
+OR wo.id LIKE 'B2%'
+OR wo.id = 'DMP1A'
 OR wo.id = 'TSW'
 OR wo.id = 'utly')
 AND wo.id != 'FY10-S3M'

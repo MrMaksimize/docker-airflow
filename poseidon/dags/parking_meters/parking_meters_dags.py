@@ -1,46 +1,40 @@
 """Parking meters _dags file."""
-from airflow.operators.python_operator import PythonOperator
+from airflow.operators.python_operator import PythonOperator, BranchPythonOperator
 from airflow.operators.bash_operator import BashOperator
+from airflow.operators.subdag_operator import SubDagOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
-from airflow.operators.latest_only_operator import LatestOnlyOperator
 from airflow.models import DAG
 from trident.util import general
-from trident.util.notifications import notify
+from trident.util.notifications import afsys_send_email
+
 from dags.parking_meters.parking_meters_jobs import *
-from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag
+from dags.parking_meters.parking_meters_subdags import *
+from trident.util.seaboard_updates import *
+from datetime import datetime, timedelta
 
 args = general.args
 schedule = general.schedule['parking_meters']
 start_date = general.start_date['parking_meters']
 conf = general.config
-cur_yr = general.get_year()
-
-# This might need some refactoring (filenameing dates)
-
-flist = {
-    'full': 'treas_parking_payments_{}_datasd.csv'.format(cur_yr),
-    'by_month': 'treas_meters_{}_pole_by_month_datasd.csv'.format(cur_yr),
-    'by_day': 'treas_meters_{}_pole_by_mo_day_datasd.csv'.format(cur_yr)
-}
 
 dag = DAG(
     dag_id='parking_meters',
     default_args=args,
     start_date=start_date,
-    schedule_interval=schedule)
+    schedule_interval=schedule,
+    catchup=False)
 
-#: Latest Only Operator for parking meters
-parking_meters_latest_only = LatestOnlyOperator(
-    task_id='parking_meters_latest_only', dag=dag)
+# Daily files sometimes contain transactions multiple year
+# But files are created per calendar year
 
+run_year = datetime.utcnow().year
 
 #: Downloads all parking files from FTP
-get_parking_files = BashOperator(
+get_parking_files = PythonOperator(
     task_id='get_parking_files',
-    bash_command=ftp_download_wget(),
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    python_callable=download_latest,
+    provide_context=True,
+    
     dag=dag)
 
 #: Joins downloaded files from ftp to production
@@ -48,109 +42,62 @@ build_prod_file = PythonOperator(
     task_id='build_prod_file',
     python_callable=build_prod_file,
     provide_context=True,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    op_kwargs={'year': run_year},
+    
     dag=dag)
 
-
-#: Uploads the generated production file
-upload_prod_file = S3FileTransferOperator(
-    task_id='upload_parking_full',
-    source_base_path=conf['prod_data_dir'],
-    source_key=flist['full'],
-    dest_s3_bucket=conf['dest_s3_bucket'],
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_key='parking_meters/' + flist['full'],
-    replace=True,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+#: Create aggregation files
+build_curr_agg = SubDagOperator(
+    task_id='create_curr_agg',
+    subdag=create_current_subdag(run_year),
     dag=dag)
 
-#: Builds by month aggregation
-build_by_month_aggregation = PythonOperator(
-    task_id='build_by_month_agg',
-    python_callable=build_aggregation,
-    op_kwargs={'agg_type': 'pole_by_month'},
+#: Create aggregation files
+build_prev_agg = SubDagOperator(
+    task_id='create_prev_agg',
+    subdag=create_prev_subdag(run_year-1),
+    dag=dag)
+
+#: Upload files
+upload_curr_s3 = SubDagOperator(
+    task_id='upload_curr_files',
+    subdag=upload_curr_files(run_year),
+    dag=dag)
+
+#: Upload files
+upload_prev_s3 = SubDagOperator(
+    task_id='upload_prev_files',
+    subdag=upload_prev_files(run_year-1),
+    dag=dag)
+
+agg_branch = BranchPythonOperator(
+    task_id='check_for_agg',
     provide_context=True,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    python_callable=check_agg,
     dag=dag)
 
-#: Uploads the generated agg file
-upload_by_month_agg = S3FileTransferOperator(
-    task_id='upload_by_month_agg',
-    source_base_path=conf['prod_data_dir'],
-    source_key=flist['by_month'],
-    dest_s3_bucket=conf['dest_s3_bucket'],
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_key='parking_meters/' + flist['by_month'],
-    replace=True,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
-    dag=dag)
-
-#: Builds by day aggregation
-build_by_day_aggregation = PythonOperator(
-    task_id='build_by_day_agg',
-    python_callable=build_aggregation,
-    op_kwargs={'agg_type': 'pole_by_mo_day'},
+year_branch = BranchPythonOperator(
+    task_id='check_for_last_year',
     provide_context=True,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    trigger_rule='none_failed',
+    python_callable=check_year,
     dag=dag)
 
-#: Uploads the generated agg file
-upload_by_day_agg = S3FileTransferOperator(
-    task_id='upload_by_day_agg',
-    source_base_path=conf['prod_data_dir'],
-    source_key=flist['by_day'],
-    dest_s3_bucket=conf['dest_s3_bucket'],
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_key='parking_meters/' + flist['by_day'],
-    replace=True,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+#: Update data inventory json
+update_json_date = PythonOperator(
+    task_id='update_json_date',
+    python_callable=update_json_date,
+    provide_context=True,
+    op_kwargs={'ds_fname': 'parking_meters_transactions'},    
     dag=dag)
+
+
 
 #: Update portal modified date
 update_parking_trans_md = get_seaboard_update_dag('parking-meters-transactions.md', dag)
 
-#: Execution Rules
+get_parking_files >> build_prod_file >> agg_branch >> year_branch >> update_json_date >> update_parking_trans_md
+agg_branch >> build_curr_agg >> upload_curr_s3 >> year_branch
+year_branch >> build_prev_agg >> upload_prev_s3
+upload_prev_s3 >> update_json_date
 
-#: parking_meters_latest_only must run before get_parking_files
-get_parking_files.set_upstream(parking_meters_latest_only)
-
-#: Download Files, build prod file.
-
-#: build_prod_file depends on get_parking_files:
-build_prod_file.set_upstream(get_parking_files)
-
-#: Upload Prod File
-
-#: upload_prod_file depends on build_prod_file
-upload_prod_file.set_upstream(build_prod_file)
-
-#: Build Aggs
-
-#: build_by_month_aggregation depends on build_prod_file:
-build_by_month_aggregation.set_upstream(build_prod_file)
-
-#: build_by_day_aggregation depends on build_prod_file:
-build_by_day_aggregation.set_upstream(build_prod_file)
-
-#: Upload Aggs
-
-#: upload_by_month_agg depends on build_by_month_aggregation
-upload_by_month_agg.set_upstream(build_by_month_aggregation)
-
-#: upload_by_day_agg depends on build_by_month_aggregation
-upload_by_day_agg.set_upstream(build_by_day_aggregation)
-
-#: github update depends on data uploads
-update_parking_trans_md.set_upstream(upload_by_day_agg)

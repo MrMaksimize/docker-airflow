@@ -8,7 +8,7 @@ from trident.util import general
 
 conf = general.config
 
-prod_file = conf['prod_data_dir'] + '/fd_problem_nature_agg_datasd.csv'
+prod_file = conf['prod_data_dir'] + '/fd_problem_nature_agg_datasd_v1.csv'
 
 def get_fd_data(**kwargs):
 	"""Get fire department data from Data Base."""
@@ -20,7 +20,12 @@ def get_fd_data(**kwargs):
 	logging.info("Read data to panda DataFrame")
 	df = fd_conn.get_pandas_df(fd_query)
 
-	logging.info("Writing {} rows to prod".format(df.shape[0]))
+	df = df.rename(columns={'city':'address_city',
+		'response_month':'month_response',
+		'response_year':'year_response'
+		})
+
+	logging.info(f"Writing {df.shape[0]} rows to prod")
 
 	# Write csv
 	general.pos_write_csv(df, prod_file)

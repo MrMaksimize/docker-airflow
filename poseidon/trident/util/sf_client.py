@@ -35,7 +35,7 @@ class Salesforce(object):
                  password=None,
                  security_token=None,
                  client_id='DataSD_Poseidon',
-                 sf_version='39.0',
+                 sf_version='47.0',
                  domain='sdgov.my'):
 
         self.sf_version = sf_version
@@ -83,7 +83,7 @@ class Salesforce(object):
             headers=login_soap_request_headers)
 
         if response.status_code != 200:
-            raise Exception("Login Failed")
+            raise Exception(response.status_code)
 
         self.session_id = getUniqueElementValueFromXmlString(response.content,
                                                              'sessionId')

@@ -23,24 +23,28 @@ import geojson
 import geobuf
 import gzip
 import shutil
+import re
 
 conf = general.config
 
-def census_address_geocoder(row):
+def census_address_geocoder(address_line='',
+                           locality='San Diego',
+                           state='CA',
+                           zip='',
+                           **kwargs):
+    
     """Geocoding function using Census + Google"""
+    logging.info(address_line)
+    address_line = address_line.replace(' ','+')
 
-    address_line = row['address_full'].replace(' ','+')
+    locality = locality.replace(' ','+')
 
-    locality = row['city'].replace(' ','+')
+    state = state.replace(' ','+')
 
-    state = row['state'].replace(' ','+')
-
-    if row['zip_short'] != ' ':
-        zip = '&zip='+row['zip_short']
+    if zip != '':
+        zip_append = '&zip='+zip
     else:
-        zip = ''
-
-    google_token = conf['google_token']
+        zip_append = ''
 
     census_url = 'https://geocoding.geo.census.gov/geocoder/locations/address?'\
         + 'street={address}'\
@@ -52,7 +56,7 @@ def census_address_geocoder(row):
     census_url = census_url.format(address=address_line,
                      locality=locality,
                      state=state,
-                     zip=zip)
+                     zip=zip_append)
 
     try:
         r = requests.get(census_url, timeout=10)
@@ -69,41 +73,69 @@ def census_address_geocoder(row):
         else:
             logging.info("Census result not found")
             logging.info("Trying Google")
-            google_address_geocoder(row)
+            return google_address_geocoder(address_line=address_line,
+                locality=locality,
+                state=state,
+                zip=zip,
+                **kwargs)
 
 
     except Exception as e:
         logging.error(e)
         logging.info('Census geocoder failed, trying Google')
-        google_address_geocoder(row)
+        return google_address_geocoder(address_line=address_line,
+            locality=locality,
+            state=state,
+            zip=zip,
+            **kwargs)
 
-def google_address_geocoder(row):
+def google_address_geocoder(address_line='',
+                           locality='San Diego',
+                           state='CA',
+                           zip='',
+                           bounds='no',
+                           **kwargs):
     """Geocoding function using just Google"""
-    address_line = row['address_full'].replace(' ','+')
 
-    locality = row['city'].replace(' ','+')
 
-    state = row['state'].replace(' ','+')
-
-    if row['zip_short'] != ' ':
-        zip = '+'+row['zip_short']
+    if zip != ' ':
+        zip_append = '+'+zip
     else:
-        zip = ''
+        zip_append = ''
 
     google_token = conf['google_token']
 
-    google_url = 'https://maps.googleapis.com/maps/api/geocode/json?'\
-        + 'address={address}'\
-        + '+{locality}'\
-        + '+{state}'\
-        + '{zip}'\
-        + '&key={google_token}'
+    if bounds == 'yes':
 
-    google_url = google_url.format(address=address_line,
-                     state=state,
-                     locality=locality,
-                     zip=zip,
-                     google_token=google_token)
+        google_url = 'https://maps.googleapis.com/maps/api/geocode/json?'\
+            + 'address={address}'\
+            + '+{locality}'\
+            + '+{state}'\
+            + '{zip}'\
+            + '&bounds={bounds}'\
+            + '&key={google_token}'
+
+        google_url = google_url.format(address=address_line,
+                         state=state,
+                         locality=locality,
+                         zip=zip_append,
+                         google_token=google_token,
+                         bounds='32.530161,-117.597986|33.511553,-116.080156')
+
+    else:
+
+        google_url = 'https://maps.googleapis.com/maps/api/geocode/json?'\
+            + 'address={address}'\
+            + '+{locality}'\
+            + '+{state}'\
+            + '{zip}'\
+            + '&key={google_token}'
+
+        google_url = google_url.format(address=address_line,
+                         state=state,
+                         locality=locality,
+                         zip=zip_append,
+                         google_token=google_token)
 
     try:
         r = requests.get(google_url, timeout=10)
@@ -123,6 +155,31 @@ def google_address_geocoder(row):
     except Exception as e:
         logging.error(e)
         return np.nan, np.nan
+
+def normalize_suffixes(address_str):
+
+    street_regex = re.compile(r'\b[Ss][Tt][Rr]*[eE]*[Tt]*[Ss]*\b')
+    avenue_regex = re.compile(r'\b[Aa][Vv][Ee][Nn]*[Uu]*[Ee]*\b')
+    drive_regex = re.compile(r'\b[Dd][Rr][Ii]*[Vv]*[Ee]*\b')
+    boulevard_regex = re.compile(r'\b[Bb][Oo]*[Uu]*[Ll][Ee]*[Vv][Aa]*[Rr]*[Dd]\b')
+    way_regex = re.compile(r'\b[Ww][Yy]\b')
+    road_regex = re.compile(r'\b[Rr][Oo][Aa][Dd]\b')
+    circle_regex = re.compile(r'\b[Cc][Ii]*[Rr][Cc]*[Ll]*[Ee]*\b')
+    parkway_regex = re.compile(r'\b[Pp][Aa][Rr][Kk][Ww][Aa][Yy]\b')
+    
+    fixed_address = re.sub(street_regex,'St',address_str)
+    fixed_address = re.sub(avenue_regex,'Ave',fixed_address)
+    fixed_address = re.sub(boulevard_regex,'Blvd',fixed_address)
+    fixed_address = re.sub(drive_regex,'Dr',fixed_address)
+    fixed_address = re.sub(way_regex,'Way',fixed_address)
+    fixed_address = re.sub(road_regex,'Rd',fixed_address)
+    fixed_address = re.sub(circle_regex,'Cir',fixed_address)
+    fixed_address = re.sub(parkway_regex,'Pky',fixed_address)
+    
+    # Remove periods
+    fixed_address = fixed_address.replace('.','')
+    
+    return fixed_address
 
 def geocode_address_google(address_line='',
                            locality='San Diego',
@@ -313,7 +370,12 @@ def extract_sde_data(table, where=''):
     sde_user = conf['sde_user']
     sde_pw = conf['sde_pw']
 
-    sde_conn = pymssql.connect(sde_server, sde_user, sde_pw, 'sdw')
+    sde_conn = pymssql.connect(
+        server=sde_server,
+        port=1433,
+        user=sde_user,
+        password=sde_pw,
+        database='sdw')
 
     if where == '':
         query = "SELECT *, [Shape].STAsText() as geom FROM SDW.CITY.{table}"
@@ -373,6 +435,17 @@ def shp2geojson(layer):
         + ' -proj wgs84'\
         + ' -o format=geojson precision=0.00000001'\
         + ' {layer}.geojson'
+
+    cmd = cmd.format(layer=layer)
+
+    return cmd
+
+def shp2geojsonOgr(layer):
+    """Shapefile to Geojson conversion using ogr."""
+    cmd = 'ogr2ogr -f GeoJSON -t_srs'\
+        + ' crs:84'\
+        + ' {layer}.geojson'\
+        + ' {layer}.shp'
 
     cmd = cmd.format(layer=layer)
 
@@ -498,13 +571,13 @@ def get_address_for_apn(apn):
         }
 
     logging.info("Get address for APN {}".format(apn))
+
     response = requests.request("POST", url, headers=headers, params=querystring)
     data = response.json()
 
-    address = ""
+
     if response.status_code == requests.codes.ok:
         apn_info = data['features'][0]['attributes']
-        address = "{} {} {}".format(apn_info['SITUS_ADDRESS'], apn_info['SITUS_STREET'], apn_info['SITUS_SUFFIX'])
-
-
-    return address
+        return "{} {} {}".format(apn_info['SITUS_ADDRESS'], apn_info['SITUS_STREET'], apn_info['SITUS_SUFFIX'])
+    else:
+        return f"APN: {apn}"

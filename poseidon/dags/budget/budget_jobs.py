@@ -4,18 +4,23 @@ import logging
 import os
 import glob
 import re
+from subprocess import Popen, PIPE, check_output
 import subprocess
 from trident.util import general
+from shlex import quote
 
 conf = general.config
 prod_path = conf['prod_data_dir']
-
+adname = conf['alb_sannet_user']
+adpass = conf['alb_sannet_pass']
+fy_pattern = re.compile(r'([0-9][0-9])')
 
 def get_accounts_chart():
     """Get chart of accounts from shared drive."""
     logging.info('Retrieving chart of accounts file.')
+
     command = "smbclient //ad.sannet.gov/dfs " \
-        + "--user={adname}%{adpass} -W ad -c " \
+        + f"--user={adname}%{adpass} -W ad -c " \
         + "'prompt OFF;"\
         + " cd \"FMGT-Shared/Shared/BUDGET/" \
         + "Open Data/Open Data Portal/" \
@@ -23,93 +28,41 @@ def get_accounts_chart():
         + " lcd \"/data/temp/\";" \
         + " mget *.xlsx'"
 
-    command = command.format(adname=conf['alb_sannet_user'],
-                             adpass=conf['alb_sannet_pass'],
-                             temp_dir=conf['temp_data_dir'])
+    command = command.format(quote(command))
 
-    logging.info(command)
+    p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
+    output, error = p.communicate()
+    
+    if p.returncode != 0:
+        raise Exception(error)
+    else:
+        logging.info("Found file")
+        return "Downloaded chart of accounts"
 
-    try:
-        p = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
-        return p
-    except subprocess.CalledProcessError as e:
-        return e.output
-
-def get_capital_ptd():
-    """Get chart of accounts from shared drive."""
-    logging.info('Retrieving latest CIP project to date')
-    #+ " lcd \"/data/sd_airflow/poseidon/data/temp\";" \
+def get_budget_files(mode='', path=''):
+    """Get latest actuals from shared drive."""
+    logging.info(f'Retrieving {mode} for {path}')
+    
     command = "smbclient //ad.sannet.gov/dfs " \
-        + "--user={adname}%{adpass} -W ad -c " \
+        + f"--user={adname}%{adpass} -W ad -c " \
         + "'prompt OFF;"\
         + " cd \"FMGT-Shared/Shared/BUDGET/" \
         + "Open Data/Open Data Portal/" \
         + "Shared with Performance and Analytics/" \
-        + "Budget/Capital/P-T-D/\";" \
+        + f"{mode}/{path}/\";" \
         + " lcd \"/data/temp/\";" \
-        + " mget FY*BUDGET.xlsx;'"
+        + f" mget FY*{mode.upper()}.xlsx;'"
 
-    command = command.format(adname=conf['alb_sannet_user'],
-                             adpass=conf['alb_sannet_pass'],
-                             temp_dir=conf['temp_data_dir'])
+    command = command.format(quote(command))
 
-    logging.info(command)
-
-    try:
-        p = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
-        return p
-    except subprocess.CalledProcessError as e:
-        return e.output
-
-def get_capital():
-    """Get latest capital budgets from shared drive."""
-    logging.info('Retrieving latest CIP project to date')
-    command = "smbclient //ad.sannet.gov/dfs " \
-        + "--user={adname}%{adpass} -W ad -c " \
-        + "'prompt OFF;"\
-        + " cd \"FMGT-Shared/Shared/BUDGET/" \
-        + "Open Data/Open Data Portal/" \
-        + "Shared with Performance and Analytics/" \
-        + "Budget/Capital/FY/\";" \
-        + " lcd \"/data/temp/\";" \
-        + " mget FY*BUDGET.xlsx;'"
-
-    command = command.format(adname=conf['alb_sannet_user'],
-                             adpass=conf['alb_sannet_pass'],
-                             temp_dir=conf['temp_data_dir'])
-
-    logging.info(command)
-
-    try:
-        p = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
-        return p
-    except subprocess.CalledProcessError as e:
-        return e.output
-
-def get_operating():
-    """Get latest operating budgets from shared drive."""
-    logging.info('Retrieving latest operating budget')
-    command = "smbclient //ad.sannet.gov/dfs " \
-        + "--user={adname}%{adpass} -W ad -c " \
-        + "'prompt OFF;"\
-        + " cd \"FMGT-Shared/Shared/BUDGET/" \
-        + "Open Data/Open Data Portal/" \
-        + "Shared with Performance and Analytics/" \
-        + "Budget/Operating/\";" \
-        + " lcd \"/data/temp/\";" \
-        + " mget FY*BUDGET.xlsx;'"
-
-    command = command.format(adname=conf['alb_sannet_user'],
-                             adpass=conf['alb_sannet_pass'],
-                             temp_dir=conf['temp_data_dir'])
-
-    logging.info(command)
-
-    try:
-        p = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
-        return p
-    except subprocess.CalledProcessError as e:
-        return e.output
+    p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
+    output, error = p.communicate()
+    
+    if p.returncode != 0:
+        raise Exception(error)
+    else:
+        logging.info("Found file")
+        return f"Downloaded {mode} {path}"
 
 def get_ref_sets():
     """ Get chart of accounts and make ref sets """
@@ -119,13 +72,11 @@ def get_ref_sets():
     # Pull in 5 tabs from chart of accounts
     # Use these to make reference datasets
 
-    temp_files = [f for f in os.listdir(conf['temp_data_dir'])]
-
-    for f in temp_files:
-        
-        if 'Chart of Accounts' in f:
-
-            accounts_path = conf['temp_data_dir'] + '/' + f
+    filename = conf['temp_data_dir'] + "/*Chart of Accounts*.xlsx"
+    list_of_files = glob.glob(filename)
+    logging.info(len(list_of_files))
+    latest_file = max(list_of_files, key=os.path.getmtime)
+    logging.info(f"Reading in {latest_file}")
 
     sheets = [
     "Funds",
@@ -139,9 +90,10 @@ def get_ref_sets():
     files = []
 
     for sheet in sheets:
-        file = pd.read_excel(accounts_path,sheet_name=sheet)
-        logging.info("Read sheet "+sheet)
-        file['(code)'] = file['(code)'].astype(str)
+        file = pd.read_excel(latest_file,
+            sheet_name=sheet,
+            dtype={'(code)':str})
+        logging.info(f"Read sheet {sheet}")
         files.append(file)
         logging.info("Successfully read sheet and appended")
 
@@ -150,12 +102,7 @@ def get_ref_sets():
     funds = files[0].loc[:, "Fund Type":"(code)"]
     assets_depts_subset = files[1].loc[:, ["Asset Owning Department","(code)"]]
     assets_types_subset = files[2].loc[:, "Asset Type/Project":"(code)"]
-    depts = files[3].loc[:, ["Department Group",
-    "Department",
-    "Division",
-    "Section",
-    "Fund Center",
-    "(code)"]]
+    depts = files[3].loc[:, "Department Group":"(code)"]
     exp_subset = files[4].loc[:, "Object Type":"(code)"]
     rev_subset = files[5].loc[:, "Object Type":"(code)"]
 
@@ -210,146 +157,345 @@ def get_ref_sets():
     logging.info("Writing reference sets")
 
     general.pos_write_csv(funds,prod_path \
-        + "/budget_reference_funds_datasd.csv")
+        + "/budget_reference_funds_datasd_v1.csv")
     general.pos_write_csv(projects,prod_path \
-        + "/budget_reference_projects_datasd.csv")
+        + "/budget_reference_projects_datasd_v1.csv")
     general.pos_write_csv(depts,prod_path \
-        + "/budget_reference_depts_datasd.csv")
+        + "/budget_reference_depts_datasd_v1.csv")
     general.pos_write_csv(items,prod_path \
-        + "/budget_reference_accounts_datasd.csv")
+        + "/budget_reference_accounts_datasd_v1.csv")
 
     return "Successfully created reference sets"
-        
 
-def create_capital():
-    """ Use fy and p-t-d capital sets and ref sets to make capital datasets """
+def create_file(mode='',path=''):
+    """ Create actuals and budget for operating, 
+    capital ptd and capital fy"""
+    
+    in_cols = ['amount','code']
 
-    adopted = glob.glob(conf['temp_data_dir'] \
-            + "/FY*_ADOPT_CIP_BUDGET.xlsx")
-    proposed = glob.glob(conf['temp_data_dir'] \
-                + "/FY*_PROP_CIP_BUDGET.xlsx")
-    todate = glob.glob(conf['temp_data_dir'] \
-                + "/FY*_2DATE_CIP_BUDGET.xlsx")
+    file_pattern = []
 
-    budgets = adopted + proposed + todate
+    fp_pre = "/FY*_"
+
+    if path == "capital_ptd":
+        merges = ['fund', 'proj', 'accounts']
+        file_pattern.append(f"{fp_pre}2DATE_CIP_{mode.upper()}")
+        in_cols.extend(['project_number_parent','project_number_child','object_number','fiscal_year'])
+    elif path == "capital_fy":
+        merges = ['fund', 'proj', 'accounts']
+        if mode  == 'actuals':
+            file_pattern.append(f"{fp_pre}FINAL_CIP_{mode.upper()}")
+            in_cols.extend(['project_number_parent','project_number_child','object_number'])
+        else:
+            file_pattern.extend([f"{fp_pre}PROP_CIP_{mode.upper()}",f"{fp_pre}ADOPT_CIP_{mode.upper()}"])
+            in_cols.extend(['project_number','object_number'])
+    else:
+        merges = ['fund','depts','accounts']
+        file_pattern.append(f"{fp_pre}OM_{mode.upper()}")
+        in_cols.extend(['dept_number','object_number'])
+
+    budgets = []
+
+    logging.info(f"Getting list of files for {mode} {path}")
+    
+    for fp in file_pattern:
+        budget_files = glob.glob(f"{conf['temp_data_dir']}/{fp}.xlsx")
+        budgets.extend(budget_files)
+    
+    df_list = []
+
+    logging.info("Reading in individual files")
+
+    for budget in budgets:
+
+        df_temp = process_df(budget,in_cols)
+                
+        df_list.append(df_temp)
+
+    logging.info("Concatting individual files")
+
+    df = pd.concat(df_list)
+
+    logging.info("Performing merges")
+
+    df_final = merge_df(df,merges)
+
+    out_fname = f"{prod_path}/{mode}_{path}_datasd.csv"
+
+    logging.info(f"Writing final file to {out_fname}")
+
+    general.pos_write_csv(df_final,out_fname)
+
+    file_specs = {'budget_capital_ptd':{
+            'file_pattern':[f"FY*_2DATE_CIP_{mode.upper()}"],
+            'refs':['fund','proj','accounts'],
+            'in_cols':['amount',
+                        'code',
+                        'project_number_parent',
+                        'project_number_child',
+                        'object_number',
+                        'fiscal_year'],
+            'out_cols':['amount',
+                        'fund_type',
+                        'fund_number',
+                        'asset_owning_dept',
+                        'project_name',
+                        'project_number_parent',
+                        'project_number_child',
+                        'account',
+                        'account_number',
+                        'fiscal_year',
+                        'budget_cycle'],
+            'out_fname':f"{prod_path}/budget_capital_ptd_datasd.csv"
+        },
+        'budget_capital_fy':{
+            'file_pattern':[f"/FY*_PROP_CIP_{mode.upper()}",f"/FY*_ADOPT_CIP_{mode.upper()}"],
+            'refs':['fund', 'proj', 'accounts'],
+            'in_cols':['amount',
+                        'code',
+                        'project_number',
+                        'object_number'],
+            'out_cols':['amount',
+                        'fund_type',
+                        'fund_number',
+                        'asset_owning_dept',
+                        'project_name',
+                        'project_number',
+                        'account',
+                        'account_number',
+                        'fiscal_year',
+                        'budget_cycle'],
+            'out_fname':f"{prod_path}/budget_capital_fy_datasd.csv"
+        },
+        'budget_operating':{
+            'file_pattern':[f"/FY*_OM_{mode.upper()}"],
+            'refs':['fund','depts','accounts'],
+            'in_cols':['amount',
+                        'code',
+                        'dept_number',
+                        'commitment_item'],
+            'out_cols':['amount',
+                        'fund_type',
+                        'fund_number',
+                        'dept_name',
+                        'funds_center_number',
+                        'account',
+                        'account_number',
+                        'fiscal_year',
+                        'budget_cycle'],
+            'out_fname':f"{prod_path}/budget_operating_datasd.csv"
+        },
+        'actuals_capital_ptd':{
+            'file_pattern':[f"FY*_2DATE_CIP_{mode.upper()}"],
+            'refs':['fund','proj','child_proj','accounts'],
+            'in_cols':['amount',
+                        'code',
+                        'project_number_parent',
+                        'project_number_child',
+                        'object_number',
+                        'fiscal_year'],
+            'out_cols':['amount',
+                        'fund_type',
+                        'fund_number',
+                        'asset_owning_dept',
+                        'project_name',
+                        'project_number_parent',
+                        'project_number_child',
+                        'account',
+                        'account_number',
+                        'fiscal_year'],
+            'out_fname':f"{prod_path}/actuals_capital_ptd_datasd.csv",
+        },
+        'actuals_capital_fy':{
+            'file_pattern':[f"/FY*_FINAL_CIP_{mode.upper()}"],
+            'refs':['fund','proj','child_proj','accounts'],
+            'in_cols':['amount',
+                        'code',
+                        'project_number_parent',
+                        'project_number_child',
+                        'object_number'],
+            'out_cols':['amount',
+                        'fund_type',
+                        'fund_number',
+                        'asset_owning_dept',
+                        'project_name',
+                        'project_number_parent',
+                        'project_number_child',
+                        'account',
+                        'account_number',
+                        'fiscal_year'],
+            'out_fname':f"{prod_path}/actuals_capital_fy_datasd.csv"
+        },
+        'actuals_operating':{
+            'file_pattern':[f"/FY*_OM_{mode.upper()}"],
+            'refs':['fund','depts','accounts'],
+            'in_cols':['amount',
+                        'code',
+                        'dept_number',
+                        'commitment_item'],
+            'out_cols':['amount',
+                        'fund_type',
+                        'fund_number',
+                        'dept_name',
+                        'funds_center_number',
+                        'account',
+                        'account_number',
+                        'fiscal_year'],
+            'out_fname':f"{prod_path}/actuals_operating_datasd.csv"
+        }
+    }
+
+    return "Successfully created file"
+
+#: Helper function
+def merge_df(df,merges):
+    """ Determine/perform merges and return finalized df """
+    
+    if "fund" in merges:
+        df = funds_merge(df)
+    if "proj" in merges:
+        df = projs_merge(df)
+    if "depts" in merges:
+        df = depts_merge(df)
+    if "accounts" in merges:
+        df = accounts_merge(df)
+
+    return df
+
+#: Helper function
+def funds_merge(df):
+    """ Merge financials with funds """
 
     fund_ref = pd.read_csv(prod_path \
-        + "/budget_reference_funds_datasd.csv",dtype={'fund_number':str})
+        + "/budget_reference_funds_datasd_v1.csv",dtype={'fund_number':str})
+
+    logging.info(f"Starting funds merge with {df.shape[0]} rows")
+
+    df = pd.merge(df,
+        fund_ref[['fund_type','fund_number']],
+        left_on='code',
+        right_on='fund_number',
+        how='left')
+
+    logging.info(f"Ending departments merge with {df.shape[0]} rows")
+
+    df = df.drop(columns=['code'])
+
+    return df
+
+#: Helper function  
+def projs_merge(df):
+    """ Merge financials with projects """
+
     proj_ref = pd.read_csv(prod_path \
-        + "/budget_reference_projects_datasd.csv",dtype={'project_number':str})
+        + "/budget_reference_projects_datasd_v1.csv",dtype={'project_number':str})
+
+    orig_cols = df.columns.tolist()
+
+    if 'project_number_parent' in orig_cols:
+        left_on = 'project_number_parent'
+        col_drop = ['project_number']
+    else:
+        left_on = 'project_number'
+        col_drop = []
+
+    logging.info(f"Starting projects merge with {df.shape[0]} rows")
+
+    df = pd.merge(df,
+        proj_ref[['asset_owning_dept','project_name','project_number']],
+        left_on=left_on,
+        right_on='project_number',
+        how='left')
+
+    logging.info(f"Ending projects merge with {df.shape[0]} rows")
+
+    df = df.drop(columns=col_drop)
+
+    return df
+
+#: Helper function
+def accounts_merge(df):
+    """ Merge financials with accounts """
+
     accounts_ref = pd.read_csv(prod_path \
-        + "/budget_reference_accounts_datasd.csv",dtype={'account_number':str})
+        + "/budget_reference_accounts_datasd_v1.csv",dtype={'account_number':str})
 
-    for count, budget in enumerate(budgets):
-        fy_pattern = re.compile(r'([0-9][0-9])')
-        this_fy = fy_pattern.findall(budget)
+    logging.info(f"Starting accounts merge with {df.shape[0]} rows")
 
-        if "2DATE" in budget:
-            out_fname = prod_path \
-                + "/budget_capital_ptd_FY{}_datasd.csv".format(this_fy[0])
-        elif "PROP" in budget:
-            out_fname = prod_path \
-                + "/budget_capital_FY{}_prop_datasd.csv".format(this_fy[0])
-        else:
-            out_fname = prod_path \
-                + "/budget_capital_FY{}_datasd.csv".format(this_fy[0])
+    df = pd.merge(df,
+        accounts_ref[['account','account_number']],
+        left_on='object_number',
+        right_on='account_number',
+        how='left')
 
-        df = pd.read_excel(budget)
-        df = df.iloc[:, [0,1,2,3]]
-        df.columns = ['amount','code','project_number','object_number']
-        df['code'] = df['code'].astype(str)
-        df['project_number'] = df['project_number'].astype(str)
-        df['object_number'] = df['object_number'].astype(str)
+    logging.info(f"Ending accounts merge with {df.shape[0]} rows")
 
-        df = pd.merge(df,
-            fund_ref[['fund_type','fund_number']],
-            left_on='code',
-            right_on='fund_number',
-            how='left')
-        df = pd.merge(df,
-            proj_ref[['asset_owning_dept','project_name','project_number']],
-            left_on='project_number',
-            right_on='project_number',
-            how='left')
-        df = pd.merge(df,
-            accounts_ref[['account','account_number']],
-            left_on='object_number',
-            right_on='account_number',
-            how='left')
+    df = df.drop(columns=['object_number'])
 
-        df = df[['amount',
-        'fund_type',
-        'fund_number',
-        'asset_owning_dept',
-        'project_name',
-        'project_number',
-        'account',
-        'account_number']]
+    return df
 
-        general.pos_write_csv(df,out_fname)
+#: Helper function
+def depts_merge(df):
+    """ Merge financials with departments """
 
-    return "Successfully created capital budgets"
+    depts_ref = pd.read_csv(prod_path \
+        + "/budget_reference_depts_datasd_v1.csv",dtype={'funds_center_number':str})
 
-def create_operating():
-    """ Use operating and ref sets to make operating dataset """
+    logging.info(f"Starting departments merge with {df.shape[0]} rows")
 
-    adopted = glob.glob(conf['temp_data_dir'] \
-            + "/FY*_ADOPT_OM_BUDGET.xlsx")
-    proposed = glob.glob(conf['temp_data_dir'] \
-                + "/FY*_PROP_OM_BUDGET.xlsx")
+    df = pd.merge(df,
+        depts_ref[['dept_name','funds_center_number']],
+        left_on='dept_number',
+        right_on='funds_center_number',
+        how='left')
 
-    budgets = adopted + proposed
+    logging.info(f"Ending departments merge with {df.shape[0]} rows")
+
+    df = df.drop(columns=['dept_number'])
+
+    return df
+
+#: Helper function
+def process_df(filepath,cols):
+    """ Peform processing common to all sets """
+
+    this_fy = fy_pattern.findall(filepath)
+
+    df = pd.read_excel(filepath)
     
-    for count, budget in enumerate(budgets):
-        
-        fy_pattern = re.compile(r'([0-9][0-9])')
-        this_fy = fy_pattern.findall(budget)
+    # Some files come through with blank, unnamed cols
 
-        if "PROP" in budget:
-            out_fname = prod_path \
-                + "/budget_operating_FY{}_prop_datasd.csv".format(this_fy[0])
+    read_cols = df.columns.tolist()
+    if 'Fiscal Year' in read_cols:
+        # This is the last col in CIP PTD stuff
+        last_col = read_cols.index('Fiscal Year') + 1
+    elif 'Object Number' in read_cols:
+        # This is the last col in most everything else
+        last_col = read_cols.index('Object Number') + 1
+    elif 'Commitment Item Number' in read_cols:
+        # One operating budget file has this col
+        last_col = read_cols.index('Commitment Item Number') + 1
+    else:
+        # default
+        last_col = len(read_cols)
+    
+    col_select = read_cols[0:last_col]
+
+
+    df = df.loc[:,col_select]
+
+    df.columns = cols
+
+    df.loc[:,cols[1:]] = df.loc[:,cols[1:]].fillna('')
+    df.loc[:,cols[1:]] = df.loc[:,cols[1:]].astype(str)
+
+    df['report_fy'] = this_fy[0]
+
+    # Don't need this for Actuals
+    if "PROP" in filepath or "ADOPT" in filepath:
+        if "PROP" in filepath:
+            df['budget_cycle'] = 'proposed'
         else:
-            out_fname = prod_path \
-            + "/budget_operating_FY{}_datasd.csv".format(this_fy[0])
+            df['budget_cycle'] = 'adopted'
 
-        df = pd.read_excel(budget)
-        df = df.iloc[:, [0,1,2,3]]
-        df.columns = ['amount','code','dept_number','commitment_item']
-        df['code'] = df['code'].astype(str)
-        df['dept_number'] = df['dept_number'].astype(str)
-        df['commitment_item'] = df['commitment_item'].astype(str)
-
-        fund_ref = pd.read_csv(prod_path \
-            + "/budget_reference_funds_datasd.csv",dtype={'fund_number':str})
-        depts_ref = pd.read_csv(prod_path \
-            + "/budget_reference_depts_datasd.csv",dtype={'funds_center_number':str})
-        accounts_ref = pd.read_csv(prod_path \
-            + "/budget_reference_accounts_datasd.csv",dtype={'account_number':str})
-
-        df = pd.merge(df,
-            fund_ref[['fund_type','fund_number']],
-            left_on='code',
-            right_on='fund_number',
-            how='left')
-        df = pd.merge(df,
-            depts_ref[['dept_name','funds_center_number']],
-            left_on='dept_number',
-            right_on='funds_center_number',
-            how='left')
-        df = pd.merge(df,
-            accounts_ref[['account','account_number']],
-            left_on='commitment_item',
-            right_on='account_number',
-            how='left')
-
-        df = df[['amount',
-        'fund_type',
-        'fund_number',
-        'dept_name',
-        'funds_center_number',
-        'account',
-        'account_number']]
-
-        general.pos_write_csv(df,out_fname)
-
-    return "Sucessfully created operating budget"
+    return df

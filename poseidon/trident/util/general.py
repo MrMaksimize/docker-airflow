@@ -7,12 +7,21 @@ import requests
 import shutil
 from datetime import datetime, timedelta, date
 from dateutil import tz
+import pendulum
 
 import subprocess
 import csv
 import json
 
 from airflow.models import Variable
+
+def get_last_run(dag):
+    last_dag_run = dag.get_last_dagrun()
+    if last_dag_run is None:
+        return pendulum.now()
+    else:
+        return last_dag_run.execution_date
+
 
 def seven_days_ago():
     """Return the date seven days ago."""
@@ -94,6 +103,7 @@ def buildConfig(env):
         'date_format_keen': "%Y-%m-%dT%H:%M:%S",
         'dags_dir': "{}/poseidon/dags".format(os.environ.get("AIRFLOW_HOME", "")),
         'dest_s3_bucket': os.environ.get('S3_DATA_BUCKET', 'datasd-dev'),
+        'ref_s3_bucket': os.environ.get('S3_REF_BUCKET', 'datasd-reference'),
         'oracle_wpl': os.environ.get('CONN_ORACLEWPL'),
         'ftp_sannet_user': os.environ.get("FTP_SANNET_USER", "anonymous"),
         'ftp_sannet_pass': os.environ.get("FTP_SANNET_PASS", "anonymous"),
@@ -103,11 +113,18 @@ def buildConfig(env):
         'ftp_read_pass': os.environ.get("FTP_READ_PASS"),
         'mrm_sannet_user': os.environ.get("MRM_SANNET_USER"),
         'mrm_sannet_pass': os.environ.get("MRM_SANNET_PASS"),
+        'svc_acct_user': os.environ.get("SVC_ACCT_USER"),
+        'svc_acct_pass': os.environ.get("SVC_ACCT_PASS"),
         'alb_sannet_user': os.environ.get("ALB_SANNET_USER"),
         'alb_sannet_pass': os.environ.get("ALB_SANNET_PASS"),
+        'arc_online_user': os.environ.get("ARC_ONLINE_USER"),
+        'arc_online_pass': os.environ.get("ARC_ONLINE_PASS"),
         'mrm_sf_user': os.environ.get("MRM_SF_USER"),
         'mrm_sf_pass': os.environ.get("MRM_SF_PASS"),
         'mrm_sf_token': os.environ.get("MRM_SF_TOKEN"),
+        'dpint_sf_user':os.environ.get("DPINT_SF_USER"),
+        'dpint_sf_pass':os.environ.get("DPINT_SF_PASS"),
+        'dpint_sf_token':os.environ.get("DPINT_SF_TOKEN"),
         'gh_tokens': os.environ.get("GH_TOKENS").split(','),
         'mail_notify': int(os.environ.get("MAIL_NOTIFY")),
         'mail_from_name': os.environ.get("MAIL_FROM_NAME"),
@@ -118,20 +135,24 @@ def buildConfig(env):
         'mail_swu_sys_tpl': os.environ.get("MAIL_SWU_SYS_TPL"),
         'mail_swu_file_updated_tpl':
         os.environ.get("MAIL_SWU_FILE_UPDATED_TPL"),
+        'mail_notify_claims': os.environ.get("MAIL_NOTIFY_CLAIMS"),
         'keen_notify': int(os.environ.get("KEEN_NOTIFY")),
         'keen_project_id': os.environ.get('KEEN_PROJECT_ID'),
         'keen_write_key': os.environ.get('KEEN_WRITE_KEY'),
         'keen_read_key': os.environ.get('KEEN_READ_KEY'),
         'keen_ti_collection': os.environ.get('KEEN_TI_COLLECTION'),
         'mrm_buffer_access_token': os.environ.get('MRM_BUFFER_ACCESS_TOKEN'),
-        'executable_path': '/usr/local/airflow/poseidon/bin',
+        'executable_path': f"{os.environ.get('AIRFLOW_HOME')}/poseidon/bin",
         'google_token': os.environ.get("GOOGLE_TOKEN"),
         'sde_user': os.environ.get("SDE_USER"),
         'sde_pw': os.environ.get("SDE_PW"),
         'sde_server': os.environ.get("SDE_SERVER"),
         'shiny_acct_name': os.environ.get("SHINY_ACCT_NAME"),
         'shiny_token': os.environ.get("SHINY_TOKEN"),
-        'shiny_secret': os.environ.get("SHINY_SECRET")
+        'shiny_secret': os.environ.get("SHINY_SECRET"),
+        'pf_api_key': os.environ.get("PF_API_KEY"),
+        'lucid_api_user': os.environ.get("LUCID_USER"),
+        'lucid_api_pass': os.environ.get("LUCID_PASS")
     }
     return config
 
@@ -140,46 +161,53 @@ config = buildConfig(os.environ.get('SD_ENV'))
 
 # https://crontab.guru/
 schedule = {
-    'fd_incidents' : "@daily",
-    'claims_stat': "@daily",
-    'pd_cfs': "@daily",
-    'pd_col': "@daily",
-    'ttcs': "@daily",
-    'indicator_bacteria_tests': "@daily",
-    'parking_meters': "@daily",
+    'fd_incidents' : "0 8 * * *", # daily at 8am UTC / 1am PST
+    'claims_stat': "@monthly",
+    'pd_ripa': None,
+    'pd_cfs': "0 0 * * *", # daily at 12am UTC / 5pm PST
+    'pd_col': "0 0 * * *", # daily at 12am UTC / 5pm PST
+    'pd_hc': None,
+    'ttcs': '0 10 * * *', # daily at 10 am UTC / 3am PST
+    'indicator_bacteria_tests': "0 8 * * *", # daily at 8am UTC / 1am PST
+    'parking_meters': '0 19 * * *', # daily at 7pm UTC, Noon PST
     'traffic_counts': "@weekly",
-    'read': "@daily",
-    'dsd_approvals': "@daily",
-    'dsd_code_enforcement': "@daily",
-    'streets_sdif': "@daily",
-    'streets_imcat': "@daily",
-    'get_it_done': "@hourly",
+    'read': "0 8 * * *", # daily at 8am UTC / 1am PST
+    'dsd_approvals': "0 16 * * 1", # Weekly on Monday at 4p UTC / 9a PST
+    'streets':"0 0,1,2,3,4,13,14,15,16,17,18,19,20,21,22,23 * * 1-6", # every hour, 7am to 7pm, Mon-Fri PST
+    'get_it_done': "0 7 * * *", # daily at 7am UTC / 11pm PST
     'gid_potholes': "0 12 * * *",
     'gid_ava': "0 12 * * *",
-    'special_events': "@daily",
+    'special_events': "0 8 * * *", # daily at 8am UTC / 1am PST
     'waze': "*/5 * * * *",  # every 5 minutes
     'inventory': "@monthly",  # Run 1x a month at 00:00 of the 1st day of mo
-    'buffer_post_promo': "@daily",
-    'sonar': '@daily',
     'gis_daily': '0 6 * * *',  # daily at 6am UTC / 10pm PST
     'gis_weekly': '0 10 * * 2',  # weekly on Tuesday at 10am UTC / 2am PST
-    'budget': "@weekly",
-    'campaign_fin': "@daily",
-    'public_art': '@daily',
-    'sire': "0 7 * * *",
-    'onbase': "*/5 * * * *",
-    'documentum_24' : "0 7 * * *",
-    'documentum_others' : "30 * * * *",
+    'budget': "0 17 * 5-7 5", # weekly Fridays at 5p UTC / 10am PST
+    'campaign_fin': "0 11 * * *", # daily at 11am UTC / 4am PST
+    'public_art': "0 11 * * *", # daily at 11am UTC / 4am PST
+    'sire': "0 8 * * 1-5", # 8am UTC / 12am PST every Mon-Fri
+    'onbase': "*/5 0,1,2,3,4,13,14,15,16,17,18,19,20,21,22,23 * * 1-6", # every 5 mins, 7am to 7pm, Mon-Fri PST
+    'documentum_daily' : "0 8 * * 1-5", # 8am UTC / 12am PST every Mon-Fri
+    'documentum_hr_30' : "30 0,1,2,3,4,13,14,15,16,17,18,19,20,21,22,23 * * 1-6", # 30 mins past the hour, 7am to 7pm, Mon-Fri PST
+    'documentum_hr_15': "15 0,1,2,3,4,13,14,15,16,17,18,19,20,21,22,23 * * 1-6", # 15 mins past the hour, 7am to 7pm, Mon-Fri PST
     'tsw_integration': '0 6 * * *',  # daily at 6am UTC / 10pm PST
-    'cip': '@daily'
+    'cip': "0 8 * * *", # daily at 8am UTC / 1am PST
+	'cityiq': '@daily',
+    'onbase_test': '*/15 * * * *',
+    'gis_tree_canopy': None,
+    'pv_prod':'@hourly',
+    'parking_meter_locs': '0 19 * * *', # daily at 7pm UTC, Noon PST
+    'sidewalks': '@monthly'
 }
 
-default_date = datetime(2019, 4, 2)
+default_date = datetime(2019, 10, 8)
 
 start_date = {
     'fd_incidents' : default_date,
     'pd_cfs': default_date,
     'pd_col': default_date,
+    'pd_hc': default_date,
+    'pd_ripa': datetime(2020, 3, 5),
     'claims_stat': default_date,
     'ttcs': default_date,
     'indicator_bacteria_tests': default_date,
@@ -190,6 +218,7 @@ start_date = {
     'dsd_code_enforcement': default_date,
     'streets_sdif': default_date,
     'streets_imcat': default_date,
+    'streets': default_date,
     'get_it_done': default_date,
     'gid_potholes': default_date,
     'gid_ava': default_date,
@@ -205,10 +234,17 @@ start_date = {
     'public_art': default_date,
     'sire': default_date,
     'onbase': default_date,
-    'documentum_24' : default_date,
-    'documentum_others' : default_date,
+    'documentum_daily' : datetime(2019, 10, 29),
+    'documentum_hr_30' : datetime(2019, 10, 29),
+    'documentum_hr_15': datetime(2019, 10, 29),
     'tsw_integration': default_date,
-    'cip': default_date
+    'cip': default_date,
+    'cityiq': default_date,
+    'onbase_test': default_date,
+    'gis_tree_canopy': default_date,
+    'parking_meter_locs': datetime(2019, 12, 25),
+    'pv_prod': datetime(2020, 2, 26),
+    'sidewalks':  default_date
 }
 
 
@@ -223,9 +259,9 @@ args = {
     'owner': 'airflow',
     'depends_on_past': False,
     'email': config['mail_default_receivers'],
-    'email_on_failure': config['mail_notify'],
+    'email_on_failure': True,
     'email_on_retry': False,
-    'retries': 3,
+    'retries': 1,
     'retry_delay': timedelta(minutes=5),
     'retry_exponential_backoff': True,
     'max_retry_delay': timedelta(minutes=120)

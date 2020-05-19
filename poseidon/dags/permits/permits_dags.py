@@ -1,125 +1,126 @@
 """DSD Permits _dags file."""
 from airflow.operators.python_operator import PythonOperator
-from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
-from airflow.operators.latest_only_operator import LatestOnlyOperator
+from airflow.operators.subdag_operator import SubDagOperator
 from airflow.models import DAG
 from trident.util import general
+from trident.util.notifications import afsys_send_email
 from dags.permits.permits_jobs import *
-from trident.util.notifications import notify
-from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag
+from dags.permits.permits_subdags import *
 
+from trident.util.seaboard_updates import *
 conf = general.config
 args = general.args
 schedule = general.schedule['dsd_approvals']
 start_date = general.start_date['dsd_approvals']
-year = general.get_year()
 
 #: Dag spec for dsd permits
 dag = DAG(dag_id='dsd_permits',
           default_args=args,
           start_date=start_date,
-          schedule_interval=schedule)
-
-#: Latest Only Operator for dsd permits.
-dsd_permits_latest_only = LatestOnlyOperator(
-    task_id='dsd_permits_latest_only', dag=dag)
+          schedule_interval=schedule,
+          catchup=False
+          )
 
 #: Get permits reports
 get_permits_files = PythonOperator(
     task_id='get_permits_files',
+    provide_context=True,
     python_callable=get_permits_files,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    
     dag=dag)
 
-#: Clean permits reports
-clean_data = PythonOperator(
-    task_id='clean_data',
-    python_callable=clean_data,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+#: Create 4 files using subdag
+create_files = SubDagOperator(
+  task_id='create_files',
+  subdag=create_file_subdag(),
+  dag=dag,
+  )
+
+#: Join BIDs to 4 files using subdag
+join_bids = SubDagOperator(
+  task_id='join_bids',
+  subdag=join_bids_subdag(),
+  dag=dag,
+  )
+
+#: Create full sets for internal
+create_full = PythonOperator(
+    task_id='create_full_sets',
+    python_callable=create_full_set,
+    
     dag=dag)
 
-#: Join BIDs to permits
-join_bids = PythonOperator(
-    task_id='join_bids',
-    python_callable=join_bids,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+#: Upload 4 files using subdag
+upload_files = SubDagOperator(
+  task_id='upload_files',
+  subdag=upload_files_subdag(),
+  dag=dag,
+  )
+
+update_set1_md = get_seaboard_update_dag('development-permits-set1.md', dag)
+update_set2_md = get_seaboard_update_dag('development-permits-set2.md', dag)
+
+#: Update data inventory json
+update_set1_json_date = PythonOperator(
+    task_id='update_set1_json_date',
+    python_callable=update_json_date,
+    provide_context=True,
+    op_kwargs={'ds_fname': 'development-permits-set1'},
+    
     dag=dag)
 
-#: Subset solar permits
-subset_solar = PythonOperator(
-    task_id='subset_solar',
-    python_callable=subset_solar,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+#: Update data inventory json
+update_set2_json_date = PythonOperator(
+    task_id='update_set2_json_date',
+    python_callable=update_json_date,
+    provide_context=True,
+    op_kwargs={'ds_fname': 'development-permits-set2'},
+    
     dag=dag)
 
-#: Upload data to S3
-upload_dsd_permits = S3FileTransferOperator(
-   task_id='upload_dsd_permits',
-   source_base_path=conf['prod_data_dir'],
-   source_key='dsd_permits_{}_datasd.csv'.format(year),
-   dest_s3_bucket=conf['dest_s3_bucket'],
-   dest_s3_conn_id=conf['default_s3_conn_id'],
-   dest_s3_key='dsd/' + 'dsd_permits_{}_datasd.csv'.format(year),
-   replace=True,
-   on_failure_callback=notify,
-   on_retry_callback=notify,
-   on_success_callback=notify,
-   dag=dag)
+#: Create TSW subset
+create_tsw_file = PythonOperator(
+    task_id='create_tsw',
+    python_callable=create_tsw_subset,
+    
+    dag=dag)
 
-upload_solar_permits = S3FileTransferOperator(
-   task_id='upload_solar_permits',
-   source_base_path=conf['prod_data_dir'],
-   source_key='solar_permits_{}_datasd.csv'.format(year),
-   dest_s3_bucket=conf['dest_s3_bucket'],
-   dest_s3_conn_id=conf['default_s3_conn_id'],
-   dest_s3_key='dsd/' + 'solar_permits_{}_datasd.csv'.format(year),
-   replace=True,
-   on_failure_callback=notify,
-   on_retry_callback=notify,
-   on_success_callback=notify,
-   dag=dag)
+#: Create PW subset
+create_pw_sap_file = PythonOperator(
+    task_id='create_pw_sap',
+    python_callable=create_pw_sap_subset,
+    
+    dag=dag)
 
+# Upload TSW subset
+upload_tsw = S3FileTransferOperator(
+      task_id="upload_tsw_subset",
+      source_base_path=conf['prod_data_dir'],
+      source_key=f"dsd_permits_row.csv",
+      dest_s3_bucket=conf['dest_s3_bucket'],
+      dest_s3_conn_id=conf['default_s3_conn_id'],
+      dest_s3_key=f"tsw/dsd_permits_row.csv",
+      replace=True,
+      
+      dag=dag,
+    )
 
-
-#: update permits.md file
-update_permits_md = get_seaboard_update_dag('permits.md', dag)
-
-#: update permits.md file
-update_solar_md = get_seaboard_update_dag('solar-permits.md', dag)
-
+# Upload TSW subset
+upload_pw_sap = S3FileTransferOperator(
+      task_id="upload_pw_subset",
+      source_base_path=conf['prod_data_dir'],
+      source_key=f"dsd_permits_public_works.csv",
+      dest_s3_bucket=conf['dest_s3_bucket'],
+      dest_s3_conn_id=conf['default_s3_conn_id'],
+      dest_s3_key=f"dsd/dsd_permits_public_works.csv",
+      replace=True,
+      
+      dag=dag,
+    )
 
 #: Execution rules
-
-#: dsd_permits_latest_only must run before get_permits_files
-get_permits_files.set_upstream(dsd_permits_latest_only)
-
-#: clean_data tasks are executed after get_approvals_files task
-clean_data.set_upstream(get_permits_files)
-
-#: upload_dsd tasks are executed after clean_data tasks
-join_bids.set_upstream(clean_data)
-
-#: subset_solar tasks are executed after clean_data tasks
-subset_solar.set_upstream(join_bids)
-
-#: upload_dsd tasks are executed after subset_solar tasks
-upload_dsd_permits.set_upstream(subset_solar)
-
-#: upload_dsd tasks are executed after clean_data tasks
-upload_solar_permits.set_upstream(subset_solar)
-
-#: github updates are executed after S3 upload tasks
-update_permits_md.set_upstream(upload_dsd_permits)
-
-#: github updates are executed after S3 upload tasks
-update_solar_md.set_upstream(upload_solar_permits)
-
-
+get_permits_files>>create_files>>join_bids>>create_full>>upload_files
+upload_files>>[update_set1_md,update_set2_md,update_set1_json_date,update_set2_json_date]
+upload_files>>[create_tsw_file,create_pw_sap_file]
+create_tsw_file>>upload_tsw
+create_pw_sap_file>>upload_pw_sap

@@ -11,7 +11,7 @@ fiscal_yr =  general.get_FY_year()
 credentials = general.source['cip']
 
 
-prod_file = conf['prod_data_dir'] + '/cip_{0}_datasd.csv'.format(fiscal_yr)
+prod_file = f"{conf['prod_data_dir']}/cip_{fiscal_yr}_datasd_v1.csv"
             
 
 def get_cip_data(**kwargs):
@@ -30,7 +30,7 @@ def get_cip_data(**kwargs):
 	rows = df.shape[0]
 	
 	# Write csv
-	logging.info('Writing {} rows to prod'.format(rows))
+	logging.info(f'Writing {rows} rows to prod')
 	general.pos_write_csv(
 		df, prod_file, date_format=conf['date_format_ymd_hms'])
 		
