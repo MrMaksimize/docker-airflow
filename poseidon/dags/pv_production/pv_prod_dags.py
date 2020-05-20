@@ -1,5 +1,5 @@
 from airflow.operators.python_operator import PythonOperator
-from airflow.operators import ShortCircuitOperator
+from airflow.operators.python_operator import ShortCircuitOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
 from airflow.models import DAG
 from trident.util import general
