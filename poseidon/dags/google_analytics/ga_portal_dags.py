@@ -26,9 +26,6 @@ conf = general.config
 schedule = general.schedule['ga_portal']
 start_date = general.start_date['ga_portal']
 
-# Optional variable
-# email_recips = conf['mail_notify']
-
 #: Required DAG definition
 dag = DAG(dag_id='ga_portal',
         default_args=args,
@@ -36,8 +33,6 @@ dag = DAG(dag_id='ga_portal',
         start_date=start_date,
         catchup=False
         )
-
-# Optional tasks. Use what you need.
 
 #: Authenticate GA
 create_keyfile = PythonOperator(
@@ -82,7 +77,7 @@ get_devices = PythonOperator(
 get_pages = PythonOperator(
     task_id='get_pages',
     op_kwargs={'view_id': '124490020',
-    'mets':['users','sessions','sessionDuration','hits'],
+    'mets':['entrances','exits','uniquePageviews','avgTimeOnPage','pageviews','users'],
     'dims':['date','hour','userType'],
     'out_path':'portal_pages'},
     provide_context=True,
