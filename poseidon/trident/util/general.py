@@ -151,6 +151,7 @@ def buildConfig(env):
         'shiny_token': os.environ.get("SHINY_TOKEN"),
         'shiny_secret': os.environ.get("SHINY_SECRET"),
         'pf_api_key': os.environ.get("PF_API_KEY"),
+        'pf_api_key_str': os.environ.get("PF_API_KEY_STR"),
         'lucid_api_user': os.environ.get("LUCID_USER"),
         'lucid_api_pass': os.environ.get("LUCID_PASS"),
         'ga_client_secrets': os.environ.get("GA_CLIENT_SECRETS")
