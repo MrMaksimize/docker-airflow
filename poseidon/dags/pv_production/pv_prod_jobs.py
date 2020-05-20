@@ -9,7 +9,7 @@ from trident.util import general
 from airflow import AirflowException
 
 conf = general.config
-PRIMARY_KEY = conf['pf_api_key']
+PRIMARY_KEY = conf['pf_api_key_str']
 LUCID_USER = conf["lucid_api_user"]
 LUCID_PASS = conf["lucid_api_pass"]
 
@@ -94,6 +94,7 @@ def get_data(start_date, end_date, elem_paths, attr, two_hours=False, resolution
 			# Use POST to avoid hitting max URL length w/ many params
 			
 			logging.info(f"Sending post request for {index+1}/{sites}")
+			logging.info(headers)
 			try:
 				r = requests.post(dataURL, headers=headers, data=body).json()
 			except requests.exceptions.RequestException as e:
