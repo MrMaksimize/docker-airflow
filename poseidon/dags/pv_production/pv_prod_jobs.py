@@ -9,7 +9,7 @@ from trident.util import general
 from airflow import AirflowException
 
 conf = general.config
-PRIMARY_KEY = conf['pf_api_key']
+PRIMARY_KEY = conf['pf_api_key_str']
 LUCID_USER = conf["lucid_api_user"]
 LUCID_PASS = conf["lucid_api_pass"]
 
