@@ -18,7 +18,7 @@ conf = general.config
 def update_json_date(ds_fname, **kwargs):
     """ Take the dataset file name and update json date modified """
 
-    repo_name = "DataSD/data-inventory"
+    repo_name = "COSD-PANDA/data-inventory"
     commit_branch = "master"
     exec_date = kwargs['next_execution_date'].in_tz(tz='US/Pacific').strftime("%Y-%m-%d")
 
@@ -51,11 +51,11 @@ def update_json_date(ds_fname, **kwargs):
                         sha=inventory.sha,
                         branch=commit_branch)
 
-                return outcome
+                return commit_msg
 
 
 def update_seaboard_date(ds_fname, **kwargs):
-    repo_name = "cityofsandiego/seaboard"
+    repo_name = "COSD-PANDA/seaboard"
     fpath_pre = "src/_datasets/"
     commit_branch = "production"
     date_search_re = "(?<=date_modified\: \\\')\d{4}-\d{2}-\d{2}"
@@ -113,8 +113,6 @@ def update_seaboard_date(ds_fname, **kwargs):
                 base='master',
                 head=commit_branch,
                 commit_message='Pullback: ' + commit_msg)
-
-
 
 
         return commit_msg
