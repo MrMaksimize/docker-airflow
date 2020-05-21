@@ -9,8 +9,8 @@ from trident.util.seaboard_updates import *
 from trident.util import general
 
 #### You must update these with the paths to the corresponding files ####
-from dags.google_analytics.ga_portal_jobs import *
-#from dags.google_analytics._subdags import *
+from dags.google_analytics.google_analytics_jobs import *
+from dags.google_analytics.ga_portal_subdags import *
 
 # Optional operator imports
 from airflow.operators.python_operator import BranchPythonOperator
@@ -40,59 +40,11 @@ create_keyfile = PythonOperator(
     python_callable=create_client_secrets,
     dag=dag)
 
-#: Get users sessions report
-get_users_sessions = PythonOperator(
-    task_id='get_users_sessions',
-    op_kwargs={'view_id': '124490020',
-    'mets':['users','sessions','sessionDuration','hits'],
-    'dims':['date','hour','userType'],
-    'out_path':'portal_users_sessions'},
-    provide_context=True,
-    python_callable=ga_batch_get,
-    dag=dag)
+#: Get various reports in subdag
+reports_subdag = SubDagOperator(
+    task_id='get_upload_reports',
+    subdag=create_subdag_operators(),
+    dag=dag,
+  )
 
-#: Get traffic report
-get_traffic = PythonOperator(
-    task_id='get_traffic',
-    op_kwargs={'view_id': '124490020',
-    'mets':['users','sessions','sessionDuration','hits'],
-    'dims':['date','hour','userType'],
-    'out_path':'portal_traffic_sources'},
-    provide_context=True,
-    python_callable=ga_batch_get,
-    dag=dag)
-
-#: Get devices report
-get_devices = PythonOperator(
-    task_id='get_devices',
-    op_kwargs={'view_id': '124490020',
-    'mets':['users','sessions','sessionDuration','hits'],
-    'dims':['date','hour','userType'],
-    'out_path':'portal_devices_platforms'},
-    provide_context=True,
-    python_callable=ga_batch_get,
-    dag=dag)
-
-#: Get pages report
-get_pages = PythonOperator(
-    task_id='get_pages',
-    op_kwargs={'view_id': '124490020',
-    'mets':['entrances','exits','uniquePageviews','avgTimeOnPage','pageviews','users'],
-    'dims':['date','hour','userType'],
-    'out_path':'portal_pages'},
-    provide_context=True,
-    python_callable=ga_batch_get,
-    dag=dag)
-
-#: Get events report
-get_events = PythonOperator(
-    task_id='get_events',
-    op_kwargs={'view_id': '124490020',
-    'mets':['users','sessions','sessionDuration','hits'],
-    'dims':['date','hour','userType'],
-    'out_path':'portal_events'},
-    provide_context=True,
-    python_callable=ga_batch_get,
-    dag=dag)
-
-create_keyfile >> get_users_sessions
+create_keyfile >> reports_subdag

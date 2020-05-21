@@ -3,7 +3,9 @@ from __future__ import print_function
 from airflow.operators.python_operator import PythonOperator
 from airflow.models import DAG
 from trident.util import general
-from trident.util.notifications import afsys_send_email
+
+# Optional import if uploading within subdag
+from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
 
 
 from dags.templates.template_jobs import *

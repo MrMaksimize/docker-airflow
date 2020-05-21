@@ -20,12 +20,14 @@ import json
 from apiclient.discovery import build
 from oauth2client.service_account import ServiceAccountCredentials
 import pendulum
+import re
 
 # Optional variables
 
 prod_path = conf['prod_data_dir']
 temp_path = conf['temp_data_dir']
 secrets_str = conf['ga_client_secrets']
+cols_re = re.compile(r"([a-z](?=[A-Z])|[A-Z](?=[A-Z][a-z]))")
 
 #: Helper function
 def getMetrics(report):
@@ -44,8 +46,12 @@ def getMetrics(report):
         for i in range(met_no):
             dict_row[metricHeadersList[i]] = metrics[i]
         df_rows.append(dict_row)
+
+    cols = [re.sub(cols_re,r"\1_",x[3:]).lower() for x in metricHeadersList]
         
     df = pd.DataFrame(df_rows,columns=metricHeadersList)
+
+    df.columns = cols
 
     return df
 
@@ -64,10 +70,15 @@ def getDimensions(report):
         for i in range(dim_no):
             dict_row[dimensionHeaders[i]] = dimensions[i]
         df_rows.append(dict_row)
+
+    cols = [re.sub(cols_re,r"\1_",x[3:]).lower() for x in dimensionHeaders]
         
     df = pd.DataFrame(df_rows,columns=dimensionHeaders)
 
+    df.columns = cols
+
     return df
+
 
 #: Dag function
 def create_client_secrets():
@@ -94,25 +105,27 @@ def ga_batch_get(view_id="",
     """ 
     Run a batch get for a specific analytics report
     View ID is the ID for the analytics property
-    Start and End are strings of dates
     Mets is the list of metrics objects
     Dims is the list of dimension objects
-    page is the page size
 
     """
     
     logging.info("authenticating using keyfile")
 
     SCOPES = ['https://www.googleapis.com/auth/analytics.readonly']
-    KEY_FILE_LOCATION = 'client_secrets_v4.json'
+    KEY_FILE_LOCATION = f'{temp_path}/client_secrets_v4.json'
     
     credentials = ServiceAccountCredentials.from_json_keyfile_name(
       KEY_FILE_LOCATION, SCOPES)
 
     analytics = build('analyticsreporting', 'v4', credentials=credentials)
-
-    start = context['execution_date'].strftime('%Y-%m-%d')
-    end = start.add(months=1).strftime('%Y-%m-%d')
+    
+    exec_date = context['execution_date']
+    
+    #start = exec_date.strftime('%Y-%m-%d')
+    #end = exec_date.add(months=1).strftime('%Y-%m-%d')
+    start = exec_date.subtract(months=1).strftime('%Y-%m-%d')
+    end = exec_date.strftime('%Y-%m-%d')
 
     logging.info("Creating metrics dictionary")
 
@@ -126,6 +139,7 @@ def ga_batch_get(view_id="",
         dimensions.append({'name':f'ga:{d}'})
 
     logging.info("Running batch request")
+    logging.info(f"Starting at {start} and ending at {end}")
 
     response = analytics.reports().batchGet(
     body={
@@ -135,19 +149,55 @@ def ga_batch_get(view_id="",
                 'samplingLevel': 'LARGE',
                 'metrics': metrics,
                 'dimensions': dimensions,
-                 'pageSize':page
+                 'pageSize':10000
                 }
             ]}).execute()
 
     logging.info("Processing batch response")
 
-    dims = getDimensions(report)
-    mets = getMetrics(report)
-    df = pd.merge(dims,mets,how="left",left_index=True,right_index=True)
+    report = response.get('reports')
+
+    dims_df = getDimensions(report[0])
+    mets_df = getMetrics(report[0])
+    df = pd.merge(dims_df,mets_df,how="left",left_index=True,right_index=True)
+
+    logging.info("Reading in prod file")
+
+    prod_df = pd.read_csv(f"{prod_path}/{out_path}_datasd.csv",
+        low_memory=False,
+        dtype={'hour':str}
+        )
+
+    # Dedupe will not work without making formats consistent
+    df['date'] = pd.to_datetime(df['date'],errors='coerce',format="%Y-%m-%d")
+    prod_df['date'] = pd.to_datetime(prod_df['date'],errors='coerce',format="%Y-%m-%d")
+
+    if "hour" in dims:
+        # Again, need consistency
+        df['hour'] = df['hour'].apply(lambda x: str(x))
+
+    logging.info(f"Prod file has {prod_df.shape[0]} records")
+
+    logging.info("Appending new records, deduping, and sorting")
+
+    # Combine new records with existing prod file
+    concat_df = pd.concat([df,prod_df],ignore_index=True,sort=False)
+    logging.info(f"Final file has {concat_df.shape[0]} records before dedupe")
+
+    # Deduplicate on dimension columns, but first alter dims list to match
+    dedupe_cols = [re.sub(cols_re,r"\1_",x).lower() for x in dims]
+    final_df = concat_df.drop_duplicates(dedupe_cols)
+    logging.info(f"Final file has {final_df.shape[0]} records after dedupe")
+    
+    # Sort by time
+    if "hour" in dims:
+        final_df = final_df.sort_values(['date','hour'])
+    else:
+        final_df = final_df.sort_values(['date'])
     
     general.pos_write_csv(
-        df,
-        f"{prod_path}/{out_path}.csv",
+        final_df,
+        f"{prod_path}/{out_path}_datasd.csv",
         date_format=conf['date_format_ymd'])
 
-    return "Successfully completed context function"
+    return "Successfully process GA report for {out_path}"
