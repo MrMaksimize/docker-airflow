@@ -40,7 +40,6 @@ def spatial_join_subdag():
         'phone',
         'website'],
     'outfile':'gid_cd'},
-    
     dag=dag_subdag)
 
   join_community_plan = PythonOperator(
@@ -51,7 +50,6 @@ def spatial_join_subdag():
     'drop_cols':['objectid',
           'acreage'],
     'outfile':'gid_cp'},
-    
     dag=dag_subdag)
 
   join_parks = PythonOperator(
@@ -63,7 +61,6 @@ def spatial_join_subdag():
           'gis_acres',
           'location'],
     'outfile':'gid_parks'},
-    
     dag=dag_subdag)
 
   join_council_districts >> join_community_plan >> join_parks
@@ -103,7 +100,6 @@ def service_name_subdag():
                 'service_name': service_name,
                 'machine_service_name': machine_service_name
             },
-            
             dag=dag_subdag)
 
         upload_task = S3FileTransferOperator(
@@ -113,7 +109,6 @@ def service_name_subdag():
             dest_s3_conn_id=conf['default_s3_conn_id'],
             dest_s3_bucket=conf['dest_s3_bucket'],
             dest_s3_key=f"get_it_done_311/{machine_service_name}_requests_datasd_v1.csv",
-            
             replace=True,
             dag=dag_subdag)
 
@@ -147,7 +142,6 @@ def upload_files_subdag():
             dest_s3_conn_id=conf['default_s3_conn_id'],
             dest_s3_bucket=conf['dest_s3_bucket'],
             dest_s3_key=f'get_it_done_311/get_it_done_{year}_requests_datasd_v1.csv',
-            
             replace=True,
             dag=dag_subdag)
 
@@ -158,7 +152,6 @@ def upload_files_subdag():
         dest_s3_conn_id=conf['default_s3_conn_id'],
         dest_s3_bucket=conf['dest_s3_bucket'],
         dest_s3_key=f'get_it_done_311/get_it_done_requests_datasd.csv',
-        
         replace=True,
         dag=dag_subdag)
 
@@ -169,7 +162,6 @@ def upload_files_subdag():
         dest_s3_conn_id=conf['default_s3_conn_id'],
         dest_s3_bucket=conf['dest_s3_bucket'],
         dest_s3_key=f'get_it_done_311/get_it_done_requests_datasd.json',
-        
         replace=True,
         dag=dag_subdag)
 

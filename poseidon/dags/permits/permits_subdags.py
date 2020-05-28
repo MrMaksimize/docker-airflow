@@ -38,7 +38,6 @@ def create_file_subdag():
         provide_context=True,
         python_callable=build_pts,
         op_kwargs={'mode': mode},
-        
         dag=dag_subdag,
       )
 
@@ -49,7 +48,6 @@ def create_file_subdag():
         provide_context=True,
         python_callable=build_accela,
         op_kwargs={'mode': mode},
-        
         dag=dag_subdag,
       )
 
@@ -77,7 +75,6 @@ def join_bids_subdag():
         provide_context=True,
         python_callable=join_bids_permits,
         op_kwargs={'pt_file': file},
-        
         dag=dag_subdag,
       )
 
@@ -107,7 +104,6 @@ def upload_files_subdag():
       dest_s3_conn_id=conf['default_s3_conn_id'],
       dest_s3_key=f"dsd/permits_{file}_datasd.csv",
       replace=True,
-      
       dag=dag_subdag,
     )
 
@@ -119,7 +115,6 @@ def upload_files_subdag():
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_key="dsd/dsd_permits_all_pts.csv",
     replace=True,
-    
     dag=dag_subdag,
     )
 
@@ -131,7 +126,6 @@ def upload_files_subdag():
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_key="dsd/dsd_permits_all_accela.csv",
     replace=True,
-    
     dag=dag_subdag,
     )
 

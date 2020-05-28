@@ -1,4 +1,4 @@
-# VERSION 1.2.0
+# VERSION 1.2.2
 # AUTHOR: Andrell Bower
 # DESCRIPTION: Airflow container for running City of San Diego Airflow Instances.  Original work by Puckel_ & mrmaksimize
 # BUILD: docker build --rm -t andrell81/docker-airflow .
@@ -13,7 +13,7 @@ ENV DEBIAN_FRONTEND noninteractive
 ENV TERM linux
 
 # Airflow
-ARG AIRFLOW_VERSION=1.10.7
+ARG AIRFLOW_VERSION=1.10.10
 ARG AIRFLOW_HOME=/usr/local/airflow
 ARG GDAL_VERSION=2.1.0
 
@@ -107,15 +107,15 @@ RUN pip install -U pip setuptools wheel \
     && pip install fiona \
     && pip install "Flask<2.0,>=1.1.0" \
     && pip install "Flask-Admin==1.5.4" \
-    && pip install "Flask-AppBuilder~=2.2" \
-    && pip install "Flask-Babel==0.12.2" \
+    && pip install "Flask-AppBuilder==2.3.0" \
+    && pip install "Flask-Babel==1.0.0" \
     && pip install "Flask-Bcrypt==0.7.1" \
     && pip install "Flask-Caching==1.3.3" \
     && pip install "Flask-Login==0.4.1" \
     && pip install "Flask-OpenID==1.2.5" \
-    && pip install "Flask-SQLAlchemy==2.4.0" \
+    && pip install "Flask-SQLAlchemy==2.4.1" \
     && pip install "flask-swagger==0.2.13" \
-    && pip install "Flask-WTF==0.14.2" \
+    && pip install "Flask-WTF==0.14.3" \
     && pip install gdal==2.1.0 \
     && pip install git+https://github.com/jguthmiller/pygeobuf.git@geobuf-v3 \
     && pip install geojson \
@@ -124,18 +124,19 @@ RUN pip install -U pip setuptools wheel \
     && pip install google-api-python-client \
     && pip install lxml \
     && pip install ndg-httpsclient \
+    && pip install oauth2client \
     && pip install pandas \
     && pip install psycopg2-binary \
     && pip install pyasn1 \
     && pip install PyGithub \
     && pip install pyOpenSSL \
     && pip install pytz \
-    && pip install "redis~=3.2" \
+    && pip install "redis==3.4.1" \
     && pip install requests \
     && pip install rtree \
     && pip install shapely \
     && pip install "tornado>=4.2.0,<6.0.0" \
-    && pip install "Werkzeug>=0.15" \
+    && pip install "Werkzeug==0.16.1" \
     && pip install xlrd \
     && apt-get autoremove -yqq --purge \
     && apt-get clean \
