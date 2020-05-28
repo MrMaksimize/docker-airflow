@@ -5,8 +5,6 @@ from airflow.models import DAG
 from trident.util import general
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
 
-
-
 from dags.google_analytics.google_analytics_jobs import *
 
 args = general.args

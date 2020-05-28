@@ -13,11 +13,7 @@ from dags.google_analytics.google_analytics_jobs import *
 from dags.google_analytics.ga_portal_subdags import *
 
 # Optional operator imports
-from airflow.operators.python_operator import BranchPythonOperator
-from trident.operators.poseidon_sonar_operator import PoseidonSonarCreator
-from airflow.operators.bash_operator import BashOperator
 from airflow.operators.subdag_operator import SubDagOperator
-from airflow.operators.python_operator import ShortCircuitOperator
 
 # Required variables
 

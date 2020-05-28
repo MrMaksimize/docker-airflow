@@ -200,4 +200,4 @@ def ga_batch_get(view_id="",
         f"{prod_path}/{out_path}_datasd.csv",
         date_format=conf['date_format_ymd'])
 
-    return "Successfully process GA report for {out_path}"
+    return f"Successfully process GA report for {out_path}"
