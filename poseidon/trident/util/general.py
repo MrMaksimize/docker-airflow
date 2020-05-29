@@ -199,7 +199,8 @@ schedule = {
     'parking_meter_locs': '0 19 * * *', # daily at 7pm UTC
     'sidewalks': '@monthly',
     'amcs': "0 12 * * *", # Daily at 4p UTC / 5a PST
-    'ga_portal': '@monthly'
+    'ga_portal': '@monthly',
+    'pv_prod':'@hourly'
 }
 
 default_date = datetime(2019, 10, 8)
