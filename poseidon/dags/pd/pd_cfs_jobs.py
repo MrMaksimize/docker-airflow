@@ -14,9 +14,10 @@ conf = general.config
 def get_cfs_data(**context):
     """Download daily raw cfs data from FTP."""
 
-    exec_date = context['execution_date']
+    exec_date = context['next_execution_date'].in_tz(tz='US/Pacific')
     # Exec date returns a Pendulum object
-    # Running this job at 5p should capture files for day of exec
+    # Running this job at 5p should capture files for the day
+    # the dag runs
 
     # File name does not have zero-padded numbers
     # But month is spelled, abbreviated

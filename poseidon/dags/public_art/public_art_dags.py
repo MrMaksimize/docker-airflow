@@ -32,13 +32,13 @@ dag = DAG(dag_id='public_art',
 get_public_art = PythonOperator(
     task_id='get_public_art',
     python_callable=get_public_art,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 process_public_art = PythonOperator(
     task_id='process_public_art',
     python_callable=process_public_art,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Upload prod art file to S3
@@ -49,7 +49,7 @@ upload_public_art = S3FileTransferOperator(
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_bucket=conf['dest_s3_bucket'],
     dest_s3_key='public_art/public_art_locations_datasd_v1.csv',
-    on_failure_callback=afsys_send_email,
+    
     replace=True,
     dag=dag)
 
@@ -59,7 +59,7 @@ update_json_date = PythonOperator(
     python_callable=update_json_date,
     provide_context=True,
     op_kwargs={'ds_fname': 'civic_art_collection'},
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Update portal modified date

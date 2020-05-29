@@ -45,7 +45,6 @@ def create_file_subdag():
       provide_context=True,
       python_callable=process_prod_files,
       op_kwargs={'mode': sheet},
-      on_failure_callback=afsys_send_email,
       dag=dag_subdag,
     )
 
@@ -75,7 +74,6 @@ def upload_prod_files():
       dest_s3_bucket=conf['dest_s3_bucket'],
       dest_s3_conn_id=conf['default_s3_conn_id'],
       dest_s3_key=f'pd/ripa_{sheet}_datasd.csv',
-      on_failure_callback=afsys_send_email,
       dag=dag_subdag)
 
   return dag_subdag
@@ -119,7 +117,6 @@ def update_json():
       python_callable=update_json_date,
       provide_context=True,
       op_kwargs={'ds_fname': ''},
-      on_failure_callback=afsys_send_email,
       dag=dag_subdag)
 
   return dag_subdag

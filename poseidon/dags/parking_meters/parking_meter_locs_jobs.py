@@ -14,9 +14,9 @@ portal_fname = conf['prod_data_dir'] +'/treas_parking_meters_loc_datasd_v1.csv'
 def ftp_download(**context):
     """Download parking meters data from FTP."""
 
-    exec_date = context['execution_date']
+    file_date = context['execution_date'].in_tz(tz='US/Pacific')
     # Exec date returns a Pendulum object
-    file_date = exec_date.subtract(days=1)
+    logging.info(context)
 
     # Need zero-padded month and date
     filename = f"{file_date.year}" \

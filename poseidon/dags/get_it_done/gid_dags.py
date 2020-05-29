@@ -31,35 +31,35 @@ dag = DAG(dag_id='get_it_done',
 get_streets_requests = PythonOperator(
     task_id='get_gid_streets',
     python_callable=get_gid_streets,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Get GID requests from Salesforce
 get_other_requests = PythonOperator(
     task_id='get_gid_other',
     python_callable=get_gid_other,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Create mapped case record type and service name cols
 update_service_name = PythonOperator(
     task_id='update_service_name',
     python_callable=update_service_name,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Fix close dates per SAP issue
 update_close_dates = PythonOperator(
     task_id='update_close_dates',
     python_callable=update_close_dates,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Fix referral column
 update_referral_col = PythonOperator(
     task_id='update_referral_col',
     python_callable=update_referral_col,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 spatial_joins = SubDagOperator(
@@ -78,7 +78,7 @@ service_names = SubDagOperator(
 create_prod_files = PythonOperator(
     task_id='create_prod_files',
     python_callable=create_prod_files,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 upload_prod_files = SubDagOperator(
@@ -93,7 +93,7 @@ update_json_date = PythonOperator(
     python_callable=update_json_date,
     provide_context=True,
     op_kwargs={'ds_fname': 'get_it_done_reports'},
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 md_update_task = get_seaboard_update_dag('get-it-done-311.md', dag)

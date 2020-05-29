@@ -26,7 +26,7 @@ get_permits_files = PythonOperator(
     task_id='get_permits_files',
     provide_context=True,
     python_callable=get_permits_files,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Create 4 files using subdag
@@ -47,7 +47,7 @@ join_bids = SubDagOperator(
 create_full = PythonOperator(
     task_id='create_full_sets',
     python_callable=create_full_set,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Upload 4 files using subdag
@@ -66,7 +66,7 @@ update_set1_json_date = PythonOperator(
     python_callable=update_json_date,
     provide_context=True,
     op_kwargs={'ds_fname': 'development-permits-set1'},
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Update data inventory json
@@ -75,21 +75,21 @@ update_set2_json_date = PythonOperator(
     python_callable=update_json_date,
     provide_context=True,
     op_kwargs={'ds_fname': 'development-permits-set2'},
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Create TSW subset
 create_tsw_file = PythonOperator(
     task_id='create_tsw',
     python_callable=create_tsw_subset,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Create PW subset
 create_pw_sap_file = PythonOperator(
     task_id='create_pw_sap',
     python_callable=create_pw_sap_subset,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 # Upload TSW subset
@@ -101,7 +101,7 @@ upload_tsw = S3FileTransferOperator(
       dest_s3_conn_id=conf['default_s3_conn_id'],
       dest_s3_key=f"tsw/dsd_permits_row.csv",
       replace=True,
-      on_failure_callback=afsys_send_email,
+      
       dag=dag,
     )
 
@@ -114,7 +114,7 @@ upload_pw_sap = S3FileTransferOperator(
       dest_s3_conn_id=conf['default_s3_conn_id'],
       dest_s3_key=f"dsd/dsd_permits_public_works.csv",
       replace=True,
-      on_failure_callback=afsys_send_email,
+      
       dag=dag,
     )
 

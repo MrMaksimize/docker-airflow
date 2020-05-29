@@ -19,7 +19,7 @@ def download_latest(**context):
     Download parking meters data from FTP.
     """
     
-    file_date = context['execution_date']
+    file_date = context['execution_date'].in_tz(tz='US/Pacific')
 
     # Need NON zero-padded month and date
     filename = f"{file_date.year}" \

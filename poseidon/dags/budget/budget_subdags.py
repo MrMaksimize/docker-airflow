@@ -51,8 +51,7 @@ def get_files_subdag():
       create_file = PythonOperator(
         task_id=f"create_{task}",
         python_callable=get_budget_files,
-        op_kwargs={'mode': mode_str, 'path':path_str},
-        on_failure_callback=afsys_send_email,
+        op_kwargs={'mode': mode, 'path':path},
         dag=dag_subdag,
       )
 
@@ -86,7 +85,7 @@ def create_files_subdag():
         task_id=f'create_{mode_str}_{path_str}',
         python_callable=create_file,
         op_kwargs={'mode': mode_str, 'path':path_str},
-        on_failure_callback=afsys_send_email,
+        
         dag=dag_subdag)
 
   return dag_subdag
@@ -124,7 +123,7 @@ def upload_files_subdag():
           dest_s3_conn_id=conf['default_s3_conn_id'],
           dest_s3_bucket=conf['dest_s3_bucket'],
           dest_s3_key=f'budget/{task}_datasd.csv',
-          on_failure_callback=afsys_send_email,
+          
           replace=True,
           dag=dag_subdag)
 
@@ -153,7 +152,7 @@ def upload_ref_files_subdag():
       dest_s3_conn_id=conf['default_s3_conn_id'],
       dest_s3_bucket=conf['dest_s3_bucket'],
       dest_s3_key=f'budget/budget_reference_{ref}_datasd_v1.csv',
-      on_failure_callback=afsys_send_email,
+      
       replace=True,
       dag=dag_subdag)
 

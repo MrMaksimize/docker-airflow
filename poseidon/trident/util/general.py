@@ -151,6 +151,11 @@ def buildConfig(env):
         'shiny_token': os.environ.get("SHINY_TOKEN"),
         'shiny_secret': os.environ.get("SHINY_SECRET"),
         'amcs_ip': os.environ.get("AMCS_IP_ADDRESS")
+        'pf_api_key': os.environ.get("PF_API_KEY"),
+        'pf_api_key_str': os.environ.get("PF_API_KEY_STR"),
+        'lucid_api_user': os.environ.get("LUCID_USER"),
+        'lucid_api_pass': os.environ.get("LUCID_PASS"),
+        'ga_client_secrets': os.environ.get("GA_CLIENT_SECRETS")
     }
     return config
 
@@ -162,12 +167,12 @@ schedule = {
     'fd_incidents' : "0 8 * * *", # daily at 8am UTC / 1am PST
     'claims_stat': "@monthly",
     'pd_ripa': None,
-    'pd_cfs': "0 8 * * *", # daily at 8am UTC / 1am PST
-    'pd_col': "0 8 * * *", # daily at 8am UTC / 1am PST
+    'pd_cfs': "0 0 * * *", # daily at 12am UTC / 5pm PST
+    'pd_col': "0 0 * * *", # daily at 12am UTC / 5pm PST
     'pd_hc': None,
     'ttcs': '0 10 * * *', # daily at 10 am UTC / 3am PST
     'indicator_bacteria_tests': "0 8 * * *", # daily at 8am UTC / 1am PST
-    'parking_meters': '0 19 * * *', # daily at 7pm UTC
+    'parking_meters': '0 19 * * *', # daily at 7pm UTC, Noon PST
     'traffic_counts': "@weekly",
     'read': "0 8 * * *", # daily at 8am UTC / 1am PST
     'dsd_approvals': "0 16 * * 1", # Weekly on Monday at 4p UTC / 9a PST
@@ -191,9 +196,16 @@ schedule = {
 	'cityiq': '@daily',
     'onbase_test': '*/15 * * * *',
     'gis_tree_canopy': None,
+<<<<<<< HEAD
     'parking_meter_locs': '0 19 * * *', # daily at 7pm UTC
     'sidewalks': '@monthly',
     'amcs': "0 12 * * *", # Daily at 4p UTC / 5a PST
+=======
+    'pv_prod':'@hourly',
+    'parking_meter_locs': '0 19 * * *', # daily at 7pm UTC, Noon PST
+    'sidewalks': '@monthly',
+    'ga_portal': '@monthly'
+>>>>>>> origin/master
 }
 
 default_date = datetime(2019, 10, 8)
@@ -239,8 +251,14 @@ start_date = {
     'onbase_test': default_date,
     'gis_tree_canopy': default_date,
     'parking_meter_locs': datetime(2019, 12, 25),
+<<<<<<< HEAD
     'sidewalks':  default_date,
     'amcs': datetime(2020, 4, 14)
+=======
+    'pv_prod': datetime(2020, 2, 26),
+    'sidewalks':  default_date,
+    'ga_portal': datetime(2020, 5, 19)
+>>>>>>> origin/master
 }
 
 
@@ -255,9 +273,9 @@ args = {
     'owner': 'airflow',
     'depends_on_past': False,
     'email': config['mail_default_receivers'],
-    'email_on_failure': config['mail_notify'],
+    'email_on_failure': False,
     'email_on_retry': False,
-    'retries': 3,
+    'retries': 1,
     'retry_delay': timedelta(minutes=5),
     'retry_exponential_backoff': True,
     'max_retry_delay': timedelta(minutes=120)

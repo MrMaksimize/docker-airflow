@@ -24,14 +24,14 @@ get_file = PythonOperator(
     task_id='get_tags_files',
     provide_context=True,
     python_callable=get_tags_file,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 create_prod = PythonOperator(
   task_id="create_tags_prod",
   provide_context=True,
   python_callable=build_tags,
-  on_failure_callback=afsys_send_email,
+  
   dag=dag)
 
 upload_file = S3FileTransferOperator(
@@ -42,10 +42,10 @@ upload_file = S3FileTransferOperator(
   dest_s3_conn_id=conf['default_s3_conn_id'],
   dest_s3_key="dsd/permits_set1_project_tags_datasd.csv",
   replace=True,
-  on_failure_callback=afsys_send_email,
+  
   dag=dag)
 
-update_tags_md = get_seaboard_update_dag('project-tags-dsd.md', dag)
+update_tags_md = get_seaboard_update_dag('development-permits-tags.md', dag)
 
 #: Update data inventory json
 update_json_date = PythonOperator(
@@ -53,7 +53,7 @@ update_json_date = PythonOperator(
     python_callable=update_json_date,
     provide_context=True,
     op_kwargs={'ds_fname': 'development-permits-tags'},
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Execution rules

@@ -30,7 +30,7 @@ get_cip_data = PythonOperator(
     task_id='get_cip_data',
     python_callable=get_cip_data,
     provide_context=True,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Upload prod cip_datasd.csv file to S3
@@ -41,7 +41,7 @@ upload_cip_data = S3FileTransferOperator(
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_bucket=conf['dest_s3_bucket'],
     dest_s3_key=f'cip/cip_{fiscal_yr}_datasd_v1.csv',
-    on_failure_callback=afsys_send_email,
+    
     replace=True,
     dag=dag)
 

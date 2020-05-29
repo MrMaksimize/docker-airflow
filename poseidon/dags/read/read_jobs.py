@@ -4,7 +4,9 @@ import pandas as pd
 import numpy as np
 from trident.util import general
 import subprocess
+from subprocess import Popen, PIPE
 from shlex import quote
+import logging
 
 conf = general.config
 
@@ -31,7 +33,7 @@ def get_file(mode=''):
     """Get READ billing data from FTP."""
     
     mode_files = datasets.get(mode)
-    out_file = f"{conf['temp_data_dir']}/{datasets.get(mode_files['prod'])}"
+    out_file = f"{conf['temp_data_dir']}/{mode_files.get('prod')}.csv"
     fpath = f"ToSanDiego/{mode_files['ftp']}"
     
     command = f"curl -o {out_file} " \
@@ -45,9 +47,11 @@ def get_file(mode=''):
     output, error = p.communicate()
     
     if p.returncode != 0:
+        logging.info(error)
         raise Exception(p.returncode)
     else:
         logging.info("Found file")
+        logging.info(output)
         return f"Successfully downloaded file for {mode}"
 
 def process_billing():

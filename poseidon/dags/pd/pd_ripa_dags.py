@@ -26,7 +26,7 @@ dag = DAG(
 get_ripa_data = PythonOperator(
     task_id='get_data',
     python_callable=get_data,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Write temp files for each Excel sheet
@@ -34,7 +34,7 @@ process_excel = PythonOperator(
     task_id="process_excel",
     provide_context=True,
     python_callable=process_excel,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Process final RIPA files and save result to prod folder

@@ -34,7 +34,7 @@ def get_accounts_chart():
     output, error = p.communicate()
     
     if p.returncode != 0:
-        raise Exception(p.returncode)
+        raise Exception(error)
     else:
         logging.info("Found file")
         return "Downloaded chart of accounts"
@@ -59,7 +59,7 @@ def get_budget_files(mode='', path=''):
     output, error = p.communicate()
     
     if p.returncode != 0:
-        raise Exception(p.returncode)
+        raise Exception(error)
     else:
         logging.info("Found file")
         return f"Downloaded {mode} {path}"
@@ -102,12 +102,7 @@ def get_ref_sets():
     funds = files[0].loc[:, "Fund Type":"(code)"]
     assets_depts_subset = files[1].loc[:, ["Asset Owning Department","(code)"]]
     assets_types_subset = files[2].loc[:, "Asset Type/Project":"(code)"]
-    depts = files[3].loc[:, ["Department Group",
-    "Department",
-    "Division",
-    "Section",
-    "Fund Center",
-    "(code)"]]
+    depts = files[3].loc[:, "Department Group":"(code)"]
     exp_subset = files[4].loc[:, "Object Type":"(code)"]
     rev_subset = files[5].loc[:, "Object Type":"(code)"]
 

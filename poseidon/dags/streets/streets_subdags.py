@@ -37,7 +37,7 @@ def esri_layer_subdag():
         provide_context=True,
         python_callable=send_arcgis,
         op_kwargs={'mode': file},
-        on_failure_callback=afsys_send_email,
+        
         dag=dag_subdag,
       )
 

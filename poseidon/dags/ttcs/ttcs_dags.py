@@ -29,21 +29,21 @@ dag = DAG(dag_id='ttcs',
 get_active_businesses = PythonOperator(
     task_id='get_active_businesses',
     python_callable=get_active_businesses,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Process temp data and save as .csv to prod folder
 clean_data = PythonOperator(
     task_id='clean_data',
     python_callable=clean_data,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Geocode new entries and update production file
 geocode_data = PythonOperator(
     task_id='geocode_data',
     python_callable=geocode_data,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 addresses_to_S3 = S3FileTransferOperator(
@@ -53,7 +53,7 @@ addresses_to_S3 = S3FileTransferOperator(
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_bucket=conf['ref_s3_bucket'],
     dest_s3_key='ttcs_address_book.csv',
-    on_failure_callback=afsys_send_email,
+    
     replace=True,
     dag=dag)
 
@@ -61,14 +61,14 @@ addresses_to_S3 = S3FileTransferOperator(
 join_bids = PythonOperator(
     task_id='join_bids',
     python_callable=join_bids,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Create subsets
 create_subsets = PythonOperator(
     task_id='create_subsets',
     python_callable=make_prod_files,
-    on_failure_callback=afsys_send_email,
+    
     dag=dag)
 
 #: Update portal modified date
@@ -97,7 +97,7 @@ for index, subset in enumerate(subset_names):
             dest_s3_conn_id=conf['default_s3_conn_id'],
             dest_s3_bucket=conf['dest_s3_bucket'],
             dest_s3_key=f'ttcs/sd_businesses_{task_name}_datasd_v1.csv',
-            on_failure_callback=afsys_send_email,
+            
             replace=True,
             dag=dag)
 
