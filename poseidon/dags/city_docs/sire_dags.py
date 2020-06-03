@@ -6,7 +6,8 @@ from airflow.operators.latest_only_operator import LatestOnlyOperator
 from airflow.models import DAG
 
 from trident.util import general
-from trident.util.notifications import notify
+from trident.util.notifications import afsys_send_email
+
 
 from dags.city_docs.city_docs_jobs import *
 
@@ -17,40 +18,35 @@ schedule = general.schedule['sire']
 start_date = general.start_date['sire']
 
 #: Dag spec
-dag = DAG(dag_id='sire_docs', default_args=args, start_date=start_date, schedule_interval=schedule)
-
-sire_docs_latest_only = LatestOnlyOperator(task_id='sire_docs_latest_only', dag=dag)
+dag = DAG(dag_id='sire_docs',
+    default_args=args,
+    start_date=start_date,
+    schedule_interval=schedule,
+    catchup=False
+    )
 
 #: Get sire tables
 get_doc_tables = PythonOperator(
     task_id='get_sire_tables',
     python_callable=get_sire,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    
     dag=dag)
-
-#: Execution rules
-#: sire_docs_latest_only must run before get_doc_tables
-get_doc_tables.set_upstream(sire_docs_latest_only)
 
 files = [f for f in os.listdir(conf['prod_data_dir'])]
 for f in files:
     if f.split('_')[0] == "sire":
         #: Upload sire prod files to S3
         upload_doc_tables = S3FileTransferOperator(
-            task_id='upload_{}'.format(f),
+            task_id=f'upload_{f}',
             source_base_path=conf['prod_data_dir'],
             source_key=f,
             dest_s3_conn_id=conf['default_s3_conn_id'],
             dest_s3_bucket=conf['dest_s3_bucket'],
-            dest_s3_key='city_docs/{}'.format(f),
-            on_failure_callback=notify,
-            on_retry_callback=notify,
-            on_success_callback=notify,
+            dest_s3_key=f'city_docs/{f}',
+            
             replace=True,
             dag=dag)
 
 
-        #: get_doc_tables must run before upload_doc_tables
-        upload_doc_tables.set_upstream(get_doc_tables)
+        #: Execution rules
+        get_doc_tables >> upload_doc_tables

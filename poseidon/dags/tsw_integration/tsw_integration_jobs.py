@@ -113,20 +113,18 @@ def get_sf_violations():
     sf = Salesforce(username, password, security_token)
 
     # Pull dataframe
-    logging.info('Pull report {} from SF'.format(report_id))
+    logging.info(f'Pull report {report_id} from SF')
 
     df = sf.get_report_df(report_id)
 
-    logging.info('Process report {} data.'.format(report_id))
+    logging.info(f'Process report {report_id} data.')
 
     general.pos_write_csv(df, temp_file_sf, date_format='%Y-%m-%dT%H:%M:%S%z')
 
-    return "Successfully wrote {} records for tsw_sf violations file".format(
-        df.shape[0])
+    return f"Successfully wrote {df.shape[0]} records for tsw_sf violations file"
 
 def get_pts_violations():
-    """Get violations from pts, creates temp file."""
-    logging.info('Downloading PTS violations.')
+    """ Get violations from pts, creates temp file. """
 
     wget_str = "wget -np --continue " \
      + "--user=$ftp_user " \
@@ -145,11 +143,11 @@ def combine_violations():
     """Combine violations from 3 different sources."""
 
     ptsv = _clean_pts_violations()
-    logging.info("Read {} violations from PTS".format(ptsv.shape[0]))
+    logging.info(f"Read {ptsv.shape[0]} violations from PTS")
     vpm = _clean_vpm_violations()
-    logging.info("Read {} violations from VPM".format(vpm.shape[0]))
+    logging.info(f"Read {vpm.shape[0]} violations from VPM")
     sfv = _clean_sf_violations()
-    logging.info("Read {} violations from SFV".format(sfv.shape[0]))
+    logging.info(f"Read {sfv.shape[0]} violations from SFV")
 
     vs = pd.concat([ptsv, sfv, vpm])
     #vs = pd.concat([ptsv, sfv])
@@ -159,7 +157,7 @@ def combine_violations():
     vs.ADDITIONAL_1 = vs.ADDITIONAL_1.apply(lambda x: ''.join(e for e in x if e.isalnum()))
     vs.ADDITIONAL_2 = vs.ADDITIONAL_2.apply(lambda x: ''.join(e for e in x if e.isalnum()))
 
-    logging.info("There are {} total violations".format(vs.shape[0]))
+    logging.info(f"There are {vs.shape[0]} total violations")
 
     vs = vs.fillna(value={'ADDRESS': '',})
     vs = vs.fillna(value={'PARCEL_APN': '',})
@@ -195,8 +193,7 @@ def combine_violations():
     add_matched = add_merge[add_merge['_merge'] == 'both']
     add_unmatched = add_merge[add_merge['_merge'] == 'left_only']
 
-    logging.info("There are {} non geocoded entries".format(
-        add_unmatched.shape[0]))
+    logging.info(f"There are {add_unmatched.shape[0]} non geocoded entries")
 
     if add_unmatched.empty:
         logging.info('Nothing to geocode')
@@ -257,6 +254,10 @@ def _clean_pts_violations():
     latest_file = max(list_of_files, key=os.path.getmtime)
     logging.info(f"Reading in {latest_file}")
 
+    dtypes = {'LONGITUDE':np.float64,
+    'LATITUDE':np.float64
+        }
+
     ptsv = pd.read_csv(latest_file,names=['INSP_ID',
         'ASSESSOR_PARCEL_10',
         'LATITUDE',
@@ -271,10 +272,7 @@ def _clean_pts_violations():
         'SCOPE',
         'LOCATION_NOTE',
         'CONSTRUCTION_NOTE'
-        ],dtype={'LONGITUDE':np.float64,
-        'LATITUDE':np.float64,
-        'PARCEL_APN':str
-        })
+        ])
 
     ptsv['PARCEL_APN'] = ptsv.ASSESSOR_PARCEL_10
     ptsv['LON'] = ptsv.LONGITUDE

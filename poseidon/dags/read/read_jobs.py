@@ -1,92 +1,63 @@
 """READ _jobs file."""
-import os
-import ftplib
 import string
 import pandas as pd
 import numpy as np
 from trident.util import general
+import subprocess
+from subprocess import Popen, PIPE
+from shlex import quote
+import logging
 
 conf = general.config
 
-ftp_files = [
-    'City\ Property\ Billing.csv', 'City\ Property\ Leases.csv',
-    'City\ Property\ Parcels.csv', 'City\ Property\ Details.csv'
-]
+datasets = {
+'leases':{
+    'ftp':'City\ Property\ Leases.csv',
+    'prod':'city_property_leases'
+},
+'properties': {
+    'ftp':'City\ Property\ Details.csv',
+    'prod':'city_property_details'
+},
+'billing': {
+    'ftp':'City\ Property\ Billing.csv',
+    'prod':'city_property_billing'
+},
+'parcels': {
+    'ftp':'City\ Property\ Parcels.csv',
+    'prod':'city_property_parcels'
+}
+}
 
-datasd = [
-    'city_property_billing_datasd_v1.csv', 'city_property_leases_datasd_v1.csv',
-    'city_property_parcels_datasd_v1.csv', 'city_property_details_datasd_v1.csv'
-]
-
-
-def get_billing():
+def get_file(mode=''):
     """Get READ billing data from FTP."""
-    curl_str = "curl -o $out_file " \
+    
+    mode_files = datasets.get(mode)
+    out_file = f"{conf['temp_data_dir']}/{mode_files.get('prod')}.csv"
+    fpath = f"ToSanDiego/{mode_files['ftp']}"
+    
+    command = f"curl -o {out_file} " \
             + "sftp://sftp.wizardsoftware.net/"\
-            + "$fpath " \
-            + "-u $user:$passwd -k"
+            + f"{fpath} " \
+            + f"-u {conf['ftp_read_user']}:{conf['ftp_read_pass']} -k"
 
-    tmpl = string.Template(curl_str)
-    command = tmpl.substitute(
-        out_file=conf['temp_data_dir'] + '/' + datasd[0],
-        fpath='ToSanDiego'+ '/' +ftp_files[0],
-        user=conf['ftp_read_user'],
-        passwd=conf['ftp_read_pass'])
+    command = command.format(quote(command))
 
-    return command
-
-def get_leases():
-    """Get READ leases data from FTP."""
-    curl_str = "curl -o $out_file " \
-            + "sftp://sftp.wizardsoftware.net/"\
-            + "$fpath " \
-            + "-u $user:$passwd -k"
-
-    tmpl = string.Template(curl_str)
-    command = tmpl.substitute(
-        out_file=conf['temp_data_dir'] + '/' + datasd[1],
-        fpath='ToSanDiego'+ '/' +ftp_files[1],
-        user=conf['ftp_read_user'],
-        passwd=conf['ftp_read_pass'])
-
-    return command
-
-def get_parcels():
-    """Get READ parcels data from FTP."""
-    curl_str = "curl -o $out_file " \
-            + "sftp://sftp.wizardsoftware.net/"\
-            + "$fpath " \
-            + "-u $user:$passwd -k"
-
-    tmpl = string.Template(curl_str)
-    command = tmpl.substitute(
-        out_file=conf['temp_data_dir'] + '/' + datasd[2],
-        fpath='ToSanDiego'+ '/' +ftp_files[2],
-        user=conf['ftp_read_user'],
-        passwd=conf['ftp_read_pass'])
-
-    return command
-
-def get_properties_details():
-    """Get READ parcels data from FTP."""
-    curl_str = "curl -o $out_file " \
-            + "sftp://sftp.wizardsoftware.net/"\
-            + "$fpath " \
-            + "-u $user:$passwd -k"
-
-    tmpl = string.Template(curl_str)
-    command = tmpl.substitute(
-        out_file=conf['temp_data_dir'] + '/' + datasd[3],
-        fpath='ToSanDiego'+ '/' +ftp_files[3],
-        user=conf['ftp_read_user'],
-        passwd=conf['ftp_read_pass'])
-
-    return command
+    p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
+    output, error = p.communicate()
+    
+    if p.returncode != 0:
+        logging.info(error)
+        raise Exception(p.returncode)
+    else:
+        logging.info("Found file")
+        logging.info(output)
+        return f"Successfully downloaded file for {mode}"
 
 def process_billing():
     """Process billing data."""
     df = pd.read_csv(
-        conf['temp_data_dir'] + '/' + datasd[0],
+        f"{conf['temp_data_dir']}/city_property_billing.csv",
         low_memory=False,
         error_bad_lines=False,
         encoding='cp1252')
@@ -106,7 +77,7 @@ def process_billing():
 
     general.pos_write_csv(
         df,
-        conf['prod_data_dir'] + '/' + datasd[0],
+        f"{conf['prod_data_dir']}/city_property_billing_datasd_v1.csv",
         date_format=conf['date_format_ymd_hms'])
 
     return 'Successfully processed billing data.'
@@ -115,7 +86,7 @@ def process_billing():
 def process_leases():
     """Process leases data."""
     df = pd.read_csv(
-        conf['temp_data_dir'] + '/' + datasd[1],
+        f"{conf['temp_data_dir']}/city_property_leases.csv",
         low_memory=False,
         error_bad_lines=False,
         encoding='cp1252')
@@ -141,7 +112,7 @@ def process_leases():
 
     general.pos_write_csv(
         df,
-        conf['prod_data_dir'] + '/' + datasd[1],
+        f"{conf['prod_data_dir']}/city_property_leases_datasd_v1.csv",
         date_format=conf['date_format_ymd_hms'])
 
     return 'Successfully processed leases data.'
@@ -150,7 +121,7 @@ def process_leases():
 def process_parcels():
     """Process parcels data."""
     df = pd.read_csv(
-        conf['temp_data_dir'] + '/' + datasd[2],
+        f"{conf['temp_data_dir']}/city_property_parcels.csv",
         low_memory=False,
         error_bad_lines=False,
         encoding='cp1252')
@@ -161,7 +132,7 @@ def process_parcels():
 
     general.pos_write_csv(
         df,
-        conf['prod_data_dir'] + '/' + datasd[2],
+        f"{conf['prod_data_dir']}/city_property_parcels_datasd_v1.csv",
         date_format=conf['date_format_ymd_hms'])
 
     return 'Successfully processed parcels data.'
@@ -170,7 +141,7 @@ def process_parcels():
 def process_properties_details():
     """Process properties details data."""
     df = pd.read_csv(
-        conf['temp_data_dir'] + '/' + datasd[3],
+        f"{conf['temp_data_dir']}/city_property_details.csv",
         low_memory=False,
         error_bad_lines=False,
         encoding='cp1252')
@@ -201,7 +172,7 @@ def process_properties_details():
 
     general.pos_write_csv(
         df,
-        conf['prod_data_dir'] + '/' + datasd[3],
+        f"{conf['prod_data_dir']}/city_property_details_datasd_v1.csv",
         date_format=conf['date_format_ymd_hms'])
 
     return 'Successfully processed properties details data.'

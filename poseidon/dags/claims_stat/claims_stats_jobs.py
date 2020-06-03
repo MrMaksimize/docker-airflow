@@ -29,7 +29,7 @@ def get_claims_data():
 
     general.pos_write_csv(
         df,
-        "{}/claimstat_raw.csv".format(tmp))
+        f"{tmp}/claimstat_raw.csv")
 
     return 'Successfully retrieved Oracle data.'
 
@@ -38,7 +38,7 @@ def clean_geocode_claims():
 
     # Load the raw data and prepare it for geocoding
     logging.info('Reading query output')
-    df = pd.read_csv("{}/claimstat_raw.csv".format(tmp))
+    df = pd.read_csv(f"{tmp}/claimstat_raw.csv")
 
     #Keep unique claim numbers only 
     #(they will have the same address, only different claimants)
@@ -137,7 +137,7 @@ def clean_geocode_claims():
         logging.info('Writing address book')
         # Write new address book to temp directory
         general.pos_write_csv(new_add_book,
-        "{}/claims_address_book.csv".format(tmp))
+        f"{tmp}/claims_address_book.csv")
 
         logging.info('merging lat lngs to final data')
 
@@ -161,6 +161,18 @@ def clean_geocode_claims():
 
     # Write clean data
     general.pos_write_csv(updated_df,
-        "{}/claim_stat_datasd.csv".format(prod))
+        f"{prod}/claim_stat_datasd.csv")
 
     return "Successfully generated claims stat prod file"
+
+def deploy_dashboard():
+    """Deploy Claims Stat dashboard"""
+    command = "Rscript /usr/local/airflow/poseidon/trident/util/shiny_deploy.R " \
+    + f"--appname=claims_{conf['env'].lower()} " \
+    + "--path=/usr/local/airflow/poseidon/dags/claims_stat/claims.Rmd " \
+    + f"--name={conf['shiny_acct_name']} " \
+    + f"--token={conf['shiny_token']} " \
+    + f"--secret={conf['shiny_secret']} " \
+    + "--force=TRUE "
+
+    return command
