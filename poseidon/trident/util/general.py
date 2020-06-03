@@ -155,7 +155,8 @@ def buildConfig(env):
         'pf_api_key_str': os.environ.get("PF_API_KEY_STR"),
         'lucid_api_user': os.environ.get("LUCID_USER"),
         'lucid_api_pass': os.environ.get("LUCID_PASS"),
-        'ga_client_secrets': os.environ.get("GA_CLIENT_SECRETS")
+        'ga_client_secrets': os.environ.get("GA_CLIENT_SECRETS"),
+        'crb_xls': os.environ.get("CRB_XLS"),
     }
     return config
 
@@ -248,7 +249,10 @@ start_date = {
     'amcs': datetime(2020, 4, 14),
     'pv_prod': datetime(2020, 2, 26),
     'sidewalks':  default_date,
-    'ga_portal': datetime(2020, 5, 19)
+    'ga_portal': datetime(2020, 5, 19),
+    'onbase_test': default_date,
+    'gis_tree_canopy': default_date,
+    'cityiq': default_date,
 }
 
 

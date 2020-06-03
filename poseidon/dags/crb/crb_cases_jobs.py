@@ -10,7 +10,9 @@ import re
 conf = general.config
 prod_path = conf['prod_data_dir']
 temp_path = conf['temp_data_dir']
-
+path_xlsx = conf['crb_xls']
+cases_fname = 'crb_cases_datasd'
+bwc_fname = 'crb_cases_bwc_datasd'
 
 
 def get_crb_excel():
@@ -24,7 +26,7 @@ def get_crb_excel():
         + "Case Tracking Information/" \
         + "CRB CASE TRACKING/\";" \
         + " lcd \"/data/temp/\";" \
-        + " mget *.xlsx'"
+        + " get {path_xlsx}'"
 
     command = command.format(adname=conf['svc_acct_user'],
                              adpass=conf['svc_acct_pass'],
@@ -38,6 +40,7 @@ def get_crb_excel():
     except subprocess.CalledProcessError as e:
         return e.output
 
+#: Helper function
 def get_officer_anon(g):
     
     g['pid'] = g['officer_name'].astype('category').cat.codes
@@ -45,11 +48,11 @@ def get_officer_anon(g):
     
     return g
 
+#: DAG function
 def create_crb_cases_prod():
     """ Pick up CRB excel from temp and process """
 
-    temp_files = [f for f in os.listdir(temp_path)]
-    data = []
+    # Regex pattern to use for finding correct sheet
     fy_regx = re.compile(r'^[fF][yY][0-9][0-9]$')
     
     temp_cols = ['#',
@@ -59,6 +62,7 @@ def create_crb_cases_prod():
     'completed',
     'presented',
     'days',
+    '30_days_or_less',
     '60_days_or_less', 
     '90_days_or_less',
     '120_days_or_less',
@@ -80,39 +84,26 @@ def create_crb_cases_prod():
     'gender',
     'years_of_service']
 
-    logging.info("Looping through temp files to find crb case tracking excel docs")
+    
+    file_path = f"{temp_path}/{path_xlsx}"
+    file_read = pd.read_excel(file_path,sheet_name=None)
+    keys = file_read.keys()
+    logging.info("Looking in Excel for fy sheet")
+    
+    for ky in keys:
+        if fy_regx.match(ky):
+            logging.info(f"Using sheet {ky}")
+            
+            df = file_read[ky]
+            df = df.loc[:,'#':'Years of Service']
+            df.columns = temp_cols
 
-    for f in temp_files:
-        if 'CRB Case Tracking' in f:
-            logging.info(f"Found {f} excel, processing")
-            file_path = f"{temp_path}/{f}"
-            file_read = pd.read_excel(file_path,sheet_name=None,header=None)
-            keys = file_read.keys()
-            logging.info("Looking in Excel for fy sheets")
-            for ky in keys:
-                if fy_regx.match(ky) and ky != 'FY18':
-                    logging.info(f"Using sheet {ky}")
-                    # Reading from row 3
-                    fy_crb_rows = file_read[ky].loc[3:].copy()
-                    # Creating column list from line 2
-                    fy_cols = [str(x).strip().lower().replace(' ','_')
-                                for x in file_read[ky].iloc[2]]
-                    # Duplicate column names for race and gender
-                    comp_race = next(((i, v) for (i, v) in enumerate(fy_cols) if v == 'race'), None)
-                    comp_gend = next(((i, v) for (i, v) in enumerate(fy_cols) if v == 'gender'), None)
-                    fy_cols[comp_race[0]] = 'race_0'
-                    fy_cols[comp_gend[0]] = 'gender_0'
-                    fy_crb_rows.columns = fy_cols
-                    # Removing blank rows using Allegation columns
-                    fy_crb_rows = fy_crb_rows.dropna(subset=['allegation'])
-                    fy_crb_rows['#'] = fy_crb_rows['#'].fillna(method='ffill')
-                    fy_crb_rows['case'] = fy_crb_rows['case'].fillna(method='ffill')
-                    fy_crb_rows["officer's_name"] = fy_crb_rows["officer's_name"].fillna(method='ffill')
-                    # Appending sheet data to data list
-                    data.append(fy_crb_rows[temp_cols])
-                    logging.info(f"Read {ky} sheet from {f}")
-
-    df = pd.concat(data,ignore_index=True)
+            df['allegation'] = df['allegation'].fillna(method='ffill')
+            df['#'] = df['#'].fillna(method='ffill')
+            df['case'] = df['case'].fillna(method='ffill')
+            df["officer's_name"] = df["officer's_name"].fillna(method='ffill')
+            
+            logging.info(f"Read {ky} sheet from {f}")
 
     df['vote'] = df['vote'].str.split('-').str.join(' ')
 
@@ -124,10 +115,11 @@ def create_crb_cases_prod():
     'completed':'date_completed',
     'presented':'date_presented',
     'days':'days_number',
+    '30_days_or_less':'days_30_or_less',
     '60_days_or_less':'days_60_or_less', 
     '90days_or_less':'days_90_or_less',
     '120days_or_less':'days_120_or_less',
-    'body_camera?':'body_camera',
+    'bwc_viewed_by_crb_team':'body_camera',
     "complainant's_name":'complainant_name',
     'race_0':'complainant_race',
     'gender_0':'complainant_gender',
@@ -137,16 +129,8 @@ def create_crb_cases_prod():
     'years_of_service':'officer_yrs_of_svce',
     'bwc_on/off':'bwc_on'})
 
-    # Breaking out officers
-    #officer_series = df['officer_name'].str.split(';').apply(pd.Series, 1).stack()
-    #officer_series.index = officer_series.index.droplevel(-1)
-    #officer_series.name = 'officer_name'
-
-    #df = df.rename(columns={'officer_name':'officer_name_orig'})
-    #df = df.join(officer_series)
-    #df = df.reset_index(drop=True)
-
-    # Need to add an anonymous officer id
+    # Need to add an anonymize officer id
+    # Cannot stay consistent, so using simple incrementor
     officers = df.loc[:,['id',
     'case_number',
     'officer_name',
@@ -168,12 +152,23 @@ def create_crb_cases_prod():
 
     officers_final = officers_final.drop('officer_name',axis=1)
 
-    officers_final = officers_final[['id','pid','case_number','bwc_on']]
-    officers_final = officers_final.sort_values(by=['id','pid'],ascending=[False,True])
+    bwc_rows = officers_final[['id','pid','case_number','bwc_on']]
+    bwc_rows = bwc_rows.sort_values(by=['id','pid'],ascending=[False,True])
 
-    general.pos_write_csv(
-        officers_final,
-        f"{prod_path}/crb_cases_bwc_datasd.csv")
+    logging.info(f"Have {bwc_rows.shape[0]} rows to append")
+    
+    prod_bwc = pd.read_csv(f"{prod_path}/{bwc_fname}.csv")
+    logging.info(f"Prod file has {prod_bwc.shape[0]}")
+
+    final_bwc = pd.concat(prod_bwc,bwc_rows,ignore_index=True,sort=False)
+    logging.info(f"Before dedupe: {final_bwc.shape[0]} rows")
+    
+    final_bwc = final_bwc.drop_duplicates(['id','pid','case_number'])
+    logging.info(f"After dedupe: {final_bwc.shape[0]} rows")
+
+    #general.pos_write_csv(
+        #final_bwc,
+        #f"{prod_path}/{bwc_fname}.csv")
 
     # Cannot publish officer name, complainant name,
     # officer race, gender, or yrs of service
@@ -192,13 +187,23 @@ def create_crb_cases_prod():
     df_anon = df_anon.sort_values(by=['id','pid'],ascending=[False,True])
     prod_cols = list(df_anon.columns)
     prod_cols = [prod_cols[0]] + [prod_cols[-1]] + prod_cols[1:-1]
-    prod_file = df_anon[prod_cols]
+    prod_rows = df_anon[prod_cols].copy()
+    
+    prod_rows = prod_rows.drop(['bwc_on'],axis=1)
+    logging.info(f"Have {prod_rows.shape[0]} rows to append")
+    
+    prod_cases = pd.read_csv(f"{prod_path}/{cases_fname}.csv")
+    logging.info(f"Prod file has {prod_file.shape[0]}")
+    
+    final_cases = pd.concat(prod_cases,prod_rows,ignore_index=True,sort=False)
+    logging.info(f"Before dedupe: {final.shape[0]} rows")
+    
+    final_cases = final_cases.drop_duplicates(['id','pid','case_number'])
+    logging.info(f"After dedupe: {final.shape[0]} rows")
 
-    prod_file_name = 'crb_cases_datasd'
-    prod_file2 = prod_file.drop(['bwc_on'],axis=1)
 
-    general.pos_write_csv(
-        prod_file2,
-        f"{prod_path}/crb_cases_datasd.csv")
+    #general.pos_write_csv(
+        #final_cases,
+        #f"{prod_path}/{cases_fname}.csv")
 
     return "Successfully processed CRB cases"
