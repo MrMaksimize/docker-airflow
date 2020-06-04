@@ -27,7 +27,7 @@ dtypes = OrderedDict([
         ('st_length','float'),
         ('paveclass','str'),
         ('funclass','str'),
-        ('pvmntclass','str')
+        ('iamfloc','str')
     ])
 
 gtype = 'LineString'
@@ -39,9 +39,7 @@ def sde_to_shp():
     df = geospatial.extract_sde_data(table=table
                                      #where="OWNERSHIP = 'City of San Diego'"
                                      )
-
-    logging.info(df.columns)
-
+    
     logging.info(f'Processing {layername} df.')
     logging.info(f'Converting {layername} df to shapefile.')
     geospatial.df2shp(df=df,
