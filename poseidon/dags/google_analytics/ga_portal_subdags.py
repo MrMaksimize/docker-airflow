@@ -60,7 +60,9 @@ def create_subdag_operators():
         op_kwargs={'view_id': '124490020',
         'mets':request_params.get('mets'),
         'dims':request_params.get('dims'),
-        'out_path':report},
+        'out_path':report,
+        'range':'monthly' # can be monthly, weekly, daily
+        },
         provide_context=True,
         python_callable=ga_batch_get,
         dag=dag_subdag,

@@ -549,7 +549,8 @@ def create_prod_files():
         'cpcode':'comm_plan_code',
         'cpname':'comm_plan_name',
         'name':'park_name',
-        'long':'lng'
+        'long':'lng',
+        'iam_functional_location':'iamfloc'
         })
 
     final_reports = final_reports[[
@@ -571,7 +572,8 @@ def create_prod_files():
     'case_origin',
     'specify_the_issue',
     'referred',
-    'public_description'
+    'public_description',
+    'iamfloc'
     ]]
 
     final_reports = final_reports.sort_values(by=['service_request_id','date_requested','date_updated'])

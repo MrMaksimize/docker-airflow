@@ -101,6 +101,7 @@ def ga_batch_get(view_id="",
     mets=[],
     dims=[],
     out_path="",
+    range="",
     **context):
     """ 
     Run a batch get for a specific analytics report
@@ -121,11 +122,30 @@ def ga_batch_get(view_id="",
     analytics = build('analyticsreporting', 'v4', credentials=credentials)
     
     exec_date = context['execution_date']
+    end = exec_date.strftime('%Y-%m-%d')
+
+    # Working backward, subtract range
+
+    if range == "monthly":
+
+        start = exec_date.subtract(months=1).strftime('%Y-%m-%d')
+
+    elif range == "weekly":
+
+        start = exec_date.subtract(weeks=1).strftime('%Y-%m-%d')
+
+    elif range == "daily":
+
+        start = exec_date.subtract(days=1).strftime('%Y-%m-%d')
+
+    else:
+
+        raise Exception("Range is not specified")
     
     #start = exec_date.strftime('%Y-%m-%d')
     #end = exec_date.add(months=1).strftime('%Y-%m-%d')
-    start = exec_date.subtract(months=1).strftime('%Y-%m-%d')
-    end = exec_date.strftime('%Y-%m-%d')
+    
+    
 
     logging.info("Creating metrics dictionary")
 
@@ -149,7 +169,7 @@ def ga_batch_get(view_id="",
                 'samplingLevel': 'LARGE',
                 'metrics': metrics,
                 'dimensions': dimensions,
-                 'pageSize':10000
+                 'pageSize':100000
                 }
             ]}).execute()
 
