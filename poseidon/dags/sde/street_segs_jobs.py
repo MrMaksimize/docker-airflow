@@ -27,7 +27,9 @@ dtypes = OrderedDict([
         ('st_length','float'),
         ('paveclass','str'),
         ('funclass','str'),
-        ('iamfloc','str')
+        ('iamfloc','str'),
+        ('lane_no','int'),
+        ('speed','int')
     ])
 
 gtype = 'LineString'
