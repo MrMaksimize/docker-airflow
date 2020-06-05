@@ -169,7 +169,7 @@ def ga_batch_get(view_id="",
                 'samplingLevel': 'LARGE',
                 'metrics': metrics,
                 'dimensions': dimensions,
-                 'pageSize':100000
+                'pageSize':100000
                 }
             ]}).execute()
 
@@ -179,7 +179,21 @@ def ga_batch_get(view_id="",
 
     dims_df = getDimensions(report[0])
     mets_df = getMetrics(report[0])
+    
     df = pd.merge(dims_df,mets_df,how="left",left_index=True,right_index=True)
+
+    general.pos_write_csv(
+        df,
+        f"{temp_path}/{out_path}.csv",
+        date_format=conf['date_format_ymd'])
+
+    return f"Successfully pulled batch report for {out_path}"
+
+def process_batch_get(dims=[],out_path=""):
+    """ Process report """
+
+    df = pd.read_csv(f"{temp_path}/{out_path}.csv",
+        low_memory=False)
 
     logging.info("Reading in prod file")
 
