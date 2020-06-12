@@ -59,11 +59,11 @@ def get_gid_streets():
     sf = Salesforce(username, password, security_token)
 
     # Pull dataframe
-    logging.info('Pull report {} from SF'.format(report_id))
+    logging.info(f'Pull report {report_id} from SF')
 
     sf.get_report_csv(report_id, temp_streets_gid)
 
-    logging.info('Process report {} data.'.format(report_id))
+    logging.info(f'Process report {report_id} data.')
 
     return "Successfully pulled Salesforce report"
 
@@ -79,11 +79,11 @@ def get_gid_other():
     sf = Salesforce(username, password, security_token)
 
     # Pull dataframe
-    logging.info('Pull report {} from SF'.format(report_id))
+    logging.info(f'Pull report {report_id} from SF')
 
     sf.get_report_csv(report_id, temp_other_gid)
 
-    logging.info('Process report {} data.'.format(report_id))
+    logging.info(f'Process report {report_id} data.')
 
     return "Successfully pulled Salesforce report"
 
@@ -253,8 +253,8 @@ def update_close_dates():
     logging.info("Start looping through fix files")
 
     for index, file in enumerate(date_files):
-        logging.info('Processing {}'.format(file))
-        path = 'https://datasd-reference.s3.amazonaws.com/{}'.format(file)
+        logging.info(f'Processing {file}')
+        path = f'https://datasd-reference.s3.amazonaws.com/{file}'
         df_date = pd.read_excel(path)
         
         df_date.columns = [x.lower().replace(' ','_').replace('/','_').replace('"','') 
@@ -269,7 +269,7 @@ def update_close_dates():
         if len(closed_cols) > 0:
             df_date[closed_cols[0]] = pd.to_datetime(df_date[closed_cols[0]],errors='coerce')
             new_dates = df_date[closed_cols[0]]
-            df_date.insert(0,'new_date_{}'.format(index),new_dates)
+            df_date.insert(0,f'new_date_{index}',new_dates)
             logging.info("Found column referencing closed date")
         else:
             logging.info("Can't locate date column in spreadsheet")
@@ -301,7 +301,7 @@ def update_close_dates():
                     else:
                         case_to_merge = case_cols[0]
                         
-            logging.info("Joining on Salesforce case number with {}".format(case_to_merge))
+            logging.info(f"Joining on Salesforce case number with {case_to_merge}")
             df = pd.merge(df,
                 df_date,
                 left_on=['case_number'],
@@ -326,9 +326,9 @@ def update_close_dates():
     # Split records into those that need to be updated
     # And those that don't
     bad_records = df_updated[df_updated['min_new_date'].notnull()]
-    logging.info("Processed {} records with known date error".format(bad_records.shape[0]))
+    logging.info(f"Processed {bad_records.shape[0]} records with known date error")
     good_records = df_updated[df_updated['min_new_date'].isnull()]
-    logging.info("{} records remain to be searched".format(good_records.shape[0]))
+    logging.info(f"{good_records.shape[0]} records remain to be searched")
 
     # Now check for any children that weren't flagged to be updated
     # By looking for case numbers in parent case number column
@@ -347,7 +347,7 @@ def update_close_dates():
         'case_number_x':'case_number'})
 
     child_search_result = good_records_new[good_records_new['min_new_date'].notnull()].shape[0]
-    logging.info("Found {} children cases where parent case has known error".format(child_search_result))
+    logging.info(f"Found {child_search_result} children cases where parent case has known error")
     
     # Export missing children to update in Salesforce
     logging.info("Exporting child cases for gid team")
@@ -605,7 +605,7 @@ def create_prod_files():
     for year in range(min_report,max_report+1):
         this_yr = str(year)
         next_yr = str(year+1)
-        logging.info('Subsetting records for {}'.format(year))
+        logging.info(f'Subsetting records for {year}')
         file_path = prod_file_base+this_yr+'_'+prod_file_end
         file_subset = final_reports[
             (final_reports['date_requested'] >= this_yr+'-01-01 00:00:00') &
@@ -626,7 +626,7 @@ def get_requests_service_name(service_name, machine_service_name):
     data = gid.loc[gid['service_name'].str.contains(service_name,na=False), :].copy()
 
     if data.shape[0] == 0:
-        raise ValueError("{} is not a valid service name".format(service_name))
+        raise ValueError(f"{service_name} is not a valid service name")
 
     data = data.reset_index()
 
@@ -639,5 +639,4 @@ def get_requests_service_name(service_name, machine_service_name):
 
     general.pos_write_csv(data, out_path, date_format='%Y-%m-%dT%H:%M:%S%z')
 
-    return "Successfully wrote {} records for gid {} prod file".format(
-        data.shape[0], machine_service_name)
+    return f"Successfully wrote {data.shape[0]} records for gid {machine_service_name} prod file"

@@ -5,10 +5,11 @@ from airflow.operators.subdag_operator import SubDagOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
 from airflow.models import DAG
 from trident.util import general
-from trident.util.notifications import notify
+from trident.util.notifications import afsys_send_email
+
 from dags.parking_meters.parking_meters_jobs import *
 from dags.parking_meters.parking_meters_subdags import *
-from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag, update_json_date
+from trident.util.seaboard_updates import *
 from datetime import datetime, timedelta
 
 args = general.args
@@ -33,9 +34,7 @@ get_parking_files = PythonOperator(
     task_id='get_parking_files',
     python_callable=download_latest,
     provide_context=True,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    
     dag=dag)
 
 #: Joins downloaded files from ftp to production
@@ -44,9 +43,7 @@ build_prod_file = PythonOperator(
     python_callable=build_prod_file,
     provide_context=True,
     op_kwargs={'year': run_year},
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    
     dag=dag)
 
 #: Create aggregation files
@@ -91,11 +88,7 @@ update_json_date = PythonOperator(
     task_id='update_json_date',
     python_callable=update_json_date,
     provide_context=True,
-    op_kwargs={'ds_fname': 'parking_meters_transactions'},
-    trigger_rule='none_failed',
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    op_kwargs={'ds_fname': 'parking_meters_transactions'},    
     dag=dag)
 
 

@@ -5,9 +5,10 @@ from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
 from airflow.operators.latest_only_operator import LatestOnlyOperator
 from airflow.models import DAG
 from trident.util import general
-from trident.util.notifications import notify
+from trident.util.notifications import afsys_send_email
+
 from dags.parking_meters.parking_meter_locs_jobs import *
-from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag, update_json_date
+from trident.util.seaboard_updates import *
 
 args = general.args
 schedule = general.schedule['parking_meter_locs']
@@ -18,7 +19,8 @@ dag = DAG(
     dag_id='parking_meter_locs',
     default_args=args,
     start_date=start_date,
-    schedule_interval=schedule
+    schedule_interval=schedule,
+    catchup=False
     )
 
 #: Downloads all parking files from FTP
@@ -26,9 +28,7 @@ get_parking_files = PythonOperator(
     task_id='get_meter_loc_files',
     provide_context=True,
     python_callable=ftp_download,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    
     dag=dag)
 
 #: Joins downloaded files from ftp to production
@@ -36,20 +36,15 @@ build_prod_file = PythonOperator(
     task_id='build_prod_file',
     provide_context=True,
     python_callable=build_prod_file,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    
     dag=dag)
 
-clean_daily_files = PythonOperator(
-    task_id='clean_files',
-    provide_context=True,
-    python_callable=clean_files,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
-    dag=dag
-    )
+#clean_daily_files = PythonOperator(
+    #task_id='clean_files',
+    #provide_context=True,
+    #python_callable=clean_files,
+    #dag=dag
+    #)
 
 #: Uploads the generated production file
 upload_prod_file = S3FileTransferOperator(
@@ -60,9 +55,6 @@ upload_prod_file = S3FileTransferOperator(
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_key='parking_meters/treas_parking_meters_loc_datasd_v1.csv',
     replace=True,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
     dag=dag)
 
 #: Update data inventory json
@@ -71,14 +63,10 @@ update_json_date = PythonOperator(
     python_callable=update_json_date,
     provide_context=True,
     op_kwargs={'ds_fname': 'parking_meters_locations'},
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
     dag=dag)
 
 #: Update portal modified date
-update_parking_trans_md = get_seaboard_update_dag('parking_meters_locations.md', dag)
+update_parking_trans_md = get_seaboard_update_dag('parking-meters-locations.md', dag)
 
 #: Execution Rules
-
 get_parking_files >> build_prod_file >> upload_prod_file >> [update_parking_trans_md, update_json_date]

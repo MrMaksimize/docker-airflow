@@ -84,7 +84,7 @@ class S3FileTransferOperator(BaseOperator):
         if conf['env'] == 'prod':
             url = "http://seshat.datasd.org/{}".format(self.dest_s3_key)
         else:
-            url = "http://{}.s3.amazonaws.com/{}".format(self.dest_s3_bucket,
+            url = "https://{}.s3-us-west-2.amazonaws.com/{}".format(self.dest_s3_bucket,
                                                          self.dest_s3_key)
 
         logging.info("URL: {}".format(url))

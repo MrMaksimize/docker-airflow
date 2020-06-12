@@ -4,9 +4,10 @@ import pandas as pd
 import string
 import numpy as np
 from trident.util import general
+from trident.util.geospatial import spatial_join_pt
 import logging
 from subprocess import Popen, PIPE
-from trident.util.geospatial import *
+from shlex import quote
 
 conf = general.config
 
@@ -36,8 +37,9 @@ def get_permits_files(**context):
     """ Get permit file from ftp site. """
     logging.info('Retrieving permits data.')
 
-    exec_date = context['execution_date']
+    exec_date = context['next_execution_date'].in_tz(tz='US/Pacific')
     # Exec date returns a Pendulum object
+    # Runs on Monday for data extracted Sunday
     file_date = exec_date.subtract(days=1)
 
     # Need zero-padded month and date
@@ -53,17 +55,22 @@ def get_permits_files(**context):
 
         fpath = f"{filelist[file].get('name')}_{filename}.{filelist[file].get('ext')}"
 
-        command = f"cd {conf['temp_data_dir']} && " \
-        f"curl --user {conf['ftp_datasd_user']}:{conf['ftp_datasd_pass']} " \
-        f"-o {fpath} " \
-        f"ftp://ftp.datasd.org/uploads/dsd/permits/" \
-        f"{fpath} -sk"
+        command = "smbclient //ad.sannet.gov/dfs " \
+        + f"--user={conf['svc_acct_user']}%{conf['svc_acct_pass']} -W ad -c " \
+        + "'prompt OFF;"\
+        + " cd \"DSD-Shared/All_DSD/Panda/\";" \
+        + " lcd \"/data/temp/\";" \
+        + f" get {fpath};'"
+
+        command = command.format(quote(command))
 
         p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
         output, error = p.communicate()
         
         if p.returncode != 0:
             logging.info(f"Error with {fpath}")
+            logging.info(output)
+            logging.info(error)
             raise Exception(p.returncode)
         else:
             logging.info(f"Found {fpath}")
@@ -449,11 +456,11 @@ def create_pw_sap_subset():
 
     appr_types = ['Right Of Way Permit-Const Plan',
     'Construction Change - Eng.',
+    'Construction Change - Building',
     'Right Of Way Permit',
     'Grading + Right of Way Permit',
     'ROW Permit-Traffic Control',
-    'Traffic Control Plan-Permit'
-                     ]
+    'Traffic Control Plan-Permit']
 
     status_types = ['Issued','Completed']
 

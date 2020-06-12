@@ -4,9 +4,10 @@ import pandas as pd
 import string
 import numpy as np
 from trident.util import general
+from trident.util.geospatial import spatial_join_pt
 import logging
 from subprocess import Popen, PIPE
-from trident.util.geospatial import *
+from shlex import quote
 
 conf = general.config
 
@@ -14,8 +15,9 @@ def get_tags_file(**context):
     """ Get permit file from ftp site. """
     logging.info('Retrieving project tags from ftp.')
 
-    exec_date = context['execution_date']
+    exec_date = context['next_execution_date'].in_tz(tz='US/Pacific')
     # Exec date returns a Pendulum object
+    # Runs on Monday for data extracted Sunday
     file_date = exec_date.subtract(days=1)
 
     # Need zero-padded month and date
@@ -32,6 +34,8 @@ def get_tags_file(**context):
     f"-o {fpath} " \
     f"ftp://ftp.datasd.org/uploads/dsd/tags/" \
     f"{fpath} -sk"
+
+    command = command.format(quote(command))
 
     p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
     output, error = p.communicate()
@@ -63,13 +67,14 @@ def build_tags(**context):
 
     logging.info("File read successfully, renaming columns")
 
-    df.columns = [x.lower().strip().replace(' ','_').replace('-','_') for x in df.columns]
+    df.columns = [x.lower() for x in df.columns]
 
     df = df.rename(columns={'devel_num':'development_id',
         'proj_id':'project_id',
         'proj_scope':'project_scope',
         'proj_tag_id':'project_tag_id',
-        'description':'project_tag_desc'})
+        'description':'project_tag_desc'
+        })
 
     logging.info("Writing prod file")
     general.pos_write_csv(

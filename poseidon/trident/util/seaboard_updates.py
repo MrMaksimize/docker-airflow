@@ -10,7 +10,7 @@ from airflow.operators.python_operator import PythonOperator
 
 from trident.util import general
 
-from trident.util.notifications import notify
+from trident.util.notifications import afsys_send_email
 
 
 conf = general.config
@@ -18,9 +18,9 @@ conf = general.config
 def update_json_date(ds_fname, **kwargs):
     """ Take the dataset file name and update json date modified """
 
-    repo_name = "DataSD/data-inventory"
+    repo_name = "COSD-PANDA/data-inventory"
     commit_branch = "master"
-    exec_date = kwargs['execution_date'].strftime("%Y-%m-%d")
+    exec_date = kwargs['next_execution_date'].in_tz(tz='US/Pacific').strftime("%Y-%m-%d")
 
     #: Auth to github
     tokens = conf["gh_tokens"]
@@ -51,15 +51,15 @@ def update_json_date(ds_fname, **kwargs):
                         sha=inventory.sha,
                         branch=commit_branch)
 
-                return outcome
+                return commit_msg
 
 
 def update_seaboard_date(ds_fname, **kwargs):
-    repo_name = "cityofsandiego/seaboard"
+    repo_name = "COSD-PANDA/seaboard"
     fpath_pre = "src/_datasets/"
     commit_branch = "production"
     date_search_re = "(?<=date_modified\: \\\')\d{4}-\d{2}-\d{2}"
-    exec_date = kwargs['execution_date'].strftime("%Y-%m-%d")
+    exec_date = kwargs['next_execution_date'].in_tz(tz='US/Pacific').strftime("%Y-%m-%d")
     test_mode = kwargs['test_mode']
 
     #: Auth to github
@@ -115,8 +115,6 @@ def update_seaboard_date(ds_fname, **kwargs):
                 commit_message='Pullback: ' + commit_msg)
 
 
-
-
         return commit_msg
 
 def get_seaboard_update_dag(ds_fname, dag):
@@ -125,9 +123,7 @@ def get_seaboard_update_dag(ds_fname, dag):
         python_callable=update_seaboard_date,
         provide_context=True,
         op_kwargs={'ds_fname': ds_fname},
-        on_failure_callback=notify,
-        on_retry_callback=notify,
-        on_success_callback=notify,
+        
         dag=dag)
 
     return task

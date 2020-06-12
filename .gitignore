@@ -40,6 +40,7 @@ data/temp/.DS_Store
 .Spotlight-V100
 .Trashes
 Icon
+*.DS_Store
 
 # data
 *.csv
@@ -49,6 +50,9 @@ Icon
 data/temp/*.geojson
 data/**/*.json
 data/**/*.*
+data/temp/
+data/prod/
+pgdata/
 
 # Secrets
 secrets.json
@@ -57,3 +61,6 @@ venv/*
 
 # R
 *.dcf
+
+### Jupyter
+*.ipynb*

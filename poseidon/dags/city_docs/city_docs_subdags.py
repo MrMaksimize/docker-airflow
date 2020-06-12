@@ -4,7 +4,8 @@ from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
 from airflow.models import DAG
 
 from trident.util import general
-from trident.util.notifications import notify
+from trident.util.notifications import afsys_send_email
+
 import dags.city_docs.documentum_name as dn
 
 from dags.city_docs.city_docs_jobs import *
@@ -64,9 +65,7 @@ def upload_files_subdag(files,parent_dag,test):
       dest_s3_conn_id=conf['default_s3_conn_id'],
       dest_s3_key=f"city_docs/documentum_{filename}.csv",
       replace=True,
-      on_failure_callback=notify,
-      on_retry_callback=notify,
-      on_success_callback=notify,
+      
       dag=dag_subdag,
     )
 
@@ -100,9 +99,7 @@ def upload_div_files_subdag(files,parent_dag,test):
       dest_s3_conn_id=conf['default_s3_conn_id'],
       dest_s3_key=f"city_docs/{filename}.csv",
       replace=True,
-      on_failure_callback=notify,
-      on_retry_callback=notify,
-      on_success_callback=notify,
+      
       dag=dag_subdag,
     )
 

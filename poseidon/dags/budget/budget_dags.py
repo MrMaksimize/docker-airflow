@@ -7,8 +7,8 @@ from dags.budget.budget_jobs import *
 from dags.budget.actuals_jobs import *
 from dags.budget.budget_subdags import *
 from trident.util import general
-from trident.util.notifications import notify
-from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag
+from trident.util.notifications import afsys_send_email
+from trident.util.seaboard_updates import *
 
 
 args = general.args
@@ -27,9 +27,7 @@ dag = DAG(
 get_accounts = PythonOperator(
     task_id='get_chart_of_accounts',
     python_callable=get_accounts_chart,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    
     dag=dag)
 
 get_files = SubDagOperator(
@@ -40,9 +38,7 @@ get_files = SubDagOperator(
 get_refs = PythonOperator(
     task_id='get_reference_sets',
     python_callable=get_ref_sets,
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    
     dag=dag)
 
 create_files = SubDagOperator(

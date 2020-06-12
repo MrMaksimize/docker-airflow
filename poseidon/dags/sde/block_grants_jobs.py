@@ -9,7 +9,7 @@ conf = general.config
 table = 'CMTY_BLOCK_DEV_GRANTS'
 prod_dir = conf['prod_data_dir']
 layername = 'block_grants_datasd'
-layer = prod_dir + '/' + layername
+layer = f"{prod_dir}/{layername}"
 
 dtypes = OrderedDict([
         ('objectid', 'int:5'),
@@ -37,25 +37,22 @@ gtype = 'Polygon'
 
 def sde_to_shp():
     """SDE table to Shapefile."""
-    logging.info('Extracting {layername} layer from SDE.'.format(
-        layername=layername))
+    logging.info(f'Extracting {layername} layer from SDE.')
     df = geospatial.extract_sde_data(table=table)
     #                                  where=" ")
 
-    logging.info('Processing {layername} df.'.format(layername=layername))
+    logging.info(f'Processing {layername} df.')
     df = df.rename(columns={'sum_totalpop': 'total_pop',
                               'sum_totunits': 'tot_units',
                               'sum_occunits': 'occ_units',
                               'sum_vacunits': 'vac_units'})
     df = df.fillna('')
 
-    logging.info('Converting {layername} df to shapefile.'.format(
-        layername=layername))
+    logging.info(f'Converting {layername} df to shapefile.')
     geospatial.df2shp(df=df,
                       folder=prod_dir,
                       layername=layername,
                       dtypes=dtypes,
                       gtype=gtype,
                       epsg=2230)
-    return 'Successfully converted {layername} to shapefile.'.format(
-           layername=layername)
+    return f'Successfully converted {layername} to shapefile.'

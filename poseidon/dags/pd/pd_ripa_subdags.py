@@ -3,9 +3,10 @@ from airflow.operators.python_operator import PythonOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
 from airflow.models import DAG
 from trident.util import general
+from trident.util.notifications import afsys_send_email
 from dags.pd.pd_ripa_jobs import *
-from trident.util.notifications import notify
-from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag, update_json_date
+
+from trident.util.seaboard_updates import *
 conf = general.config
 args = general.args
 schedule = general.schedule['pd_ripa']
@@ -44,9 +45,6 @@ def create_file_subdag():
       provide_context=True,
       python_callable=process_prod_files,
       op_kwargs={'mode': sheet},
-      on_failure_callback=notify,
-      on_retry_callback=notify,
-      on_success_callback=notify,
       dag=dag_subdag,
     )
 
@@ -76,9 +74,6 @@ def upload_prod_files():
       dest_s3_bucket=conf['dest_s3_bucket'],
       dest_s3_conn_id=conf['default_s3_conn_id'],
       dest_s3_key=f'pd/ripa_{sheet}_datasd.csv',
-      on_failure_callback=notify,
-      on_retry_callback=notify,
-      on_success_callback=notify,
       dag=dag_subdag)
 
   return dag_subdag
@@ -122,9 +117,6 @@ def update_json():
       python_callable=update_json_date,
       provide_context=True,
       op_kwargs={'ds_fname': ''},
-      on_failure_callback=notify,
-      on_retry_callback=notify,
-      on_success_callback=notify,
       dag=dag_subdag)
 
   return dag_subdag

@@ -261,8 +261,7 @@ def create_base_data():
 
     spot_unknown = df[mask]
 
-    logging.info('Found {} records with no activity, type or status'.format(
-        spot_unknown.shape[0]))
+    logging.info(f'Found {spot_unknown.shape[0]} records with no activity, type or status')
 
     # Remove unknown
     df = df[~mask]
@@ -287,7 +286,7 @@ def create_mode_data(mode='sdif', **context):
 
     df = pd.read_csv(temp_file,low_memory=False,parse_dates=date_cols)
 
-    exec_date = context['execution_date'].in_tz(tz='US/Pacific')
+    exec_date = context['next_execution_date'].in_tz(tz='US/Pacific')
 
     five_yrs_ago = exec_date.subtract(years=5).strftime('%Y-%m-%d')
     three_yrs_ago = exec_date.subtract(years=3).strftime('%Y-%m-%d')
@@ -578,8 +577,12 @@ def send_arcgis(mode=['completed'], **context):
 def check_exec_time(**context):
     currTime = context['execution_date'].in_timezone('America/Los_Angeles')
     if currTime.hour == 16:
-        logging.info(f'Calling downstream tasks, hour is: {currTime.hour}')
-        return True
+        if currTime.day_of_week <= 4 :
+            logging.info(f'Calling downstream tasks, hour is: {currTime.hour}')
+            return True
+        else:
+            logging.info(f'Skipping downstream tasks, day is: {currTime.day_of_week}')
+            return False
     else:
         logging.info(f'Skipping downstream tasks, hour is: {currTime.hour}')
         return False

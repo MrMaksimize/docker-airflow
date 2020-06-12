@@ -149,7 +149,13 @@ def buildConfig(env):
         'sde_server': os.environ.get("SDE_SERVER"),
         'shiny_acct_name': os.environ.get("SHINY_ACCT_NAME"),
         'shiny_token': os.environ.get("SHINY_TOKEN"),
-        'shiny_secret': os.environ.get("SHINY_SECRET")
+        'shiny_secret': os.environ.get("SHINY_SECRET"),
+        'amcs_ip': os.environ.get("AMCS_IP_ADDRESS"),
+        'pf_api_key': os.environ.get("PF_API_KEY"),
+        'pf_api_key_str': os.environ.get("PF_API_KEY_STR"),
+        'lucid_api_user': os.environ.get("LUCID_USER"),
+        'lucid_api_pass': os.environ.get("LUCID_PASS"),
+        'ga_client_secrets': os.environ.get("GA_CLIENT_SECRETS")
     }
     return config
 
@@ -161,25 +167,23 @@ schedule = {
     'fd_incidents' : "0 8 * * *", # daily at 8am UTC / 1am PST
     'claims_stat': "@monthly",
     'pd_ripa': None,
-    'pd_cfs': "0 8 * * *", # daily at 8am UTC / 1am PST
-    'pd_col': "0 8 * * *", # daily at 8am UTC / 1am PST
+    'pd_cfs': "0 0 * * *", # daily at 12am UTC / 5pm PST
+    'pd_col': "0 0 * * *", # daily at 12am UTC / 5pm PST
     'pd_hc': None,
     'ttcs': '0 10 * * *', # daily at 10 am UTC / 3am PST
     'indicator_bacteria_tests': "0 8 * * *", # daily at 8am UTC / 1am PST
-    'parking_meters': '0 19 * * *', # daily at 7pm UTC
+    'parking_meters': '0 19 * * *', # daily at 7pm UTC, Noon PST
     'traffic_counts': "@weekly",
     'read': "0 8 * * *", # daily at 8am UTC / 1am PST
     'dsd_approvals': "0 16 * * 1", # Weekly on Monday at 4p UTC / 9a PST
-    'streets':"@hourly",
+    'streets':"0 0,1,2,3,4,13,14,15,16,17,18,19,20,21,22,23 * * 1-6", # every hour, 7am to 7pm, Mon-Fri PST
     'get_it_done': "0 7 * * *", # daily at 7am UTC / 11pm PST
-    'gid_potholes': "0 12 * * *",
-    'gid_ava': "0 12 * * *",
     'special_events': "0 8 * * *", # daily at 8am UTC / 1am PST
     'waze': "*/5 * * * *",  # every 5 minutes
     'inventory': "@monthly",  # Run 1x a month at 00:00 of the 1st day of mo
     'gis_daily': '0 6 * * *',  # daily at 6am UTC / 10pm PST
     'gis_weekly': '0 10 * * 2',  # weekly on Tuesday at 10am UTC / 2am PST
-    'budget': "@weekly",
+    'budget': "0 17 * 5-7 5", # weekly Fridays at 5p UTC / 10am PST
     'campaign_fin': "0 11 * * *", # daily at 11am UTC / 4am PST
     'public_art': "0 11 * * *", # daily at 11am UTC / 4am PST
     'sire': "0 8 * * 1-5", # 8am UTC / 12am PST every Mon-Fri
@@ -193,7 +197,10 @@ schedule = {
     'onbase_test': '*/15 * * * *',
     'gis_tree_canopy': None,
     'parking_meter_locs': '0 19 * * *', # daily at 7pm UTC
-    'sidewalks': '@daily'
+    'sidewalks': '@monthly',
+    'amcs': "0 12 * * *", # Daily at 4p UTC / 5a PST
+    'ga_portal': '@monthly',
+    'pv_prod':'@hourly'
 }
 
 default_date = datetime(2019, 10, 8)
@@ -239,7 +246,10 @@ start_date = {
     'onbase_test': default_date,
     'gis_tree_canopy': default_date,
     'parking_meter_locs': datetime(2019, 12, 25),
-    'sidewalks':  default_date
+    'amcs': datetime(2020, 4, 14),
+    'pv_prod': datetime(2020, 2, 26),
+    'sidewalks':  default_date,
+    'ga_portal': datetime(2020, 5, 19)
 }
 
 
@@ -254,9 +264,9 @@ args = {
     'owner': 'airflow',
     'depends_on_past': False,
     'email': config['mail_default_receivers'],
-    'email_on_failure': config['mail_notify'],
+    'email_on_failure': False,
     'email_on_retry': False,
-    'retries': 3,
+    'retries': 1,
     'retry_delay': timedelta(minutes=5),
     'retry_exponential_backoff': True,
     'max_retry_delay': timedelta(minutes=120)

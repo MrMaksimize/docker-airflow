@@ -6,7 +6,8 @@ from airflow.operators.subdag_operator import SubDagOperator
 from airflow.models import DAG
 
 from trident.util import general
-from trident.util.notifications import notify
+from trident.util.notifications import afsys_send_email
+
 import dags.city_docs.documentum_name as dn
 
 from dags.city_docs.city_docs_jobs import *
@@ -34,10 +35,11 @@ other_file_list = dn.table_name('schedule_daily')+dn.table_name('schedule_hourly
 
 #: Dag spec
 dag = DAG(dag_id='documentum_test',
-    catchup=False,
     default_args=args,
     start_date=start_date,
-    schedule_interval=schedule)
+    schedule_interval=schedule,
+    catchup=False
+    )
 
 schedule_mode = 'schedule_hourly_30'
 
@@ -48,27 +50,21 @@ get_doc_tables = PythonOperator(
     op_kwargs={'mode': schedule_mode,
     'test':True,
     'conn_id':'docm_test_sql'},
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    
     dag=dag)
 
 div_doc_latest = PythonOperator(
     task_id='divide_doc_latest',
     python_callable=latest_res_ords,
     op_kwargs={'filename': 'documentum_scs_council_reso_ordinance_v_test'},
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    
     dag=dag)
 
 div_doc_other = PythonOperator(
     task_id='divide_doc_other',
     python_callable=split_reso_ords,
     op_kwargs={'filename': 'documentum_scs_council_reso_ordinance_v_test'},
-    on_failure_callback=notify,
-    on_retry_callback=notify,
-    on_success_callback=notify,
+    
     dag=dag)
 
 upload_div_files = SubDagOperator(
