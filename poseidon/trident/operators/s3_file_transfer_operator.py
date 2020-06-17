@@ -19,7 +19,7 @@ from airflow.hooks.S3_hook import S3Hook
 from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
 from trident.util import general
-
+import boto3
 
 conf = general.config
 
@@ -94,11 +94,22 @@ class S3FileTransferOperator(BaseOperator):
         return url
 
     def verify_file_size_match(self, local_path, url):
-        r = requests.head(url)
-        r.raise_for_status()
-        upload_size = int(r.headers['Content-Length'])
+        s3_file = boto3.client('s3')
+
+        try:
+            s3_data = s3_file.head_object(Bucket=self.dest_s3_bucket, Key=self.dest_s3_key)
+        except botocore.exceptions.ClientError as e:
+            if e.response['Error']['Code'] == '404':
+                logging.info(f'The object does not exist on bucket {self.dest_s3_bucket} key {self.dest_s3_key}')
+            else:
+                else_error = e.response['Error']['Code']
+                logging.info(f'HTTP HEAD code {else_error} on bucket {self.dest_s3_bucket} key {self.dest_s3_key}')
+                raise
+        
+        upload_size = s3_data["ResponseMetadata"]["HTTPHeaders"]['content-length']
         local_size = int(os.path.getsize(local_path))
-        assert upload_size == local_size, 'upload size {} does not match local size {}'.format(
+
+        assert int(upload_size) == int(local_size), 'upload size {} does not match local size {}'.format(
             upload_size, local_size)
 
         logging.info("Upload size {} matches local size {}".format(upload_size,
