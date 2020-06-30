@@ -102,7 +102,7 @@ def buildConfig(env):
         'date_format_ymd_hms': "%Y-%m-%d %H:%M:%S",
         'date_format_keen': "%Y-%m-%dT%H:%M:%S",
         'dags_dir': "{}/poseidon/dags".format(os.environ.get("AIRFLOW_HOME", "")),
-        'dest_s3_bucket': os.environ.get('S3_DATA_BUCKET', 'datasdtest2-dev'),
+        'dest_s3_bucket': os.environ.get('S3_DATA_BUCKET', 'datasd-dev'),
         'ref_s3_bucket': os.environ.get('S3_REF_BUCKET', 'datasd-reference'),
         'oracle_wpl': os.environ.get('CONN_ORACLEWPL'),
         'ftp_sannet_user': os.environ.get("FTP_SANNET_USER", "anonymous"),
@@ -155,7 +155,11 @@ def buildConfig(env):
         'pf_api_key_str': os.environ.get("PF_API_KEY_STR"),
         'lucid_api_user': os.environ.get("LUCID_USER"),
         'lucid_api_pass': os.environ.get("LUCID_PASS"),
-        'ga_client_secrets': os.environ.get("GA_CLIENT_SECRETS")
+        'ga_client_secrets': os.environ.get("GA_CLIENT_SECRETS"),
+        'migration_aws_key': os.environ.get('MIGRATION_ACCESS_KEY'),
+        'migration_aws_secret': os.environ.get('MIGRATION_ACCESS_SECRET'),
+        'migration_aws_region': os.environ.get('MIGRATION_REGION'),
+        'migration_dest_s3_bucket': os.environ.get('MIGRATION_BUCKET', 'datasd.dev')
     }
     return config
 
