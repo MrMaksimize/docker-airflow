@@ -19,7 +19,7 @@ from airflow.hooks.S3_hook import S3Hook
 from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
 from trident.util import general
-
+import boto3
 
 conf = general.config
 
@@ -68,6 +68,7 @@ class S3FileTransferOperator(BaseOperator):
         self.dest_s3_key = dest_s3_key
 
     def execute(self, context):
+        
         ti = context['ti']
         dest_s3 = S3Hook(aws_conn_id=self.dest_s3_conn_id)
         local_fpath = "%s/%s" % (self.source_base_path, self.source_key)
@@ -88,17 +89,55 @@ class S3FileTransferOperator(BaseOperator):
                                                          self.dest_s3_key)
 
         logging.info("URL: {}".format(url))
-
-        self.verify_file_size_match(local_fpath, url)
+        s3_file = boto3.client('s3')
+        self.verify_file_size_match(s3_file, local_fpath, url)
+        
+        #Perform Migration Account Upload
+        self.execute_migration()        
 
         return url
 
-    def verify_file_size_match(self, local_path, url):
-        r = requests.head(url)
-        r.raise_for_status()
-        upload_size = int(r.headers['Content-Length'])
+    def execute_migration(self):
+        aws_key = conf['migration_aws_key']
+        aws_secret_key = conf['migration_aws_secret']
+        aws_region = conf['migration_aws_region']
+        migration_s3_bucket = conf['migration_dest_s3_bucket']
+
+        local_filepath = f'{self.source_base_path}/{self.source_key}'
+        logging.info(f'{local_filepath} >>>>> {migration_s3_bucket}/{self.dest_s3_key}')
+
+        migration_s3_upload = boto3.session.Session(aws_access_key_id=aws_key,
+            aws_secret_access_key=aws_secret_key,
+            region_name=aws_region).client(service_name='s3', 
+                                            region_name=aws_region,
+                                            aws_access_key_id=aws_key,
+                                            aws_secret_access_key=aws_secret_key)
+
+        migration_s3_upload.upload_file(local_filepath, migration_s3_bucket, self.dest_s3_key)
+
+        logging.info("Upload completed to new account")
+
+        url = "https://{}.s3-us-west-2.amazonaws.com/{}".format(self.dest_s3_bucket,self.dest_s3_key)
+
+        self.verify_file_size_match(migration_s3_upload, local_filepath, url)
+
+    def verify_file_size_match(self, boto_client, local_path, url):
+
+        try:
+            s3_data = boto_client.head_object(Bucket=self.dest_s3_bucket, Key=self.dest_s3_key)
+            #s3_data = s3_file.head_object(Bucket=self.dest_s3_bucket, Key=self.dest_s3_key)
+        except botocore.exceptions.ClientError as e:
+            if e.response['Error']['Code'] == '404':
+                logging.info(f'The object does not exist on bucket {self.dest_s3_bucket} key {self.dest_s3_key}')
+            else:
+                else_error = e.response['Error']['Code']
+                logging.info(f'HTTP HEAD code {else_error} on bucket {self.dest_s3_bucket} key {self.dest_s3_key}')
+                raise
+        
+        upload_size = s3_data["ResponseMetadata"]["HTTPHeaders"]['content-length']
         local_size = int(os.path.getsize(local_path))
-        assert upload_size == local_size, 'upload size {} does not match local size {}'.format(
+
+        assert int(upload_size) == int(local_size), 'upload size {} does not match local size {}'.format(
             upload_size, local_size)
 
         logging.info("Upload size {} matches local size {}".format(upload_size,
