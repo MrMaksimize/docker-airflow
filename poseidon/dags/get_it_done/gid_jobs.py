@@ -8,6 +8,7 @@ import numpy as np
 from trident.util import general
 from trident.util.sf_client import Salesforce
 from trident.util.geospatial import spatial_join_pt
+import csv
 
 conf = general.config
 
@@ -494,16 +495,15 @@ def create_prod_files():
         'cpcode']].fillna(-999999.0).astype(int)
 
     df = df.replace(-999999,'')
-    
+
+    df['case_age_days'] = df['case_age_days'].replace(-999999,0)
     df['parent_case_number'] = df['parent_case_number'].replace(0,'')
 
     df.loc[:,['parent_case_number',
         'sap_notification_number',
-        'case_age_days',
         'district',
         'cpcode']] = df.loc[:,['parent_case_number',
         'sap_notification_number',
-        'case_age_days',
         'district',
         'cpcode']].astype(str)
 
@@ -594,12 +594,17 @@ def create_prod_files():
         full_file,
         date_format='%Y-%m-%d')
 
-    logging.info("Creating new compressed json")
-    #json_subset = final_reports.drop(['public_description'],axis=1)
-    final_json = final_reports.to_json(f'{conf["prod_data_dir"]}/get_it_done_requests_datasd.json',
-        orient='records',
-        compression='gzip'
-        )
+    logging.info("Creating new compressed csv for Snowflake")
+    csv_subset = final_reports.drop(['public_description'],axis=1)
+    csv_subset.to_csv(f"{conf['prod_data_dir']}/get_it_done_snowflake.csv.gz",
+            index=False,
+            header=False,
+            quoting=csv.QUOTE_MINIMAL,
+            compression='gzip',
+            doublequote=True,
+            na_rep="NULL",
+            date_format="%Y-%m-%d %H:%M:%S",
+            escapechar='\\')
 
     min_report = final_reports['date_requested'].min().year
     max_report = final_reports['date_requested'].max().year

@@ -155,7 +155,12 @@ def buildConfig(env):
         'pf_api_key_str': os.environ.get("PF_API_KEY_STR"),
         'lucid_api_user': os.environ.get("LUCID_USER"),
         'lucid_api_pass': os.environ.get("LUCID_PASS"),
-        'ga_client_secrets': os.environ.get("GA_CLIENT_SECRETS")
+        'ga_client_secrets': os.environ.get("GA_CLIENT_SECRETS"),
+        'snowflake_user': os.environ.get("SNOWFLAKE_USER"),
+        'snowflake_pass': os.environ.get("SNOWFLAKE_PASS"),
+        'snowflake_org': os.environ.get("SNOWFLAKE_ORG"),
+        'snowflake_wh': os.environ.get("SNOWFLAKE_WH"),
+        'snowflake_db': os.environ.get("SNOWFLAKE_DB")
     }
     return config
 
