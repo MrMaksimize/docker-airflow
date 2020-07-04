@@ -11,7 +11,11 @@ args = general.args
 schedule = general.schedule['dsd_approvals']
 start_date = general.start_date['dsd_approvals']
 
-files = ['set1_active','set1_closed','set2_active','set2_closed']
+files = ['set1_active',
+'set1_closed',
+'set1_closed_projects',
+'set2_active',
+'set2_closed']
 
 def create_file_subdag():
   """
@@ -28,7 +32,7 @@ def create_file_subdag():
   )
 
   for file in files:
-    mode = file.split('_')[1]
+    mode = file.split('_')[-1]
     sys = file.split('_')[0]
 
     if sys == 'set1': 

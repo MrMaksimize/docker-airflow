@@ -101,7 +101,7 @@ def build_pts(mode='active', **context):
 
         # Currently active permits
         logging.info("Reading active permits")
-        active = pd.read_csv(f"{conf['temp_data_dir']}/" \
+        df = pd.read_csv(f"{conf['temp_data_dir']}/" \
             + f"{filelist['Active approvals since 2003'].get('name')}_" \
             + f"{filename}.{filelist['Active approvals since 2003'].get('ext')}",
             low_memory=False,
@@ -109,22 +109,10 @@ def build_pts(mode='active', **context):
             encoding="ISO-8859-1",
             parse_dates=date_cols,
             dtype=dtypes)
-        # Need to add closed projects to open approvals
-        logging.info("Reading closed projects")
-        closed_projects = pd.read_csv(f"{conf['temp_data_dir']}/" \
-            + f"{filelist['Closed projects'].get('name')}_{filename}." \
-            + f"{filelist['Closed projects'].get('ext')}",
-            low_memory=False,
-            sep=",",
-            encoding="ISO-8859-1",
-            parse_dates=date_cols,
-            dtype=dtypes)
-
-        df = pd.concat([active,closed_projects],sort=False)
 
         prod_permits = f"{conf['temp_data_dir']}/permits_set1_active.csv"
 
-    else:
+    elif mode == 'closed' :
 
         # Closed permits
         logging.info("Reading closed permits")
@@ -138,6 +126,25 @@ def build_pts(mode='active', **context):
             dtype=dtypes)
 
         prod_permits = f"{conf['temp_data_dir']}/permits_set1_closed.csv"
+
+    elif mode == "projects":
+
+        # Closed projects, open approvals
+        logging.info("Reading closed projects")
+        df = pd.read_csv(f"{conf['temp_data_dir']}/" \
+            + f"{filelist['Closed projects'].get('name')}_{filename}." \
+            + f"{filelist['Closed projects'].get('ext')}",
+            low_memory=False,
+            sep=",",
+            encoding="ISO-8859-1",
+            parse_dates=date_cols,
+            dtype=dtypes)
+
+        prod_permits = f"{conf['temp_data_dir']}/permits_set1_closed_projects.csv"
+
+    else:
+
+        raise Exception("Incorrect mode")
 
 
     logging.info("File read successfully, renaming columns")
@@ -153,6 +160,18 @@ def build_pts(mode='active', **context):
         'approval_expiration_date':'date_approval_expire',
         'approval_create_date':'date_approval_create',
         'approval_close_date':'date_approval_close'})
+
+    if mode == "projects":
+
+        projects_closed_prod = pd.read_csv(f"{conf['temp_data_dir']}/permits_set1_closed_projects.csv",
+            low_memory=False)
+        
+        final_projects_closed = pd.concat([projects_closed_prod,df],
+            ignore_index=True,
+            sort=False)
+
+        df = final_projects_closed.copy()
+
 
     logging.info("Removing certain columns")
     # Removing columns per SME
@@ -333,8 +352,15 @@ def create_full_set():
         parse_dates=date_cols,
         dtype=dtypes
         )
+    logging.info("Reading in projects closed")
+    pts_closed_projects = pd.read_csv(f"{conf['prod_data_dir']}/permits_set1_closed_projects_datasd.csv",
+        low_memory=False,
+        parse_dates=date_cols,
+        dtype=dtypes
+        )
 
-    pts_all = pd.concat([pts_historical,pts_closed,pts_active],sort=False)
+    pts_all = pd.concat([pts_historical,pts_closed,pts_active,pts_closed_projects],sort=False)
+    pts_all = pts_all.drop_duplicates()
 
     logging.info(f"Combined all sets for {pts_all.shape[0]} records")
 
