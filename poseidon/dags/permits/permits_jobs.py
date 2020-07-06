@@ -83,7 +83,7 @@ def build_pts(mode='active', **context):
 
     date_cols = ['Project Create Date',
     'Project Deemed Complete Date',
-    ' Approval Create Date',
+    'Approval Create Date',
     'Approval Issue Date',
     'Approval Expiration Date',
     'Approval Close Date']
