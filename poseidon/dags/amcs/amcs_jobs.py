@@ -77,7 +77,10 @@ def get_updates_only():
         shutil.copyfile(previous_run_temp_file1, previous_run_temp_file1 + '.' + datetime.date.today().isoformat())
         # delete old backup file
         ten_days_ago = (datetime.date.today() - datetime.timedelta(days=10)).isoformat()
-        os.remove(previous_run_temp_file1 + '.' + ten_days_ago)
+        try:
+            os.remove(previous_run_temp_file1 + '.' + ten_days_ago)
+        except:
+            pass
 
 
         get_diff(previous_file=previous_run_temp_file1, current_file=temp_file1, output_file=temp_file2)
