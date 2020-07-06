@@ -361,7 +361,6 @@ def create_full_set():
 
     pts_all = pd.concat([pts_historical,pts_closed,pts_active,pts_closed_projects],sort=False)
     pts_all = pts_all.drop_duplicates()
-    pts_all = pts_all.drop(columns=['appl_days'])
 
     for dc in date_cols:
         logging.info(f"Converting {dc} column")
