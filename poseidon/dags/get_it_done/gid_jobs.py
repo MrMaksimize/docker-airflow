@@ -596,15 +596,7 @@ def create_prod_files():
 
     logging.info("Creating new compressed csv for Snowflake")
     csv_subset = final_reports.drop(['public_description'],axis=1)
-    csv_subset.to_csv(f"{conf['prod_data_dir']}/get_it_done_snowflake.csv.gz",
-            index=False,
-            header=False,
-            quoting=csv.QUOTE_MINIMAL,
-            compression='gzip',
-            doublequote=True,
-            na_rep="NULL",
-            date_format="%Y-%m-%d %H:%M:%S",
-            escapechar='\\')
+    general.sf_write_csv(csv_subset,'get_it_done')
 
     min_report = final_reports['date_requested'].min().year
     max_report = final_reports['date_requested'].max().year

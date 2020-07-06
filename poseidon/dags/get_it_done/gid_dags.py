@@ -1,8 +1,6 @@
 """Get It Done _dags file."""
 import re
 import glob
-import json
-from airflow.models.connection import Connection
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.subdag_operator import SubDagOperator
 from airflow.contrib.operators.snowflake_operator import SnowflakeOperator
@@ -23,9 +21,9 @@ conf = general.config
 schedule = general.schedule['get_it_done']
 start_date = general.start_date['get_it_done']
 
-snowflake_stage = format_stage_sql('get_it_done_snowflake')
+snowflake_stage = format_stage_sql('get_it_done')
 snowflake_del = format_delete_sql('get_it_done')
-snowflake_copy = format_copy_sql('get_it_done','get_it_done_snowflake')
+snowflake_copy = format_copy_sql('get_it_done')
 
 #: Dag spec
 dag = DAG(dag_id='get_it_done',

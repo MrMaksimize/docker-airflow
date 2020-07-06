@@ -155,12 +155,7 @@ def buildConfig(env):
         'pf_api_key_str': os.environ.get("PF_API_KEY_STR"),
         'lucid_api_user': os.environ.get("LUCID_USER"),
         'lucid_api_pass': os.environ.get("LUCID_PASS"),
-        'ga_client_secrets': os.environ.get("GA_CLIENT_SECRETS"),
-        'snowflake_user': os.environ.get("SNOWFLAKE_USER"),
-        'snowflake_pass': os.environ.get("SNOWFLAKE_PASS"),
-        'snowflake_org': os.environ.get("SNOWFLAKE_ORG"),
-        'snowflake_wh': os.environ.get("SNOWFLAKE_WH"),
-        'snowflake_db': os.environ.get("SNOWFLAKE_DB")
+        'ga_client_secrets': os.environ.get("GA_CLIENT_SECRETS")
     }
     return config
 
@@ -316,6 +311,22 @@ def pos_write_csv(df, fname, **kwargs):
 
     df.to_csv(fname, **csv_args)
 
+def sf_write_csv(df, fname, **kwargs):
+    """ Write compressed csv for snowflake """
+    fname_full = f"{config['prod_data_dir']}/{fname}_snowflake.csv.gz"
+    default = {
+        'index':False,
+        'header':False,
+        'quoting':csv.QUOTE_MINIMAL,
+        'compression':'gzip',
+        'doublequote':True,
+        'na_rep':"NULL",
+        'date_format':"%Y-%m-%d %H:%M:%S",
+        'escapechar':'\\'
+    }
+    csv_args = default.copy()
+    csv_args.update(kwargs)
+    df.to_csv(fname_full, **csv_args)
 
 def file_to_string(rel_file_path, caller=None):
     """Read a file into a string variable.  Caller is __file___."""

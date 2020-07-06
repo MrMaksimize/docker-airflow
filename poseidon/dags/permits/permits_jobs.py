@@ -8,6 +8,7 @@ from trident.util.geospatial import spatial_join_pt
 import logging
 from subprocess import Popen, PIPE
 from shlex import quote
+from datetime import datetime as dt
 
 conf = general.config
 
@@ -320,7 +321,6 @@ def create_full_set():
     date_cols = ['date_project_create',
     'date_project_complete',
     'date_approval_issue',
-    'date_approval_expire',
     'date_approval_create',
     'date_approval_close']
 
@@ -361,6 +361,13 @@ def create_full_set():
 
     pts_all = pd.concat([pts_historical,pts_closed,pts_active,pts_closed_projects],sort=False)
     pts_all = pts_all.drop_duplicates()
+    pts_all = pts_all.drop(columns=['appl_days'])
+
+    for dc in date_cols:
+        logging.info(f"Converting {dc} column")
+        pts_all[dc] = pts_all[dc].apply(lambda x: np.nan if pd.isnull(x) else x.strftime("%Y-%m-%d %H:%M:%S"))
+
+    pts_all['date_approval_expire'] = pd.to_datetime(pts_all['date_approval_expire'],errors='coerce',format="%Y-%m-%d %H:%M:%S")
 
     logging.info(f"Combined all sets for {pts_all.shape[0]} records")
 
@@ -372,6 +379,9 @@ def create_full_set():
         pts_all,
         f"{conf['prod_data_dir']}/dsd_permits_all_pts.csv",
         date_format=conf['date_format_ymd_hms'])
+
+    logging.info("Writing compressed csv")
+    general.sf_write_csv(pts_all,'dsd_approvals_pts')
 
     logging.info("Reading in all Accela files")
     logging.info("Reading in Active")
@@ -400,6 +410,10 @@ def create_full_set():
         accela_all,
         f"{conf['prod_data_dir']}/dsd_permits_all_accela.csv",
         date_format=conf['date_format_ymd'])
+
+    logging.info("Writing compressed csv")
+
+    general.sf_write_csv(accela_all,'dsd_approvals_accela')
 
     return "Successfully created full PTS and Accela sets"
 
