@@ -315,6 +315,22 @@ def pos_write_csv(df, fname, **kwargs):
 
     df.to_csv(fname, **csv_args)
 
+def sf_write_csv(df, fname, **kwargs):
+    """ Write compressed csv for snowflake """
+    fname_full = f"{config['prod_data_dir']}/{fname}_snowflake.csv.gz"
+    default = {
+        'index':False,
+        'header':False,
+        'quoting':csv.QUOTE_MINIMAL,
+        'compression':'gzip',
+        'doublequote':True,
+        'na_rep':"NULL",
+        'date_format':"%Y-%m-%d %H:%M:%S",
+        'escapechar':'\\'
+    }
+    csv_args = default.copy()
+    csv_args.update(kwargs)
+    df.to_csv(fname_full, **csv_args)
 
 def file_to_string(rel_file_path, caller=None):
     """Read a file into a string variable.  Caller is __file___."""
