@@ -1,4 +1,4 @@
-# VERSION 1.2.2
+# VERSION 1.2.3
 # AUTHOR: Andrell Bower
 # DESCRIPTION: Airflow container for running City of San Diego Airflow Instances.  Original work by Puckel_ & mrmaksimize
 # BUILD: docker build --rm -t andrell81/docker-airflow .
@@ -136,6 +136,7 @@ RUN pip install -U pip setuptools wheel \
     && pip install rtree \
     && pip install shapely \
     && pip install "tornado>=4.2.0,<6.0.0" \
+    && pip install "snowflake-connector-python==2.2.8" \
     && pip install "Werkzeug==0.16.1" \
     && pip install xlrd \
     && apt-get autoremove -yqq --purge \
