@@ -13,7 +13,7 @@ ENV DEBIAN_FRONTEND noninteractive
 ENV TERM linux
 
 # Airflow
-ARG AIRFLOW_VERSION=1.10.10
+ARG AIRFLOW_VERSION=1.10.11
 ARG AIRFLOW_HOME=/usr/local/airflow
 ARG GDAL_VERSION=2.1.0
 
@@ -102,7 +102,7 @@ RUN curl -sL https://deb.nodesource.com/setup_10.x | bash - \
 RUN pip install -U pip setuptools wheel \
     && pip install apache-airflow[crypto,celery,postgres,slack,s3,jdbc,mysql,mssql,ssh,password,rabbitmq,samba]==${AIRFLOW_VERSION} \
     && pip install arcgis \
-    && pip install boto3 \
+    && pip install "boto3==1.12.26" \
     && pip install bs4 \
     && pip install fiona \
     && pip install "Flask<2.0,>=1.1.0" \
@@ -219,6 +219,6 @@ EXPOSE 8080 5555 8793
 
 USER airflow
 WORKDIR ${AIRFLOW_HOME}
-ENTRYPOINT ["secretly", "./entrypoint.sh"]
-CMD ["secretly", "webserver"] # set default arg for entrypoint
+ENTRYPOINT ["./entrypoint.sh"]
+CMD ["webserver"] # set default arg for entrypoint
 

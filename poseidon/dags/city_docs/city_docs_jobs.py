@@ -28,7 +28,7 @@ def get_sire():
             path = f'./sql/sire/{name}'
             query_string = general.file_to_string(path, __file__)
             logging.info('Connecting to MS Database')
-            sire_conn = MsSqlHook(mssql_conn_id='sire_sql')
+            sire_conn = MsSqlHook(mssql_conn_id='AIRFLOW_CONN_SIRE_SQL')
             logging.info('Reading data to Pandas DataFrame')
             df = sire_conn.get_pandas_df(query_string)
             table_type = name[0:-4]
