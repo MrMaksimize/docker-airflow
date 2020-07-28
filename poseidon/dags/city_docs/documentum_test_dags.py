@@ -49,7 +49,7 @@ get_doc_tables = PythonOperator(
     python_callable=get_documentum,
     op_kwargs={'mode': schedule_mode,
     'test':True,
-    'conn_id':'docm_test_sql'},
+    'conn_id':'DOCM_TEST_SQL'},
     
     dag=dag)
 

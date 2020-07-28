@@ -28,7 +28,7 @@ def get_sire():
             path = f'./sql/sire/{name}'
             query_string = general.file_to_string(path, __file__)
             logging.info('Connecting to MS Database')
-            sire_conn = MsSqlHook(mssql_conn_id='AIRFLOW_CONN_SIRE_SQL')
+            sire_conn = MsSqlHook(mssql_conn_id='SIRE_SQL')
             logging.info('Reading data to Pandas DataFrame')
             df = sire_conn.get_pandas_df(query_string)
             table_type = name[0:-4]
@@ -51,7 +51,7 @@ def get_onbase():
             path = f'./sql/onbase/{name}'
             query_string = general.file_to_string(path, __file__)
             logging.info('Connecting to MS Database')
-            onbase_conn = MsSqlHook(mssql_conn_id='onbase_sql')
+            onbase_conn = MsSqlHook(mssql_conn_id='ONBASE_SQL')
             logging.info('Reading data to Pandas DataFrame')
             df = onbase_conn.get_pandas_df(query_string)
             table_type = name[0:-4]
@@ -74,7 +74,7 @@ def get_onbase_test():
             path = f'./sql/onbase/{name}'
             query_string = general.file_to_string(path, __file__)
             logging.info('Connecting to MS Database')
-            onbase_conn = MsSqlHook(mssql_conn_id='onbase_test_sql')
+            onbase_conn = MsSqlHook(mssql_conn_id='ONBASE_TEST_SQL')
             logging.info('Reading data to Pandas DataFrame')
             df = onbase_conn.get_pandas_df(query_string)
             table_type = name[0:-4]
@@ -88,7 +88,7 @@ def get_onbase_test():
 
     return "Successfully retrieved OnBase tables"
     
-def get_documentum(mode, test=False, conn_id='docm_sql', **kwargs):
+def get_documentum(mode, test=False, conn_id='DOCM_SQL', **kwargs):
     """Get tables from Documentum."""
     logging.info('Getting files from documentum')
     

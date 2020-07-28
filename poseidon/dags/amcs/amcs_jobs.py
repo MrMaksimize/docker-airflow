@@ -10,6 +10,8 @@ from shlex import quote
 import subprocess
 from trident.util import general
 from trident.util.sf_client import Salesforce
+from airflow.hooks.base_hook import BaseHook
+from airflow.models import Variable
 
 conf = general.config
 
@@ -21,14 +23,14 @@ temp_file3 = conf['temp_data_dir'] + '/grouped_amcs_sites.csv'
 final_file = conf['temp_data_dir'] + '/final_amcs_sites.csv'
 
 # If the server IP ever changes, the smbclient command might fail with NT_STATUS_UNSUCCESSFUL errors
-server_ip = conf['amcs_ip']
-
 
 def write_to_shared_drive():
     """Write the file to the share location"""
     logging.info('Retrieving data for current FY.')
+    conn = BaseHook.get_connection(conn_id="SVC_ACCT")
+    server_ip = Variable.get("AMCS_IP_ADDRESS")
     command = "smbclient //csdldcamcsappp/GetItDone -W ad -mSMB3 " \
-        + f"--user={conf['svc_acct_user']}%{conf['svc_acct_pass']} --ip-address={server_ip} " \
+        + f"--user={conn.login}%{conn.password} --ip-address={server_ip} " \
         + f"--directory='/' -c '" \
         + f" put {final_file} sites_export.csv'"
 
@@ -45,14 +47,16 @@ def write_to_shared_drive():
 
 def get_sites():
     """Get requests from sf, creates prod file."""
-    username = conf['dpint_sf_user']
-    password = conf['dpint_sf_pass']
-    security_token = conf['dpint_sf_token']
+    sf_conn = BaseHook.get_connection(conn_id="DPINT_SF_AMCS")
 
-    report_id = "00Ot0000000QrwU"
+    username = sf_conn.login
+    password = sf_conn.password
+    security_token = sf_conn.extra_dejson
+    report_id = sf_conn.schema
+    #report_id = "00Ot0000000QrwU"
 
     # Init salesforce client
-    sf = Salesforce(username, password, security_token)
+    sf = Salesforce(username, password, security_token['token'])
 
     # Pull dataframe
     logging.info('Pull report {} from SF'.format(report_id))

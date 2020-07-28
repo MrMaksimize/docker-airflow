@@ -25,13 +25,12 @@ from trident.operators.poseidon_email_operator import PoseidonEmailWithPythonOpe
 
 # Required variables
 
+from airflow.models import Variable
 args = general.args
 conf = general.config
 schedule = '@daily' # Replace
 start_date = general.default_date # Replace
 
-# Optional variable
-email_recips = conf['mail_notify']
 
 #: Required DAG definition
 dag = DAG(dag_id='template',
@@ -109,7 +108,7 @@ template_email_report = PoseidonEmailWithPythonOperator(
 #: Send an email a file was updated
 template_email_updated = PoseidonEmailFileUpdatedOperator(
     task_id='template_send_updated',
-    to=email_recips,
+    to="{{ var.value.MAIL_NOTIFY_CLAIMS }}", # optional
     subject='File Updated',
     file_url="http://seshat.datasd.org/dsd/dsd_permits_all_pts.csv",
     message='<p>DSD permits have been updated.</p>' \
@@ -142,8 +141,8 @@ upload_data = S3FileTransferOperator(
     task_id='template_upload',
     source_base_path=conf['prod_data_dir'],
     source_key='',
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_bucket=conf['dest_s3_bucket'],
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
     dest_s3_key='/',
     replace=True,
     dag=dag)

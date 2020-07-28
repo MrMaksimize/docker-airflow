@@ -43,8 +43,8 @@ addresses_to_S3 = S3FileTransferOperator(
     task_id='upload_address_book',
     source_base_path=conf['prod_data_dir'],
     source_key='events_address_book.csv',
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_bucket=conf['ref_s3_bucket'],
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_REF_BUCKET }}",
     dest_s3_key='events_address_book.csv',
     
     replace=True,
@@ -55,8 +55,8 @@ upload_special_events_web = S3FileTransferOperator(
     task_id='upload_special_events_web',
     source_base_path=conf['prod_data_dir'],
     source_key='special_events_list_datasd.csv',
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_bucket=conf['dest_s3_bucket'],
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
     dest_s3_key='special_events/special_events_list_datasd.csv',
     
     replace=True,
@@ -67,8 +67,8 @@ upload_special_events = S3FileTransferOperator(
     task_id='upload_special_events',
     source_base_path=conf['prod_data_dir'],
     source_key='special_events_list_datasd_v1.csv',
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_bucket=conf['dest_s3_bucket'],
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
     dest_s3_key='special_events/special_events_list_datasd_v1.csv',
     
     replace=True,

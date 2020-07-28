@@ -85,13 +85,13 @@ def normalize_address(address_string):
 def get_special_events():
     """Get special events from DB."""
     se_query = general.file_to_string('./sql/special_events.sql', __file__)
-    se_conn = MsSqlHook(mssql_conn_id='special_events_sql')
+    se_conn = MsSqlHook(mssql_conn_id='SPECIAL_EVENTS_SQL')
     df = se_conn.get_pandas_df(se_query)
     df['event_id'] = pd.to_numeric(
         df['event_id'], errors='coerce', downcast='integer')
 
     general.pos_write_csv(
-        df, temp_file, date_format=conf['date_format_ymd_hms'])
+        df, temp_file, date_format="%Y-%m-%d %H:%M:%S")
 
     return "Retrieved special events to temp file."
 
@@ -159,11 +159,11 @@ def process_special_events():
     general.pos_write_csv(
         updated_df,
         prod_file,
-        date_format=conf['date_format_ymd_hms'])
+        date_format="%Y-%m-%d %H:%M:%S")
 
     general.pos_write_csv(
         updated_df,
         prod_v1_file,
-        date_format=conf['date_format_ymd_hms'])
+        date_format="%Y-%m-%d %H:%M:%S")
 
     return "Successfully generated special events prod file"

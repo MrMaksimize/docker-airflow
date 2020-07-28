@@ -12,10 +12,10 @@ from trident.util import geospatial
 from trident.util.sf_client import Salesforce
 from airflow.hooks.postgres_hook import PostgresHook
 import cx_Oracle
+from airflow.hooks.base_hook import BaseHook
 
 
 conf = general.config
-credentials = general.source['dsd_permits']
 
 temp_file_sf = conf['temp_data_dir'] + '/tsw_violations_sf_temp.csv'
 temp_file_pts = conf['temp_data_dir'] + '/tsw_violations_pts_temp.csv'
@@ -41,6 +41,8 @@ geocoded_addresses = 'https://datasd-reference.s3.amazonaws.com/sw_viols_address
 def get_vpm_violations_wget():
     """Temporary placeholder method for generating a wget to retrieve violations"""
 
+    ftp_conn = BaseHook.get_connection(conn_id="FTP_DATASD")
+
     command = """
     rm -rf {} && wget -np --continue \
     --user={} --password={} \
@@ -48,8 +50,8 @@ def get_vpm_violations_wget():
     ftp://ftp.datasd.org/uploads/virtual_pm/{}
     """.format(
             temp_file_vpm,
-            conf['ftp_datasd_user'],
-            conf['ftp_datasd_pass'],
+            ftp_conn.login,
+            ftp_conn.password,
             conf['temp_data_dir'],
             dump_csv_file)
 
@@ -126,18 +128,41 @@ def get_sf_violations():
 def get_pts_violations():
     """ Get violations from pts, creates temp file. """
 
-    wget_str = "wget -np --continue " \
-     + "--user=$ftp_user " \
-     + "--password='$ftp_pass' " \
-     + "--directory-prefix=$temp_dir " \
-     + "ftp://ftp.datasd.org/uploads/dsd/stormwater/*Panda_Extract_STW_*.csv"
-    tmpl = string.Template(wget_str)
-    command = tmpl.substitute(
-    ftp_user=conf['ftp_datasd_user'],
-    ftp_pass=conf['ftp_datasd_pass'],
-    temp_dir=conf['temp_data_dir'])
+    exec_date = context['next_execution_date'].in_tz(tz='US/Pacific')
+    # Exec date returns a Pendulum object
+    # Runs on Monday for data extracted Sunday
+    file_date = exec_date.subtract(days=1)
 
-    return command
+    # Need zero-padded month and date
+    filename = f"{file_date.year}" \
+    f"{file_date.strftime('%m')}" \
+    f"{file_date.strftime('%d')}"
+
+    conn = BaseHook.get_connection(conn_id="SVC_ACCT")
+
+    fpath = f"P2K_261-Panda_Extract_STW_{filename}.csv"
+
+    command = "smbclient //ad.sannet.gov/dfs " \
+    + f"--user={conn.login}%{conn.password} -W ad -c " \
+    + "'prompt OFF;"\
+    + " cd \"DSD-Shared/All_DSD/Panda/\";" \
+    + " lcd \"/data/temp/\";" \
+    + f" get {fpath};'"
+
+    command = command.format(quote(command))
+
+    p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
+    output, error = p.communicate()
+    
+    if p.returncode != 0:
+        logging.info(f"Error with {fpath}")
+        logging.info(output)
+        logging.info(error)
+        raise Exception(p.returncode)
+    else:
+        logging.info(f"Found {fpath}")
+
+    return "Successfully downloaded latest STW violations"
 
 def combine_violations():
     """Combine violations from 3 different sources."""

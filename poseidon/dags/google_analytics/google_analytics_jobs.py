@@ -21,12 +21,12 @@ from apiclient.discovery import build
 from oauth2client.service_account import ServiceAccountCredentials
 import pendulum
 import re
+from airflow.models import Variable
 
 # Optional variables
 
 prod_path = conf['prod_data_dir']
 temp_path = conf['temp_data_dir']
-secrets_str = conf['ga_client_secrets']
 cols_re = re.compile(r"([a-z](?=[A-Z])|[A-Z](?=[A-Z][a-z]))")
 
 #: Helper function
@@ -88,7 +88,7 @@ def create_client_secrets():
     logging.info("Writing keyfile to authenticate GA")
 
     json_path = f'{temp_path}/client_secrets_v4.json'
-
+    secrets_str = Variable.get("GA_CLIENT_SECRETS")
     secrets_json = json.loads(secrets_str)
     
     with open(json_path, 'w') as json_file:
@@ -185,7 +185,7 @@ def ga_batch_get(view_id="",
     general.pos_write_csv(
         df,
         f"{temp_path}/{out_path}.csv",
-        date_format=conf['date_format_ymd'])
+        date_format="%Y-%m-%d")
 
     return f"Successfully pulled batch report for {out_path}"
 
@@ -232,6 +232,6 @@ def process_batch_get(dims=[],out_path=""):
     general.pos_write_csv(
         final_df,
         f"{prod_path}/{out_path}_datasd.csv",
-        date_format=conf['date_format_ymd'])
+        date_format="%Y-%m-%d")
 
     return f"Successfully process GA report for {out_path}"

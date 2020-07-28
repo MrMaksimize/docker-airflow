@@ -90,8 +90,8 @@ upload_fin_support = S3FileTransferOperator(
     task_id='upload_financial_support',
     source_base_path=conf['prod_data_dir'],
     source_key='financial_support_'+str(cur_yr)+'_datasd_v1.csv',
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_bucket=conf['dest_s3_bucket'], # What is this supposed to be?
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}", # What is this supposed to be?
     dest_s3_key='campaign_fin/financial_support_'+str(cur_yr)+'_datasd_v1.csv',
     
     replace=True,

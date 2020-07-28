@@ -24,25 +24,22 @@ get_file = PythonOperator(
     task_id='get_tags_files',
     provide_context=True,
     python_callable=get_tags_file,
-    
     dag=dag)
 
 create_prod = PythonOperator(
   task_id="create_tags_prod",
   provide_context=True,
   python_callable=build_tags,
-  
   dag=dag)
 
 upload_file = S3FileTransferOperator(
   task_id="upload_tags",
   source_base_path=conf['prod_data_dir'],
   source_key="permits_set1_project_tags_datasd.csv",
-  dest_s3_bucket=conf['dest_s3_bucket'],
-  dest_s3_conn_id=conf['default_s3_conn_id'],
+  dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
+  dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
   dest_s3_key="dsd/permits_set1_project_tags_datasd.csv",
   replace=True,
-  
   dag=dag)
 
 update_tags_md = get_seaboard_update_dag('development-permits-tags.md', dag)

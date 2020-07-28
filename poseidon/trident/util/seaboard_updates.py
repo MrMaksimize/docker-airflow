@@ -11,6 +11,7 @@ from airflow.operators.python_operator import PythonOperator
 from trident.util import general
 
 from trident.util.notifications import afsys_send_email
+from airflow.models import Variable
 
 
 conf = general.config
@@ -23,7 +24,7 @@ def update_json_date(ds_fname, **kwargs):
     exec_date = kwargs['next_execution_date'].in_tz(tz='US/Pacific').strftime("%Y-%m-%d")
 
     #: Auth to github
-    tokens = conf["gh_tokens"]
+    tokens = Variable.get("GH_TOKENS").split(',')
     op_token = random.choice(tokens)
     gh = Github(login_or_token=op_token)
 
@@ -63,7 +64,7 @@ def update_seaboard_date(ds_fname, **kwargs):
     test_mode = kwargs['test_mode']
 
     #: Auth to github
-    tokens = conf['gh_tokens']
+    tokens = Variable.get("GH_TOKENS").split(',')
     op_token = random.choice(tokens)
     gh = Github(login_or_token=op_token)
 

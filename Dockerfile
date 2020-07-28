@@ -1,12 +1,11 @@
-# VERSION 1.2.3
-# AUTHOR: Andrell Bower
-# DESCRIPTION: Airflow container for running City of San Diego Airflow Instances.  Original work by Puckel_ & mrmaksimize
-# BUILD: docker build --rm -t andrell81/docker-airflow .
+# VERSION 1
+# AUTHOR: City of San Diego
+# DESCRIPTION: Airflow container for running City of San Diego Airflow Instances.
+# BUILD: docker build --rm -t cityofsandiego/airflow:latest .
 # SOURCE: https://github.com/DataSD/poseidon-airflow
 
-FROM python:3.6
-LABEL maintainer="andrell81"
-
+FROM python:3.7
+LABEL maintainer="City of San Diego"
 
 # Never prompts the user for choices on installation/configuration of packages
 ENV DEBIAN_FRONTEND noninteractive
@@ -32,17 +31,10 @@ ENV GDAL_VERSION $GDAL_VERSION
 ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
 ENV C_INCLUDE_PATH=/usr/include/gdal
 
-
-# Oracle Essentials
-ENV ORACLE_HOME /opt/oracle
-ENV ARCH x86_64
-ENV DYLD_LIBRARY_PATH /opt/oracle
-ENV LD_LIBRARY_PATH /opt/oracle
-
 #R
 ENV R_BASE_VERSION 3.5.3
 
-
+RUN pwd
 
 # Update apt and install
 RUN apt-get update -yqq \
@@ -100,46 +92,26 @@ RUN curl -sL https://deb.nodesource.com/setup_10.x | bash - \
 
 
 RUN pip install -U pip setuptools wheel \
-    && pip install apache-airflow[crypto,celery,postgres,slack,s3,jdbc,mysql,mssql,ssh,password,rabbitmq,samba]==${AIRFLOW_VERSION} \
-    && pip install arcgis \
-    && pip install "boto3==1.12.26" \
-    && pip install bs4 \
-    && pip install fiona \
-    && pip install "Flask<2.0,>=1.1.0" \
-    && pip install "Flask-Admin==1.5.4" \
-    && pip install "Flask-AppBuilder==2.3.0" \
-    && pip install "Flask-Babel==1.0.0" \
-    && pip install "Flask-Bcrypt==0.7.1" \
-    && pip install "Flask-Caching==1.3.3" \
-    && pip install "Flask-Login==0.4.1" \
-    && pip install "Flask-OpenID==1.2.5" \
-    && pip install "Flask-SQLAlchemy==2.4.1" \
-    && pip install "flask-swagger==0.2.13" \
-    && pip install "Flask-WTF==0.14.3" \
-    && pip install gdal==2.1.0 \
-    && pip install git+https://github.com/jguthmiller/pygeobuf.git@geobuf-v3 \
-    && pip install geojson \
-    && pip install geopandas \
-    && pip install geomet \
-    && pip install google-api-python-client \
-    && pip install lxml \
-    && pip install ndg-httpsclient \
-    && pip install oauth2client \
-    && pip install pandas \
-    && pip install psycopg2-binary \
-    && pip install pyasn1 \
-    && pip install PyGithub \
-    && pip install pyOpenSSL \
-    && pip install pytz \
-    && pip install "redis==3.4.1" \
-    && pip install requests \
-    && pip install rtree \
-    && pip install shapely \
-    && pip install "tornado>=4.2.0,<6.0.0" \
-    && pip install "snowflake-connector-python==2.2.8" \
-    && pip install "Werkzeug==0.16.1" \
-    && pip install xlrd \
-    && apt-get autoremove -yqq --purge \
+    && pip install apache-airflow[crypto,celery,postgres,s3,jdbc,mysql,mssql,oracle,ssh,password,rabbitmq,samba]==${AIRFLOW_VERSION} \
+    arcgis \
+    boto3 \
+    fiona \
+    gdal==2.1.0 \
+    git+https://github.com/jguthmiller/pygeobuf.git@geobuf-v3 \
+    geojson \
+    geopandas \
+    google-api-python-client \
+    oauth2client \
+    pandas \
+    PyGithub \
+    redis \
+    requests \
+    shapely \
+    snowflake-connector-python \
+    --constraint \
+        https://raw.githubusercontent.com/apache/airflow/${AIRFLOW_VERSION}/requirements/requirements-python3.7.txt
+
+RUN apt-get autoremove -yqq --purge \
     && apt-get clean \
     && rm -rf \
         /var/lib/apt/lists/* \
@@ -155,7 +127,6 @@ RUN pip install -U pip setuptools wheel \
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
       build-essential r-base r-cran-hexbin r-cran-plotly
-      #&& rm -rf /tmp/downloaded_packages/ /tmp/*.rds
 
 RUN Rscript -e "install.packages(c('data.table', \
     'docopt', \
@@ -174,41 +145,22 @@ RUN Rscript -e "install.packages(c('data.table', \
     'viridis' \
 ))"
 
-#RUN install.r dplyr \
-    #docopt \
-    #crosstalk \
-    #data.table \
-    #DT \
-    #dygraphs \
-    #flexdashboard \
-    #ggplot2 \
-    #hexbin \
-    #leaflet \
-    #mgcv \
-    #plotly \
-    #rmarkdown \
-    #rsconnect \
-    #shiny \
-    #tidyr \
-    #viridis
-
 RUN chown -R airflow /usr/local/lib/R/site-library* /usr/local/lib/R/site-library/*
-
-
-# Get Oracle Client
-# TODO -- ADD
-ADD http://datasd-dev-assets.s3.amazonaws.com/oracle.zip ${AIRFLOW_HOME}/
-ADD https://github.com/energyhub/secretly/releases/download/0.0.6/secretly-linux-amd64 /usr/local/bin/secretly
 
 COPY script/entrypoint.sh ${AIRFLOW_HOME}/entrypoint.sh
 COPY config/airflow.cfg ${AIRFLOW_HOME}/airflow.cfg
 
-RUN chmod +x /usr/local/bin/secretly
+WORKDIR /opt/oracle
 
+RUN wget https://download.oracle.com/otn_software/linux/instantclient/instantclient-basiclite-linuxx64.zip && \
+    unzip instantclient-basiclite-linuxx64.zip && \
+    rm -f instantclient-basiclite-linuxx64.zip && \
+    cd instantclient* && \
+    rm -f *jdbc* *occi* *mysql* *jar uidrvci genezi adrci && \
+    echo /opt/oracle/instantclient* > /etc/ld.so.conf.d/oracle-instantclient.conf && \
+    ldconfig
 
-RUN unzip ${AIRFLOW_HOME}/oracle.zip -d /opt \
-  && env ARCHFLAGS="-arch $ARCH" pip install cx_Oracle \
-  && rm ${AIRFLOW_HOME}/oracle.zip
+WORKDIR /
 
 RUN chown -R airflow: ${AIRFLOW_HOME} \
     && chmod +x ${AIRFLOW_HOME}/entrypoint.sh \

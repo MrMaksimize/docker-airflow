@@ -134,7 +134,7 @@ def get_transactions_a():
         general.pos_write_csv(
             campaignTransactions,
             save_path,
-            date_format=conf['date_format_ymd_hms'])
+            date_format="%Y-%m-%d %H:%M:%S")
 
         # Process max dates for later use
         logging.info("Calculate max filing dates")
@@ -149,7 +149,7 @@ def get_transactions_a():
         general.pos_write_csv(
             date_checks_max,
             conf['temp_data_dir'] + '/date_checks_max.csv',
-            date_format=conf['date_format_ymd_hms'])
+            date_format="%Y-%m-%d %H:%M:%S")
 
 
 
@@ -237,7 +237,7 @@ def get_transactions_b():
         general.pos_write_csv(
             campaignTransactions,
             save_path,
-            date_format=conf['date_format_ymd_hms'])
+            date_format="%Y-%m-%d %H:%M:%S")
     else:
         return "Count request failed " + str(countRequest.status_code)
         
@@ -322,7 +322,7 @@ def get_transactions_c():
         general.pos_write_csv(
             campaignTransactions,
             save_path,
-            date_format=conf['date_format_ymd_hms'])
+            date_format="%Y-%m-%d %H:%M:%S")
     else:
         return "Count request failed " + str(countRequest.status_code)
         
@@ -418,7 +418,7 @@ def get_transactions_d():
         general.pos_write_csv(
             campaignTransactions,
             save_path,
-            date_format=conf['date_format_ymd_hms'])
+            date_format="%Y-%m-%d %H:%M:%S")
     else:
         return "Count request failed " + str(countRequest.status_code)
         
@@ -513,7 +513,7 @@ def get_transactions_summary():
         general.pos_write_csv(
             campaignTransactions,
             save_path,
-            date_format=conf['date_format_ymd_hms'])
+            date_format="%Y-%m-%d %H:%M:%S")
 
     else:
         return "Count request failed " + str(countRequest.status_code)
@@ -607,7 +607,7 @@ def get_transactions_497():
         general.pos_write_csv(
             campaignTransactions,
             save_path,
-            date_format=conf['date_format_ymd_hms'])
+            date_format="%Y-%m-%d %H:%M:%S")
     else:
         return "Count request failed " + str(countRequest.status_code)
         
@@ -713,7 +713,7 @@ def get_transactions_496():
         general.pos_write_csv(
             campaignTransactions,
             save_path,
-            date_format=conf['date_format_ymd_hms'])
+            date_format="%Y-%m-%d %H:%M:%S")
     else:
         return "Count request failed " + str(countRequest.status_code)
         

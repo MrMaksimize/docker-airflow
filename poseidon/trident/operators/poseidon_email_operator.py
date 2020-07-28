@@ -27,6 +27,7 @@ from trident.util.notifications import send_email_swu
 from trident.util.general import merge_dicts
 
 from trident.util.general import config as conf
+from airflow.models import Variable
 
 
 
@@ -151,7 +152,7 @@ class PoseidonEmailFileUpdatedOperator(PoseidonEmailOperator):
         self.swu['template_data']['message'] = self.message
         self.swu['template_data']['file_url'] = self.file_url
         self.swu['dispatch_type'] = 'file_updated'
-        self.swu['template_id'] = conf['mail_swu_file_updated_tpl']
+        self.swu['template_id'] = Variable.get("MAIL_SWU_FILE_UPDATED_TPL")
 
         send_email_swu(**self.swu)
         

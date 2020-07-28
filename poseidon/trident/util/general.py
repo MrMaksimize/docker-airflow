@@ -98,65 +98,6 @@ def buildConfig(env):
         'default_s3_conn_id': 's3data',
         'prod_data_dir': "/data/prod",
         'temp_data_dir': "/data/temp",
-        'home_dir': os.environ.get("AIRFLOW_HOME", ""),
-        'date_format_ymd': "%Y-%m-%d",
-        'date_format_ymd_hms': "%Y-%m-%d %H:%M:%S",
-        'date_format_keen': "%Y-%m-%dT%H:%M:%S",
-        'dags_dir': "{}/poseidon/dags".format(os.environ.get("AIRFLOW_HOME", "")),
-        'dest_s3_bucket': os.environ.get('S3_DATA_BUCKET', 'datasd-dev'),
-        'ref_s3_bucket': os.environ.get('S3_REF_BUCKET', 'datasd-reference'),
-        #'oracle_wpl': os.environ.get('CONN_ORACLEWPL'),
-        'oracle_wpl': BaseHook.get_connection(conn_id="WPL"),
-        #'ftp_datasd_user': os.environ.get("FTP_DATASD_USER"),
-        #'ftp_datasd_pass': os.environ.get("FTP_DATASD_PASS"),
-        'ftp_datasd': BaseHook.get_connection(conn_id="FTP_DATASD"),
-        #'ftp_read_user': os.environ.get("FTP_READ_USER"),
-        #'ftp_read_pass': os.environ.get("FTP_READ_PASS"),
-        'ftp_read': BaseHook.get_connection(conn_id="FTP_READ"),
-        #'svc_acct_user': os.environ.get("SVC_ACCT_USER"),
-        #'svc_acct_pass': os.environ.get("SVC_ACCT_PASS"),
-        'svc_acct': BaseHook.get_connection(conn_id="SVC_ACCT"),
-        #'alb_sannet_user': os.environ.get("ALB_SANNET_USER"),
-        #'alb_sannet_pass': os.environ.get("ALB_SANNET_PASS"),
-        'alb_sannet': BaseHook.get_connection(conn_id="ALB_SANNET"),
-        #'arc_online_user': os.environ.get("ARC_ONLINE_USER"),
-        #'arc_online_pass': os.environ.get("ARC_ONLINE_PASS"),
-        'arc_online': BaseHook.get_connection(conn_id="ARC_ONLINE"),
-        #'dpint_sf_user':os.environ.get("DPINT_SF_USER"),
-        #'dpint_sf_pass':os.environ.get("DPINT_SF_PASS"),
-        #'dpint_sf_token':os.environ.get("DPINT_SF_TOKEN"),
-        'dpint_sf': BaseHook.get_connection(conn_id="DPINT_SF"),
-        #'gh_tokens': os.environ.get("GH_TOKENS").split(','),
-        #'mail_notify': int(os.environ.get("MAIL_NOTIFY")),
-        'mail_from_name': os.environ.get("MAIL_FROM_NAME"),
-        'mail_from_addr': os.environ.get("MAIL_FROM_ADDR"),
-        'mail_from_reply_to': os.environ.get("MAIL_FROM_REPLY_TO"),
-        'mail_default_receivers': os.environ.get("MAIL_DEFAULT_RECEIVERS"),
-        'mail_swu_key': os.environ.get("MAIL_SWU_KEY"),
-        'mail_swu_sys_tpl': os.environ.get("MAIL_SWU_SYS_TPL"),
-        'mail_swu_file_updated_tpl':
-        os.environ.get("MAIL_SWU_FILE_UPDATED_TPL"),
-        'mail_notify_claims': os.environ.get("MAIL_NOTIFY_CLAIMS"),
-        #'keen_notify': int(os.environ.get("KEEN_NOTIFY")),
-        'executable_path': f"{os.environ.get('AIRFLOW_HOME')}/poseidon/bin",
-        'google_token': os.environ.get("GOOGLE_TOKEN"),
-        #'sde_user': os.environ.get("SDE_USER"),
-        #'sde_pw': os.environ.get("SDE_PW"),
-        #'sde_server': os.environ.get("SDE_SERVER"),
-        'sde': BaseHook.get_connection(conn_id="SDE"),
-        'shiny_acct_name': os.environ.get("SHINY_ACCT_NAME"),
-        'shiny_token': os.environ.get("SHINY_TOKEN"),
-        'shiny_secret': os.environ.get("SHINY_SECRET"),
-        'amcs_ip': os.environ.get("AMCS_IP_ADDRESS"),
-        'pf_api_key': os.environ.get("PF_API_KEY"),
-        'pf_api_key_str': os.environ.get("PF_API_KEY_STR"),
-        'lucid_api_user': os.environ.get("LUCID_USER"),
-        'lucid_api_pass': os.environ.get("LUCID_PASS"),
-        'ga_client_secrets': os.environ.get("GA_CLIENT_SECRETS"),
-        'migration_aws_key': os.environ.get('MIGRATION_ACCESS_KEY'),
-        'migration_aws_secret': os.environ.get('MIGRATION_ACCESS_SECRET'),
-        'migration_aws_region': os.environ.get('MIGRATION_REGION'),
-        'migration_dest_s3_bucket': os.environ.get('MIGRATION_BUCKET', 'datasd.dev')
     }
     return config
 
@@ -253,18 +194,10 @@ start_date = {
     'ga_portal': datetime(2020, 5, 19)
 }
 
-
-source = {'ttcs': os.environ.get('CONN_ORACLETTCS'),
-'cef':os.environ.get('CONN_ORACLE_CEF'),
-'dsd_permits' : os.environ.get('CONN_ORACLE_PERMITS'),
-'cip': os.environ.get('CONN_ORACLECIP'),
-'risk': os.environ.get('CONN_ORACLE_RISK')
-}
-
 args = {
     'owner': 'airflow',
     'depends_on_past': False,
-    'email': config['mail_default_receivers'],
+    'email': Variable.get("MAIL_DEFAULT_RECEIVERS"),
     'email_on_failure': False,
     'email_on_retry': False,
     'retries': 1,
@@ -299,7 +232,7 @@ def pos_write_csv(df, fname, **kwargs):
         'index': False,
         'encoding': 'utf-8',
         'doublequote': True,
-        'date_format': config['date_format_ymd'],
+        'date_format': "%Y-%m-%d",
         'quoting': csv.QUOTE_ALL
     }
     csv_args = default.copy()

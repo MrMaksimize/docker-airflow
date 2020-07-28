@@ -18,7 +18,7 @@ def get_fd_data( **kwargs):
 	
 	
 	fd_query = general.file_to_string('./sql/fd.sql', __file__)
-	fd_conn = MsSqlHook(mssql_conn_id='fire_department')
+	fd_conn = MsSqlHook(mssql_conn_id='FIRE_DEPARTMENT')
 
 	logging.info("Read data to panda DataFrame")
 	
@@ -26,7 +26,7 @@ def get_fd_data( **kwargs):
 	# Write csv
 	logging.info('Writing ' + prod_file)
 	general.pos_write_csv(
-		df, prod_file, date_format=conf['date_format_ymd_hms'])
+		df, prod_file, date_format="%Y-%m-%d %H:%M:%S")
 		
 	return "Successfully wrote prod file at " + prod_file
 

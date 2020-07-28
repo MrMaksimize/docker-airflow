@@ -9,6 +9,7 @@ import logging
 from subprocess import Popen, PIPE
 from shlex import quote
 from datetime import datetime as dt
+from airflow.hooks.base_hook import BaseHook
 
 conf = general.config
 
@@ -50,6 +51,8 @@ def get_permits_files(**context):
 
     files = [*filelist]
 
+    conn = BaseHook.get_connection(conn_id="SVC_ACCT")
+
     for file in files:
 
         logging.info(f"Checking FTP for {filelist[file].get('name')}")
@@ -57,7 +60,7 @@ def get_permits_files(**context):
         fpath = f"{filelist[file].get('name')}_{filename}.{filelist[file].get('ext')}"
 
         command = "smbclient //ad.sannet.gov/dfs " \
-        + f"--user={conf['svc_acct_user']}%{conf['svc_acct_pass']} -W ad -c " \
+        + f"--user={conn.login}%{conn.password} -W ad -c " \
         + "'prompt OFF;"\
         + " cd \"DSD-Shared/All_DSD/Panda/\";" \
         + " lcd \"/data/temp/\";" \
@@ -183,7 +186,7 @@ def build_pts(mode='active', **context):
     general.pos_write_csv(
     df,
     prod_permits,
-    date_format=conf['date_format_ymd_hms'])
+    date_format="%Y-%m-%d %H:%M:%S")
 
     return 'Created new PTS files'
 
@@ -282,7 +285,7 @@ def build_accela(mode='active', **context):
     general.pos_write_csv(
     df,
     prod_permits,
-    date_format=conf['date_format_ymd'])
+    date_format="%Y-%m-%d")
 
 
     return 'Created new Accela files'
@@ -377,7 +380,7 @@ def create_full_set():
     general.pos_write_csv(
         pts_all,
         f"{conf['prod_data_dir']}/dsd_permits_all_pts.csv",
-        date_format=conf['date_format_ymd_hms'])
+        date_format="%Y-%m-%d %H:%M:%S")
 
     logging.info("Writing compressed csv")
     general.sf_write_csv(pts_all,'dsd_approvals_pts')
@@ -408,7 +411,7 @@ def create_full_set():
     general.pos_write_csv(
         accela_all,
         f"{conf['prod_data_dir']}/dsd_permits_all_accela.csv",
-        date_format=conf['date_format_ymd'])
+        date_format="%Y-%m-%d")
 
     logging.info("Writing compressed csv")
 

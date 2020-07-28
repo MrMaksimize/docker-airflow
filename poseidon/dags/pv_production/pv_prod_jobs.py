@@ -7,11 +7,10 @@ import pandas as pd
 import logging
 from trident.util import general
 from airflow import AirflowException
+from airflow.models import Variable
+from airflow.hooks.base_hook import BaseHook
 
 conf = general.config
-PRIMARY_KEY = conf['pf_api_key_str']
-LUCID_USER = conf["lucid_api_user"]
-LUCID_PASS = conf["lucid_api_pass"]
 
 pv_meters = {'2000.05.066.SWG01.MTR01': 'Carmel Valley Rec Center', 
 					'2000.05.088.SWG01.MTR01': 'Serra Mesa-Kearny Mesa Library', 
@@ -68,12 +67,12 @@ def API_to_csv(elem_paths, interval, execution_date):
 	df_5min = df_5min.round(decimals=3)
 
 	logging.info(f"Writing {interval} data to temp")
-	general.pos_write_csv(df_5min, temp_file, index=True, date_format=conf['date_format_ymd_hms'])
+	general.pos_write_csv(df_5min, temp_file, index=True, date_format="%Y-%m-%d %H:%M:%S")
 
 #: Helper Function
 def get_data(start_date, end_date, elem_paths, attr, two_hours=False, resolution="raw", fp=None):
 	baseurl = 'https://api.powerfactorscorp.com'
-	headers = {"Ocp-Apim-Subscription-Key": PRIMARY_KEY}
+	headers = {"Ocp-Apim-Subscription-Key": Variable.get("PF_API_KEY_STR")}
 	dataURL = baseurl + '/drive/v2/data'
 	# To store values for each element
 	results = {path: [] for path in elem_paths}
@@ -136,7 +135,7 @@ def build_production_files(prod_file, temp_file, **context):
 	# Group by timestamp to deduplicate by keeping first
 	df_prod = df_prod.groupby(df_prod.index).first()
 	df_prod = df_prod.round(decimals=3)
-	general.pos_write_csv(df_prod, prod_file, index=True, date_format=conf['date_format_ymd_hms'])
+	general.pos_write_csv(df_prod, prod_file, index=True, date_format="%Y-%m-%d %H:%M:%S")
 
 	results = df_prod.shape[0]
 	logging.info(f'Writing to production {results} rows in {prod_file}')
@@ -144,8 +143,9 @@ def build_production_files(prod_file, temp_file, **context):
 
 #: DAG Function
 def get_lucid_token(**context):
+	conn = BaseHook.get_connection(conn_id="LUCID")
 	url = "https://api.buildingos.com/o/token/"
-	payload = f'client_id={LUCID_USER}&client_secret={LUCID_PASS}&grant_type=client_credentials'
+	payload = f'client_id={conn.user}&client_secret={conn.password}&grant_type=client_credentials'
 	headers = {'Content-Type': 'application/x-www-form-urlencoded'}
 	response = requests.request("POST", url, headers=headers, data = payload)
 	token_data = json.loads(response.text)

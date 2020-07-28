@@ -4,6 +4,7 @@ import logging
 import json
 
 from trident.util import general
+from airflow.models import Variable
 
 
 conf = general.config
@@ -31,7 +32,10 @@ def afsys_send_email(to,
     :type mime_subtype: string
 
     """
-    if conf['mail_notify'] == 1:
+
+    mail_notify = int(Variable.get("MAIL_NOTIFY"))
+
+    if mail_notify == 1:
         logging.info("Dispatching email: " + subject)
         template_data = {
             'html_content': html_content,
@@ -41,7 +45,7 @@ def afsys_send_email(to,
         send_email_swu(
             to=to,
             template_data=template_data,
-            template_id=conf['mail_swu_sys_tpl'],
+            template_id=Variable.get("MAIL_SWU_SYS_TPL"),
             dispatch_type='airflow_alert',
             subject='Airflow Alert')
 
@@ -70,7 +74,7 @@ def send_email_swu(to,
     :type mime_subtype: string
     """
     request_url = 'https://api.sendwithus.com/api/v1/send'
-    api_key = conf['mail_swu_key']
+    api_key = Variable.get("MAIL_SWU_KEY")
 
 
     to = get_email_address_list(to)
@@ -81,7 +85,7 @@ def send_email_swu(to,
     dispatch_meta = dispatch_meta or {}
 
 
-    default_receivers = get_email_address_list(conf['mail_default_receivers'])
+    default_receivers = get_email_address_list(Variable.get("MAIL_DEFAULT_RECEIVERS"))
 
     all_receivers = []
 
@@ -111,9 +115,9 @@ def send_email_swu(to,
             'address': to.pop()
         },
         'sender': {
-            'name': conf['mail_from_name'],
-            'address': conf['mail_from_addr'],
-            'reply_to': conf['mail_from_reply_to']
+            'name': Variable.get("MAIL_FROM_NAME"),
+            'address': Variable.get("MAIL_FROM_ADDR"),
+            'reply_to': Variable.get("MAIL_FROM_REPLY_TO")
         }
     }
 
