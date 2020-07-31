@@ -4,8 +4,6 @@ import string
 import pandas as pd
 import logging
 from airflow.hooks.mssql_hook import MsSqlHook
-from airflow.hooks.dbapi_hook import DbApiHook
-from airflow.hooks.base_hook import BaseHook
 from trident.util import general
 import dags.city_docs.documentum_name as dn
 import pymssql as ms
@@ -101,11 +99,7 @@ def get_documentum(mode, test=False, conn_id='docm_sql', **kwargs):
         table_name = dn.table_name(mode)
     
     save_path_pre = f"{conf['prod_data_dir']}/documentum_"
-    documentum_conn = BaseHook(conn_id)
-    #documentum_conn = MsSqlHook(mssql_conn_id=conn_id)
-    #documentum_conn = ms.connect(host='csdsdcentsql.ad.sannet.gov\\csdsdclegissql1',user='scsweb', password='web5c5', database='SCSLEGIS')
-    
-    logging.info(documentum_conn.host)
+    documentum_conn = MsSqlHook(mssql_conn_id=conn_id)
     
     for name in table_name:
         logging.info(f'Querying for {name} table')
@@ -113,22 +107,22 @@ def get_documentum(mode, test=False, conn_id='docm_sql', **kwargs):
         logging.info('Connecting to MS Database')
         logging.info('Reading data to Pandas DataFrame')
 
-        #try:
-        df = documentum_conn.get_pandas_df(query_string)
+        try:
+            df = documentum_conn.get_pandas_df(query_string)
 
-        logging.info('Correcting title column')
-    
-        df['TITLE'] = fix_title(df[['TITLE','OBJECT_NAME']])
-        if test:
-            save_path =  f"{save_path_pre}{name.lower()}_test.csv"
-        else:
-            save_path =  f"{save_path_pre}{name.lower()}.csv"
-        logging.info('Writing Production file')
-        general.pos_write_csv(df, save_path)
+            logging.info('Correcting title column')
+        
+            df['TITLE'] = fix_title(df[['TITLE','OBJECT_NAME']])
+            if test:
+                save_path =  f"{save_path_pre}{name.lower()}_test.csv"
+            else:
+                save_path =  f"{save_path_pre}{name.lower()}.csv"
+            logging.info('Writing Production file')
+            general.pos_write_csv(df, save_path)
 
-        #except Exception as e:
+        except Exception as e:
             
-            #logging.info(f'Could not read {0} because {e}')
+            logging.info(f'Could not read {name} because {e}')
 
     return "Successfully retrieved Documentum tables"
 
