@@ -6,7 +6,6 @@ import logging
 from airflow.hooks.mssql_hook import MsSqlHook
 from trident.util import general
 import dags.city_docs.documentum_name as dn
-import pymssql as ms
 
 conf = general.config
 #prod_data_schedule_24 = general.create_path_if_not_exists(conf['prod_data_dir'] + '/schedule_24')

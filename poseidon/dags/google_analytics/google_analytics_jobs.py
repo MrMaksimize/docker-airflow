@@ -122,7 +122,7 @@ def ga_batch_get(view_id="",
     analytics = build('analyticsreporting', 'v4', credentials=credentials)
     
     exec_date = context['next_execution_date']
-    exec_date = pendulum.datetime(2020, 6, 30)
+    end = exec_date.strftime('%Y-%m-%d')
     
     # Working backward, subtract range
 
