@@ -29,11 +29,12 @@ def get_tags_file(**context):
 
     fpath = f"P2K_261-Panda_Extract_DSD_Projects_Tags_{filename}.txt"
 
-    command = f"cd {conf['temp_data_dir']} && " \
-    f"curl --user {conf['ftp_datasd_user']}:{conf['ftp_datasd_pass']} " \
-    f"-o {fpath} " \
-    f"ftp://ftp.datasd.org/uploads/dsd/tags/" \
-    f"{fpath} -sk"
+    command = "smbclient //ad.sannet.gov/dfs " \
+        + f"--user={conf['svc_acct_user']}%{conf['svc_acct_pass']} -W ad -c " \
+        + "'prompt OFF;"\
+        + " cd \"DSD-Shared/All_DSD/Panda/\";" \
+        + " lcd \"/data/temp/\";" \
+        + f" get {fpath};'"
 
     command = command.format(quote(command))
 
