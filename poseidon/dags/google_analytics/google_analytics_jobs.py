@@ -123,7 +123,7 @@ def ga_batch_get(view_id="",
     
     exec_date = context['next_execution_date']
     end = exec_date.strftime('%Y-%m-%d')
-
+    
     # Working backward, subtract range
 
     if range == "monthly":
@@ -142,10 +142,7 @@ def ga_batch_get(view_id="",
 
         raise Exception("Range is not specified")
     
-    #start = exec_date.strftime('%Y-%m-%d')
-    #end = exec_date.add(months=1).strftime('%Y-%m-%d')
-    
-    
+    logging.info(f"Pulling {start} through {end}")
 
     logging.info("Creating metrics dictionary")
 
@@ -203,7 +200,7 @@ def process_batch_get(dims=[],out_path=""):
         )
 
     # Dedupe will not work without making formats consistent
-    df['date'] = pd.to_datetime(df['date'],errors='coerce',format="%Y-%m-%d")
+    df['date'] = pd.to_datetime(df['date'],errors='coerce',format="%Y%m%d")
     prod_df['date'] = pd.to_datetime(prod_df['date'],errors='coerce',format="%Y-%m-%d")
 
     if "hour" in dims:
