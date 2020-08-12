@@ -93,8 +93,9 @@ def build_pts(mode='active', **context):
     'Job ID':'str',
     'Approval ID':'str'}
 
-    filename = context['task_instance'].xcom_pull(dag_id="dsd_permits",
-        task_ids='get_permits_files')
+    #filename = context['task_instance'].xcom_pull(dag_id="dsd_permits",
+        #task_ids='get_permits_files')
+    filename = '20200802'
 
     logging.info("Reading in PTS files")
 
@@ -205,8 +206,10 @@ def build_accela(mode='active', **context):
     'JOB_BC_CODE_DESCRIPTION':str,
     'APPROVAL_CATEGORY_CODE':str}
 
-    filename = context['task_instance'].xcom_pull(dag_id="dsd_permits",
-        task_ids='get_permits_files')
+    #filename = context['task_instance'].xcom_pull(dag_id="dsd_permits",
+        #task_ids='get_permits_files')
+
+    filename = '20200802'
 
     if mode == 'active':
         # Read in PV and All
