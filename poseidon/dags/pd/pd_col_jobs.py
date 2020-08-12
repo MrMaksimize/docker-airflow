@@ -64,8 +64,8 @@ def process_collisions_data(**context):
     #details_date = context['task_instance'].xcom_pull(dag_id="pd_col.get_files",
         #task_ids='get_activities')
 
-    activity_date = "Jul_28_2020"
-    details_date = "Jul_28_2020"
+    activity_date = "Aug_12_2020"
+    details_date = "Aug_12_2020"
     
     if activity_date != details_date:
 
