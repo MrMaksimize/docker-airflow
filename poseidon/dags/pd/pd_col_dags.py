@@ -37,13 +37,23 @@ process_collisions_data = PythonOperator(
     dag=dag)
 
 #: Upload prod file to S3
-collisions_to_S3 = S3FileTransferOperator(
-    task_id='collisions_to_S3',
+activities_to_S3 = S3FileTransferOperator(
+    task_id='activities_to_S3',
     source_base_path=conf['prod_data_dir'],
     source_key='pd_collisions_datasd_v1.csv',
     dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
     dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
     dest_s3_key='pd/pd_collisions_datasd_v1.csv',
+    dag=dag)
+
+#: Upload prod file to S3
+details_to_S3 = S3FileTransferOperator(
+    task_id='details_to_S3',
+    source_base_path=conf['prod_data_dir'],
+    source_key='pd_collisions_details_datasd.csv',
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_key='pd/pd_collisions_details_datasd.csv',
     dag=dag)
 
 #: Update data inventory json
@@ -58,4 +68,4 @@ update_json_date = PythonOperator(
 update_pd_cls_md = get_seaboard_update_dag('police-collisions.md', dag)
 
 #: Execution rules:
-get_collisions_data >> process_collisions_data >> collisions_to_S3 >> [update_pd_cls_md,update_json_date]
+get_collisions_data >> process_collisions_data >> [activities_to_S3,details_to_S3] >> [update_pd_cls_md,update_json_date]

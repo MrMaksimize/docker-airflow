@@ -85,9 +85,6 @@ def process_collisions_data(**context):
 
         activity.columns = ['report_id',
         'date_time',
-        'injured',
-        'killed',
-        'hit_run_lvl',
         'police_beat',
         'address_no_primary',
         'address_pd_primary',
@@ -98,7 +95,11 @@ def process_collisions_data(**context):
         'address_sfx_intersecting',
         'violation_section',
         'violation_type',
-        'charge_desc']
+        'charge_desc',
+        'injured',
+        'killed',
+        'hit_run_lvl',
+        ]
 
         details.columns = ['report_id',
         'date_time',
@@ -109,7 +110,10 @@ def process_collisions_data(**context):
         'veh_make',
         'veh_model']
 
-    df = pd.merge(activity,details,how="inner",on="report_id")
+        activity['date_time'] = pd.to_datetime(activity['date_time'],errors="coerce")
+        details['date_time'] = pd.to_datetime(details['date_time'],errors="coerce")
+
+    df = pd.merge(details,activity,how="outer",on=["report_id","date_time"])
 
     general.pos_write_csv(
         activity,
