@@ -95,7 +95,7 @@ def build_pts(mode='active', **context):
 
     #filename = context['task_instance'].xcom_pull(dag_id="dsd_permits",
         #task_ids='get_permits_files')
-    filename = '20200802'
+    filename = '20200816'
 
     logging.info("Reading in PTS files")
 
@@ -209,7 +209,7 @@ def build_accela(mode='active', **context):
     #filename = context['task_instance'].xcom_pull(dag_id="dsd_permits",
         #task_ids='get_permits_files')
 
-    filename = '20200802'
+    filename = '20200816'
 
     if mode == 'active':
         # Read in PV and All
@@ -290,31 +290,60 @@ def build_accela(mode='active', **context):
 
     return 'Created new Accela files'
 
-def join_bids_permits(pt_file='set1_active', **context):
+def spatial_join_permits(pt_file='set1_active',
+    poly_file='',
+    **context):
     """ Spatially joins permits to Business Improvement Districts. """
 
     pt_path = f"{conf['temp_data_dir']}/permits_{pt_file}.csv"
-    bids_geojson = f"{conf['prod_data_dir']}/bids_datasd.geojson"
-    bids_join = spatial_join_pt(pt_path,
-                             bids_geojson,
-                             lat='lat_job',
-                             lon='lng_job')
+    geojson = f"{conf['prod_data_dir']}/{poly_file}_datasd.geojson"
+    join = spatial_join_pt(pt_path,
+        geojson,
+        lat='lat_job',
+        lon='lng_job')
 
-    bids_join = bids_join.drop(['objectid',
-        'long_name',
-        'status',
-        'link'
-        ], axis=1)
+    if poly_file == 'bids':
 
-    bids_join = bids_join.rename(columns={'name':'bid_name'})
+        join = join.drop(['objectid',
+            'long_name',
+            'status',
+            'link'
+            ], axis=1)
 
-    bid_permits = f"{conf['prod_data_dir']}/permits_{pt_file}_datasd.csv"
+        join = join.rename(columns={'name':'bid_name'})
+
+        out_file = f"{conf['temp_data_dir']}/permits_{pt_file}.csv"
+
+    elif poly_file == 'council_districts':
+
+        join = join.drop(['objectid',
+            'name',
+            'phone',
+            'website',
+            'perimeter',
+            'area'
+            ],axis=1)
+
+        join = join.rename(columns={'district':'council_district'})
+
+        out_file = f"{conf['temp_data_dir']}/permits_{pt_file}.csv"
+
+    elif poly_file == 'zip_codes':
+
+        join = join.drop(['objectid',
+            'community'], axis=1)
+
+        out_file = f"{conf['prod_data_dir']}/permits_{pt_file}_datasd.csv"
+
+    else:
+
+        raise Exception('Invalid poly file')
 
     general.pos_write_csv(
-        bids_join,
-        bid_permits)
+        join,
+        out_file)
 
-    return 'Successfully joined permits to BIDs'
+    return f'Successfully joined permits to {poly_file}'
 
 def create_full_set():
     """
@@ -362,8 +391,10 @@ def create_full_set():
         dtype=dtypes
         )
 
-    pts_all = pd.concat([pts_historical,pts_closed,pts_active,pts_closed_projects],sort=False)
+    pts_all = pd.concat([pts_historical,pts_closed,pts_active,pts_closed_projects],ignore_index=True,sort=True)
     pts_all = pts_all.drop_duplicates()
+
+    prod_cols = pts_active.columns.tolist()
 
     for dc in date_cols:
         logging.info(f"Converting {dc} column")
@@ -378,12 +409,12 @@ def create_full_set():
 
     logging.info("Writing to csv")
     general.pos_write_csv(
-        pts_all,
+        pts_all[prod_cols],
         f"{conf['prod_data_dir']}/dsd_permits_all_pts.csv",
         date_format=conf['date_format_ymd_hms'])
 
     logging.info("Writing compressed csv")
-    general.sf_write_csv(pts_all,'dsd_approvals_pts')
+    #general.sf_write_csv(pts_all,'dsd_approvals_pts')
 
     logging.info("Reading in all Accela files")
     logging.info("Reading in Active")
@@ -415,7 +446,7 @@ def create_full_set():
 
     logging.info("Writing compressed csv")
 
-    general.sf_write_csv(accela_all,'dsd_approvals_accela')
+    #general.sf_write_csv(accela_all,'dsd_approvals_accela')
 
     return "Successfully created full PTS and Accela sets"
 

@@ -78,9 +78,56 @@ def join_bids_subdag():
     join_bids = PythonOperator(
         task_id=f"join_bids_{file}",
         provide_context=True,
-        python_callable=join_bids_permits,
-        op_kwargs={'pt_file': file},
+        python_callable=spatial_join_permits,
+        op_kwargs={'pt_file': file,
+        'poly_file': 'bids'
+        },
         dag=dag_subdag)
+
+    join_cd = PythonOperator(
+        task_id=f"join_cd_{file}",
+        provide_context=True,
+        python_callable=spatial_join_permits,
+        op_kwargs={'pt_file': file,
+        'poly_file':'council_districts'
+        },
+        dag=dag_subdag)
+
+    join_zips = PythonOperator(
+        task_id=f"join_zips_{file}",
+        provide_context=True,
+        python_callable=spatial_join_permits,
+        op_kwargs={'pt_file': file,
+        'poly_file':'zip_codes'
+        },
+        dag=dag_subdag)
+
+  bids_hist = PythonOperator(
+      task_id=f"join_bids_closed_historical",
+      provide_context=True,
+      python_callable=spatial_join_permits,
+      op_kwargs={'pt_file': 'set1_closed_historical',
+      'poly_file': 'bids'
+      },
+      dag=dag_subdag)
+
+  cd_hist = PythonOperator(
+      task_id=f"join_cd_closed_historical",
+      provide_context=True,
+      python_callable=spatial_join_permits,
+      op_kwargs={'pt_file': 'set1_closed_historical',
+      'poly_file':'council_districts'
+      },
+      dag=dag_subdag)
+
+  zips_hist = PythonOperator(
+      task_id=f"join_zips_closed_historical",
+      provide_context=True,
+      python_callable=spatial_join_permits,
+      op_kwargs={'pt_file': 'set1_closed_historical',
+      'poly_file':'zip_codes'
+      },
+      dag=dag_subdag)
 
   return dag_subdag
 
