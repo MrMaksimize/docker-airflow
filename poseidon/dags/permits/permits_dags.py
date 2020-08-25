@@ -27,23 +27,23 @@ get_permits_files = PythonOperator(
     python_callable=get_permits_files,
     dag=dag)
 
-#: Create 4 files using subdag
+#: Create 2 Accela files using subdag
 create_files = SubDagOperator(
   task_id='create_files',
   subdag=create_file_subdag(),
   dag=dag)
 
 #: Join BIDs to 4 files using subdag
-join_bids = SubDagOperator(
-  task_id='join_bids',
-  subdag=join_bids_subdag(),
+join_polygons = SubDagOperator(
+  task_id='join_polygons',
+  subdag=join_subdag(),
   dag=dag)
 
-#: Create full sets for internal
-create_full = PythonOperator(
-    task_id='create_full_sets',
-    python_callable=create_full_set,
-    dag=dag)
+#: Subset files
+create_subsets = SubDagOperator(
+  task_id='create_subsets',
+  subdag=subsets_subdag(),
+  dag=dag)
 
 exec_snowflake = SubDagOperator(
   task_id="snowflake",
@@ -111,9 +111,9 @@ upload_pw_sap = S3FileTransferOperator(
     )
 
 #: Execution rules
-get_permits_files>>create_files>>join_bids>>create_full>>upload_files
-create_full>>exec_snowflake
+get_permits_files>>create_files>>join_polygons>>create_subsets>>upload_files
+join_polygons>>exec_snowflake
 upload_files>>[update_set1_md,update_set2_md,update_set1_json_date,update_set2_json_date]
-upload_files>>[create_tsw_file,create_pw_sap_file]
+create_subsets>>[create_tsw_file,create_pw_sap_file]
 create_tsw_file>>upload_tsw
 create_pw_sap_file>>upload_pw_sap

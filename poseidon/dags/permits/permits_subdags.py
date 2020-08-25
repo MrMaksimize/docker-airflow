@@ -14,12 +14,6 @@ args = general.args
 schedule = general.schedule['dsd_approvals']
 start_date = general.start_date['dsd_approvals']
 
-files = ['set1_active',
-'set1_closed',
-'set1_closed_projects',
-'set2_active',
-'set2_closed']
-
 snowflake_files = ['dsd_approvals_pts','dsd_approvals_accela']
 
 def create_file_subdag():
@@ -35,99 +29,74 @@ def create_file_subdag():
     schedule_interval=schedule,
     catchup=False)
 
-  for file in files:
-    mode = file.split('_')[-1]
-    sys = file.split('_')[0]
+  create_accela = PythonOperator(
+    task_id=f"create_set2",
+    provide_context=True,
+    python_callable=build_accela,
+    dag=dag_subdag)
 
-    if sys == 'set1': 
-
-      create_file = PythonOperator(
-        task_id=f"create_{file}",
-        provide_context=True,
-        python_callable=build_pts,
-        op_kwargs={'mode': mode},
-        dag=dag_subdag)
-
-    else:
-
-      create_file = PythonOperator(
-        task_id=f"create_{file}",
-        provide_context=True,
-        python_callable=build_accela,
-        op_kwargs={'mode': mode},
-        dag=dag_subdag)
+  create_pts = PythonOperator(
+    task_id=f"create_set1",
+    provide_context=True,
+    python_callable=build_pts,
+    dag=dag_subdag)
 
   return dag_subdag
 
 
-def join_bids_subdag():
+def join_subdag():
   """
   Generate a DAG to be used as a subdag 
   that joins BIDs to permit files 
   """
 
   dag_subdag = DAG(
-    dag_id='dsd_permits.join_bids',
+    dag_id='dsd_permits.join_polygons',
     default_args=args,
     start_date=start_date,
     schedule_interval=schedule,
     catchup=False)
 
-  for file in files:
+  join_accela = PythonOperator(
+    task_id=f"join_accela",
+    python_callable=spatial_joins,
+    op_kwargs={'pt_file': 'dsd_permits_all_accela'},
+    dag=dag_subdag)
 
-    join_bids = PythonOperator(
-        task_id=f"join_bids_{file}",
-        provide_context=True,
-        python_callable=spatial_join_permits,
-        op_kwargs={'pt_file': file,
-        'poly_file': 'bids'
-        },
-        dag=dag_subdag)
+  join_pts = PythonOperator(
+    task_id=f"join_pts",
+    python_callable=spatial_joins,
+    op_kwargs={'pt_file': 'dsd_permits_all_pts'},
+    dag=dag_subdag)
 
-    join_cd = PythonOperator(
-        task_id=f"join_cd_{file}",
-        provide_context=True,
-        python_callable=spatial_join_permits,
-        op_kwargs={'pt_file': file,
-        'poly_file':'council_districts'
-        },
-        dag=dag_subdag)
+  return dag_subdag
 
-    join_zips = PythonOperator(
-        task_id=f"join_zips_{file}",
-        provide_context=True,
-        python_callable=spatial_join_permits,
-        op_kwargs={'pt_file': file,
-        'poly_file':'zip_codes'
-        },
-        dag=dag_subdag)
+def subsets_subdag():
+  """
+  Generate a DAG to be used as a subdag 
+  that joins BIDs to permit files 
+  """
 
-  bids_hist = PythonOperator(
-      task_id=f"join_bids_closed_historical",
+  dag_subdag = DAG(
+    dag_id='dsd_permits.create_subsets',
+    default_args=args,
+    start_date=start_date,
+    schedule_interval=schedule,
+    catchup=False)
+
+  subset_accela = PythonOperator(
+      task_id=f"subset_accela",
       provide_context=True,
-      python_callable=spatial_join_permits,
-      op_kwargs={'pt_file': 'set1_closed_historical',
-      'poly_file': 'bids'
-      },
+      python_callable=create_subsets,
+      op_kwargs={'mode': 'set2'},
       dag=dag_subdag)
 
-  cd_hist = PythonOperator(
-      task_id=f"join_cd_closed_historical",
-      provide_context=True,
-      python_callable=spatial_join_permits,
-      op_kwargs={'pt_file': 'set1_closed_historical',
-      'poly_file':'council_districts'
-      },
-      dag=dag_subdag)
-
-  zips_hist = PythonOperator(
-      task_id=f"join_zips_closed_historical",
-      provide_context=True,
-      python_callable=spatial_join_permits,
-      op_kwargs={'pt_file': 'set1_closed_historical',
-      'poly_file':'zip_codes'
-      },
-      dag=dag_subdag)
+  subset_pts = PythonOperator(
+    task_id=f"subset_pts",
+    provide_context=True,
+    python_callable=create_subsets,
+    op_kwargs={'mode': 'set1'},
+    dag=dag_subdag)
 
   return dag_subdag
 
@@ -143,6 +112,12 @@ def upload_files_subdag():
     start_date=start_date,
     schedule_interval=schedule,
     catchup=False)
+
+  files = ['set1_active',
+  'set1_closed',
+  'set2_active',
+  'set2_closed'
+  ]
 
   for file in files:
 

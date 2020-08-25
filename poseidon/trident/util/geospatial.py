@@ -325,8 +325,15 @@ def spatial_join_pt(pt_file, poly_file, lat='lat', lon='lon'):
 
     This function returns a DataFrame, not a Geodataframe.
     """
-    logging.info('Loading point file')
-    df = pd.read_csv(pt_file,low_memory=False)
+    if isinstance(pt_file,str):
+
+        logging.info('Loading point file')
+        df = pd.read_csv(pt_file,low_memory=False)
+
+    elif isinstance(pt_file,pd.DataFrame):
+
+        logging.info('Point file already loaded')
+        df = pt_file
 
     logging.info('Starting with {} rows in point file'.format(df.shape[0]))
 
@@ -338,6 +345,7 @@ def spatial_join_pt(pt_file, poly_file, lat='lat', lon='lon'):
     logging.info('Loading poly file as geodf')
     poly = geojson_to_geodf(poly_file)
     pt.crs = poly.crs
+    logging.info(f'Set point to {pt.crs} to match {poly.crs}')
     
     logging.info('Operating spatial join.')
     pt_join = sjoin(pt, poly, how='left')

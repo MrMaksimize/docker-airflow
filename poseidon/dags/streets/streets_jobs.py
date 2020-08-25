@@ -370,8 +370,7 @@ def create_mode_data(mode='sdif', **context):
             'job_entry_dt',
             'job_updated_dt',
             'seg_placed_in_srvc',
-            'seg_func_class',
-            'seg_council_district'
+            'seg_func_class'
             ])
 
         df = df.rename(columns={'wo_id':'project_id',
@@ -381,6 +380,7 @@ def create_mode_data(mode='sdif', **context):
             'wo_proj_type':'type',
             'wo_resident_engineer':'resident_engineer',
             'street':'address_street',
+            'seg_council_district':'seg_cd',
             'seg_length_ft':'length',
             'seg_width_ft':'width',
             'moratorium':'date_moratorium',
@@ -390,7 +390,7 @@ def create_mode_data(mode='sdif', **context):
 
         final_cols = ['pve_id','seg_id','project_id','title','project_manager',
         'project_manager_phone','status','type','resident_engineer','address_street',
-        'street_from','street_to','length','width','date_moratorium',
+        'street_from','street_to','seg_cd','length','width','date_moratorium',
         'date_start','date_end','paving_miles']
 
         df_final = df[final_cols].copy()
