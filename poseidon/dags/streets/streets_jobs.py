@@ -446,7 +446,9 @@ def create_arcgis_base():
     'pav_mi',
     'date_cy',
     'date_fy',
-    'mi_comp']]
+    'mi_comp',
+    'seg_cd'
+    ]]
 
     logging.info("Filling in NAs")
 
@@ -549,6 +551,7 @@ def send_arcgis(mode=['completed'], **context):
         'oci11_des',
         'oci_15',
         'oci15_des',
+        'seg_cd',
         'geometry']]
 
         shp_path = f"{conf['prod_data_dir']}/{layer_name}"
