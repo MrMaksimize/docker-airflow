@@ -12,6 +12,8 @@ from datetime import datetime as dt
 
 conf = general.config
 
+filelist = {'set1'}
+
 filelist = {'Closed projects':{
                 'name':'P2K_261-Panda_Extract_DSD_Projects_Closed',
                 'ext':'txt'},
@@ -78,7 +80,7 @@ def get_permits_files(**context):
 
     return filename
 
-def build_pts(mode='active', **context):
+def build_pts(**context):
     """Get PTS permits and create active and closed"""
 
     date_cols = ['Project Create Date',
@@ -95,64 +97,48 @@ def build_pts(mode='active', **context):
 
     filename = context['task_instance'].xcom_pull(dag_id="dsd_permits",
         task_ids='get_permits_files')
+    
+    logging.info(f"Reading active permits {filename}")
+    active = pd.read_csv(f"{conf['temp_data_dir']}/" \
+        + f"{filelist['Active approvals since 2003'].get('name')}_" \
+        + f"{filename}.{filelist['Active approvals since 2003'].get('ext')}",
+        low_memory=False,
+        sep=",",
+        encoding="ISO-8859-1",
+        parse_dates=date_cols,
+        dtype=dtypes)    
 
-    logging.info("Reading in PTS files")
+    # Closed permits
+    logging.info(f"Reading closed permits {filename}")
+    closed = pd.read_csv(f"{conf['temp_data_dir']}/" \
+        + f"{filelist['Closed approvals since 2019'].get('name')}_{filename}." \
+        + f"{filelist['Closed approvals since 2019'].get('ext')}",
+        low_memory=False,
+        sep=",",
+        encoding="ISO-8859-1",
+        parse_dates=date_cols,
+        dtype=dtypes)
 
-    if mode == 'active':
+    # Closed projects, open approvals
+    logging.info(f"Reading closed projects {filename}")
+    closed_pr = pd.read_csv(f"{conf['temp_data_dir']}/" \
+        + f"{filelist['Closed projects'].get('name')}_{filename}." \
+        + f"{filelist['Closed projects'].get('ext')}",
+        low_memory=False,
+        sep=",",
+        encoding="ISO-8859-1",
+        parse_dates=date_cols,
+        dtype=dtypes)
 
-        # Currently active permits
-        logging.info("Reading active permits")
-        df = pd.read_csv(f"{conf['temp_data_dir']}/" \
-            + f"{filelist['Active approvals since 2003'].get('name')}_" \
-            + f"{filename}.{filelist['Active approvals since 2003'].get('ext')}",
-            low_memory=False,
-            sep=",",
-            encoding="ISO-8859-1",
-            parse_dates=date_cols,
-            dtype=dtypes)
+    logging.info("Files read successfully, concatting")
 
-        prod_permits = f"{conf['temp_data_dir']}/permits_set1_active.csv"
+    df_new = pd.concat([active,closed,closed_pr],sort=True,ignore_index=True)
 
-    elif mode == 'closed' :
+    df_new['file_date'] = filename
 
-        # Closed permits
-        logging.info("Reading closed permits")
-        df = pd.read_csv(f"{conf['temp_data_dir']}/" \
-            + f"{filelist['Closed approvals since 2019'].get('name')}_{filename}." \
-            + f"{filelist['Closed approvals since 2019'].get('ext')}",
-            low_memory=False,
-            sep=",",
-            encoding="ISO-8859-1",
-            parse_dates=date_cols,
-            dtype=dtypes)
+    df_new.columns = [x.lower().strip().replace(' ','_').replace('-','_') for x in df_new.columns]
 
-        prod_permits = f"{conf['temp_data_dir']}/permits_set1_closed.csv"
-
-    elif mode == "projects":
-
-        # Closed projects, open approvals
-        logging.info("Reading closed projects")
-        df = pd.read_csv(f"{conf['temp_data_dir']}/" \
-            + f"{filelist['Closed projects'].get('name')}_{filename}." \
-            + f"{filelist['Closed projects'].get('ext')}",
-            low_memory=False,
-            sep=",",
-            encoding="ISO-8859-1",
-            parse_dates=date_cols,
-            dtype=dtypes)
-
-        prod_permits = f"{conf['temp_data_dir']}/permits_set1_closed_projects.csv"
-
-    else:
-
-        raise Exception("Incorrect mode")
-
-
-    logging.info("File read successfully, renaming columns")
-
-    df.columns = [x.lower().strip().replace(' ','_').replace('-','_') for x in df.columns]
-
-    df = df.rename(columns={'job_latitude':'lat_job',
+    df_new = df_new.rename(columns={'job_latitude':'lat_job',
         'job_longitude':'lng_job',
         'job_street_address':'address_job',
         'project_create_date':'date_project_create',
@@ -162,32 +148,51 @@ def build_pts(mode='active', **context):
         'approval_create_date':'date_approval_create',
         'approval_close_date':'date_approval_close'})
 
-    if mode == "projects":
+    logging.info("Reading in existing")
 
-        projects_closed_prod = pd.read_csv(f"{conf['temp_data_dir']}/permits_set1_closed_projects.csv",
-            low_memory=False)
-        
-        final_projects_closed = pd.concat([projects_closed_prod,df],
-            ignore_index=True,
-            sort=False)
+    df_old = pd.read_csv(f"{conf['temp_data_dir']}/dsd_permits_all_pts.csv",
+        low_memory=False,
+        dtype={'approval_id':str})
 
-        df = final_projects_closed.copy()
+    prod_cols = df_old.columns.tolist()
 
+    prev_exec_date = context['execution_date'].in_tz(tz='US/Pacific')
+    old_file_date = prev_exec_date.subtract(days=1)
 
-    logging.info("Removing certain columns")
-    # Removing columns per SME
+    # Need zero-padded month and date
+    old_filename = f"{old_file_date.year}" \
+    f"{old_file_date.strftime('%m')}" \
+    f"{old_file_date.strftime('%d')}"
 
-    df = df.drop(columns=['project_expiration_date','appl_days','project_expiration_code'])
+    df_old['file_date'] = old_filename
+
+    all_records = pd.concat([df_new,df_old],
+        sort=True,
+        ignore_index=True)
+    
+    logging.info(f"New files contain {df_new.shape[0]} records")
+    logging.info(f"Old file contains {df_old.shape[0]} records")
+    logging.info(f"Combined is {all_records.shape[0]} records")
+
+    all_sorted = all_records.sort_values(['approval_id','file_date'],ascending=[True,False])
+    logging.info(f"All sorted has {all_sorted.shape[0]} records")
+    deduped = all_sorted.drop_duplicates(subset='approval_id')
+
+    logging.info(f"Deduped file has {deduped.shape[0]} records")
+
+    logging.info("Writing compressed csv")
+    general.sf_write_csv(deduped,'dsd_approvals_pts')
 
     logging.info("Writing file to temp")
+
     general.pos_write_csv(
-    df,
-    prod_permits,
+    deduped[prod_cols],
+    f"{conf['temp_data_dir']}/dsd_permits_all_pts.csv",
     date_format=conf['date_format_ymd_hms'])
 
-    return 'Created new PTS files'
+    return 'Created new PTS file'
 
-def build_accela(mode='active', **context):
+def build_accela(**context):
     """ Get Accela permits and create open and closed """
     
     date_cols = ['project_create_date',
@@ -207,50 +212,41 @@ def build_accela(mode='active', **context):
 
     filename = context['task_instance'].xcom_pull(dag_id="dsd_permits",
         task_ids='get_permits_files')
-
-    if mode == 'active':
-        # Read in PV and All
         
-        logging.info(f"Reading active PV permits for {filename}")
-        pv = pd.read_excel(f"{conf['temp_data_dir']}/" \
-            + f"{filelist['Active Accela PV permits all time'].get('name')}_{filename}." \
-            + f"{filelist['Active Accela PV permits all time'].get('ext')}",
-            dtype=dtypes,
-            na_values=' null')
+    logging.info(f"Reading active PV permits for {filename}")
+    pv_active = pd.read_excel(f"{conf['temp_data_dir']}/" \
+        + f"{filelist['Active Accela PV permits all time'].get('name')}_{filename}." \
+        + f"{filelist['Active Accela PV permits all time'].get('ext')}",
+        dtype=dtypes,
+        na_values=' null')
+
+    logging.info(f"Reading active non PV permits for {filename}")
+    other_active = pd.read_excel(f"{conf['temp_data_dir']}/" \
+        + f"{filelist['All other active Accela permits all time'].get('name')}_{filename}." \
+        + f"{filelist['All other active Accela permits all time'].get('ext')}",
+        dtype=dtypes,
+        na_values=' null')
         
-        logging.info(f"Reading active non PV permits for {filename}")
-        other = pd.read_excel(f"{conf['temp_data_dir']}/" \
-            + f"{filelist['All other active Accela permits all time'].get('name')}_{filename}." \
-            + f"{filelist['All other active Accela permits all time'].get('ext')}",
-            dtype=dtypes,
-            na_values=' null')
-
-        prod_permits = f"{conf['temp_data_dir']}/permits_set2_active.csv"
-
-
-    else:
-        # Read in PV and All
-        
-        logging.info(f"Reading inactive PV permits for {filename}")
-        pv = pd.read_excel(f"{conf['temp_data_dir']}/" \
-            + f"{filelist['Closed Accela PV permits all time'].get('name')}_{filename}." \
-            + f"{filelist['Closed Accela PV permits all time'].get('ext')}",
-            dtype=dtypes,
-            na_values=' null')
-        
-        logging.info(f"Reading inactive non PV permits for {filename}")
-        other = pd.read_excel(f"{conf['temp_data_dir']}/" \
-            + f"{filelist['All other closed Accela permits all time'].get('name')}_{filename}." \
-            + f"{filelist['All other closed Accela permits all time'].get('ext')}",
-            dtype=dtypes,
-            na_values=' null')
-
-        prod_permits = f"{conf['temp_data_dir']}/permits_set2_closed.csv"
+    logging.info(f"Reading inactive PV permits for {filename}")
+    pv_closed = pd.read_excel(f"{conf['temp_data_dir']}/" \
+        + f"{filelist['Closed Accela PV permits all time'].get('name')}_{filename}." \
+        + f"{filelist['Closed Accela PV permits all time'].get('ext')}",
+        dtype=dtypes,
+        na_values=' null')
     
-    logging.info("File read successfully")
+    logging.info(f"Reading inactive non PV permits for {filename}")
+    other_closed = pd.read_excel(f"{conf['temp_data_dir']}/" \
+        + f"{filelist['All other closed Accela permits all time'].get('name')}_{filename}." \
+        + f"{filelist['All other closed Accela permits all time'].get('ext')}",
+        dtype=dtypes,
+        na_values=' null')
     
-    logging.info("Concatting PV and non PV")
-    df = pd.concat([pv,other],sort=False)
+    logging.info("Files read successfully")
+    
+    logging.info("Concatting all")
+    df = pd.concat([pv_active,pv_closed,other_active,other_closed],
+        sort=True,
+        ignore_index=True)
     
     logging.info("Fixing col names and dropping fields will all null")
     df.columns = [x.lower().strip().replace(' ','_') for x in df.columns]
@@ -276,46 +272,148 @@ def build_accela(mode='active', **context):
                         'approval_will_expire_date':'date_approval_expire'
                        })
 
-    df = df.drop(columns=['project_expiration_date','project_expiration_code'])
+    df = df.drop(columns=['project_expiration_date','project_expiration_code'])    
+
+    df['file_date'] = filename
+
+    logging.info("Reading in existing file")
+
+    df_old = pd.read_csv(f"{conf['temp_data_dir']}/dsd_permits_all_accela.csv",
+        low_memory=False,
+        dtype={'approval_id':str}
+        )
+
+    prod_cols = df_old.columns.tolist()
+
+    prev_exec_date = context['execution_date'].in_tz(tz='US/Pacific')
+    old_file_date = prev_exec_date.subtract(days=1)
+
+    # Need zero-padded month and date
+    old_filename = f"{old_file_date.year}" \
+    f"{old_file_date.strftime('%m')}" \
+    f"{old_file_date.strftime('%d')}"
+
+    df_old['file_date'] = old_filename
+
+    all_records = pd.concat([df,df_old],
+        sort=True,
+        ignore_index=True)
+    
+    logging.info(f"New files contain {df.shape[0]} records")
+    logging.info(f"Old file contains {df_old.shape[0]} records")
+    logging.info(f"Combined is {all_records.shape[0]} records")
+
+    all_sorted = all_records.sort_values(['approval_id','file_date'],ascending=[True,False])
+    deduped = all_sorted.drop_duplicates(subset='approval_id')
+
+    logging.info(f"Deduped file has {deduped.shape[0]} records")
+
+    logging.info("Writing compressed csv")
+    general.sf_write_csv(deduped,'dsd_approvals_accela')
 
     logging.info("Writing file to temp")
-    general.pos_write_csv(
-    df,
-    prod_permits,
-    date_format=conf['date_format_ymd'])
 
+    general.pos_write_csv(
+    deduped[prod_cols],
+    f"{conf['temp_data_dir']}/dsd_permits_all_accela.csv",
+    date_format=conf['date_format_ymd'])
 
     return 'Created new Accela files'
 
-def join_bids_permits(pt_file='set1_active', **context):
+def spatial_joins(pt_file='',**context):
     """ Spatially joins permits to Business Improvement Districts. """
 
-    pt_path = f"{conf['temp_data_dir']}/permits_{pt_file}.csv"
-    bids_geojson = f"{conf['prod_data_dir']}/bids_datasd.geojson"
-    bids_join = spatial_join_pt(pt_path,
-                             bids_geojson,
-                             lat='lat_job',
-                             lon='lng_job')
+    pt_path = f"{conf['temp_data_dir']}/{pt_file}.csv"
 
-    bids_join = bids_join.drop(['objectid',
+    logging.info("Reading in point file")
+    point = pd.read_csv(pt_path,
+        low_memory=False,
+        dtype={'approval_id':str}
+        )
+
+    logging.info(f"{pt_path} has {point.shape[0]} records")
+    point_cols = point.columns.tolist()
+    prod_cols = point_cols + ['bid_name','council_district','zip']
+
+    ref_df = pd.read_csv('https://datasd-reference.s3.amazonaws.com/permits_polygons_master.csv',
+        low_memory=False,
+        dtype={'approval_id':str}
+        )
+
+    logging.info("Read ref file")
+
+    merge = pd.merge(point,ref_df,how='left',on=['approval_id'])
+
+    logging.info(f"Merge has {merge.shape[0]} records")
+
+    missing = merge[(merge['zip'].isna()) &
+      (merge['council_district'].isna()) &
+      (merge['bid_name'].isna()) &
+      (~merge['lng_job'].isna()) &
+      (~merge['lat_job'].isna())]
+
+    missing_ids = missing.loc[:,'approval_id'].tolist()
+
+    complete = merge[~merge['approval_id'].isin(missing_ids)]
+
+    logging.info(f'Need to get polygons for {missing.shape[0]}')
+    logging.info(f"Have polygons for {complete.shape[0]}")
+
+    logging.info("Joining BIDS")
+
+    missing = missing.drop(columns=['bid_name','council_district','zip'])
+    
+    bids = spatial_join_pt(missing,
+        f"{conf['prod_data_dir']}/bids_datasd.geojson",
+        lat='lat_job',
+        lon='lng_job')
+
+    bids = bids.drop(['objectid',
         'long_name',
         'status',
         'link'
         ], axis=1)
 
-    bids_join = bids_join.rename(columns={'name':'bid_name'})
+    bids = bids.rename(columns={'name':'bid_name'})
 
-    bid_permits = f"{conf['prod_data_dir']}/permits_{pt_file}_datasd.csv"
+    logging.info("Joining council districts")
+
+    cd = spatial_join_pt(bids,
+        f"{conf['prod_data_dir']}/council_districts_datasd.geojson",
+        lat='lat_job',
+        lon='lng_job')
+
+    cd = cd.drop(['objectid',
+        'name',
+        'phone',
+        'website',
+        'perimeter',
+        'area'
+        ],axis=1)
+
+    cd = cd.rename(columns={'district':'council_district'})
+
+    logging.info("Joining ZIPS")
+
+    zips = spatial_join_pt(cd,
+        f"{conf['prod_data_dir']}/zip_codes_datasd.geojson",
+        lat='lat_job',
+        lon='lng_job')
+
+    zips = zips.drop(['objectid',
+        'community'], axis=1)
+
+    final = pd.concat([complete,zips],ignore_index=True,sort=True)
 
     general.pos_write_csv(
-        bids_join,
-        bid_permits)
+        final[prod_cols],
+        f"{conf['prod_data_dir']}/{pt_file}.csv")
 
-    return 'Successfully joined permits to BIDs'
+    return f'Successfully joined permits to polygons'
 
-def create_full_set():
+def create_subsets(mode='set1',**context):
     """
-    Create a file for internal use that has all permits together
+    Create subsets for public use
     """
 
     date_cols = ['date_project_create',
@@ -331,90 +429,40 @@ def create_full_set():
     'job_bc_code':str
     }
 
-    logging.info("Reading in all PTS files")
-    logging.info("Reading in active")
+    logging.info(f"Reading in {mode}")
 
-    pts_active = pd.read_csv(f"{conf['prod_data_dir']}/permits_set1_active_datasd.csv",
-        low_memory=False,
-        parse_dates=date_cols,
-        dtype=dtypes
-        )
-    logging.info("Reading in historical")
-    pts_historical = pd.read_csv(f"{conf['prod_data_dir']}/permits_set1_closed_historical_datasd.csv",
-        low_memory=False,
-        parse_dates=date_cols,
-        dtype=dtypes,
-        error_bad_lines=False
-        )
-    logging.info("Reading in closed")
-    pts_closed = pd.read_csv(f"{conf['prod_data_dir']}/permits_set1_closed_datasd.csv",
-        low_memory=False,
-        parse_dates=date_cols,
-        dtype=dtypes
-        )
-    logging.info("Reading in projects closed")
-    pts_closed_projects = pd.read_csv(f"{conf['prod_data_dir']}/permits_set1_closed_projects_datasd.csv",
-        low_memory=False,
-        parse_dates=date_cols,
-        dtype=dtypes
-        )
-
-    pts_all = pd.concat([pts_historical,pts_closed,pts_active,pts_closed_projects],sort=False)
-    pts_all = pts_all.drop_duplicates()
-
-    for dc in date_cols:
-        logging.info(f"Converting {dc} column")
-        pts_all[dc] = pts_all[dc].apply(lambda x: np.nan if pd.isnull(x) else x.strftime("%Y-%m-%d %H:%M:%S"))
-
-    pts_all['date_approval_expire'] = pd.to_datetime(pts_all['date_approval_expire'],errors='coerce',format="%Y-%m-%d %H:%M:%S")
-
-    logging.info(f"Combined all sets for {pts_all.shape[0]} records")
-
-    logging.info("Sorting by approval id")
-    pts_all = pts_all.sort_values('approval_id')
-
-    logging.info("Writing to csv")
-    general.pos_write_csv(
-        pts_all,
-        f"{conf['prod_data_dir']}/dsd_permits_all_pts.csv",
-        date_format=conf['date_format_ymd_hms'])
-
-    logging.info("Writing compressed csv")
-    general.sf_write_csv(pts_all,'dsd_approvals_pts')
-
-    logging.info("Reading in all Accela files")
-    logging.info("Reading in Active")
+    if mode == 'set1':
+        filepath = "dsd_permits_all_pts.csv"
+    elif mode == 'set2':
+        filepath = "dsd_permits_all_accela.csv"
+    else:
+        raise Exception('Invalid mode')
     
-    accela_active = pd.read_csv(f"{conf['prod_data_dir']}/permits_set2_active_datasd.csv",
+    df = pd.read_csv(f"{conf['temp_data_dir']}/{filepath}",
         low_memory=False,
         parse_dates=date_cols)
 
-    logging.info("Reading in Closed")
+    logging.info(f"File has {df.shape[0]} records")
 
-    accela_closed = pd.read_csv(f"{conf['prod_data_dir']}/permits_set2_closed_datasd.csv",
-        low_memory=False,
-        parse_dates=date_cols)
+    closed = df.loc[~df['date_approval_close'].isna()]
+    active = df.loc[(df['date_approval_close'].isna()) & (df['date_project_complete'].isna())]
 
-    accela_all = pd.concat([accela_active,accela_closed],sort=False)
-
-    logging.info(f"Combined all sets for {accela_all.shape[0]} records")
-
-    logging.info("Sorting by approval id")
-
-    accela_all = accela_all.sort_values('approval_id')
+    logging.info(f"{closed.shape[0]} records meet closed criteria")
+    logging.info(f"{active.shape[0]} records meet active criteria")
 
     logging.info("Writing to csv")
 
     general.pos_write_csv(
-        accela_all,
-        f"{conf['prod_data_dir']}/dsd_permits_all_accela.csv",
+        closed,
+        f"{conf['prod_data_dir']}/permits_{mode}_closed_datasd.csv",
         date_format=conf['date_format_ymd'])
 
-    logging.info("Writing compressed csv")
+    general.pos_write_csv(
+        active,
+        f"{conf['prod_data_dir']}/permits_{mode}_active_datasd.csv",
+        date_format=conf['date_format_ymd'])
 
-    general.sf_write_csv(accela_all,'dsd_approvals_accela')
-
-    return "Successfully created full PTS and Accela sets"
+    return f"Successfully created {mode} subsets"
 
 def create_tsw_subset():
     """ 
@@ -516,12 +564,6 @@ def create_pw_sap_subset():
         dtype={'approval_id':str,'project_id':str}
         )
 
-    pts_historical = pd.read_csv(f"{conf['prod_data_dir']}/permits_set1_closed_historical_datasd.csv",
-        low_memory=False,
-        usecols=usecols,
-        dtype={'approval_id':str,'project_id':str}
-        )
-
     pts_closed = pd.read_csv(f"{conf['prod_data_dir']}/permits_set1_closed_datasd.csv",
         low_memory=False,
         usecols=usecols,
@@ -533,17 +575,12 @@ def create_pw_sap_subset():
 
     logging.info(active_subset.shape)
 
-    historical_subset = pts_historical.loc[(pts_historical['approval_type'].isin(appr_types)) & 
-    (pts_historical['approval_status'].isin(status_types)),:]
-
-    logging.info(historical_subset.shape)
-
     closed_subset = pts_closed.loc[(pts_closed['approval_type'].isin(appr_types)) & 
     (pts_closed['approval_status'].isin(status_types)),:]
 
     logging.info(closed_subset.shape)
 
-    pts_all = pd.concat([active_subset,historical_subset,closed_subset],ignore_index=True,sort=False)
+    pts_all = pd.concat([active_subset,closed_subset],ignore_index=True,sort=False)
 
     accela_active = pd.read_csv(f"{conf['prod_data_dir']}/permits_set2_active_datasd.csv",
         low_memory=False,
