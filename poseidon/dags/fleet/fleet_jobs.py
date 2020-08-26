@@ -4,6 +4,7 @@
 
 from trident.util import general
 import logging
+from airflow.hooks.base_hook import BaseHook
 
 # Required variables
 
@@ -27,12 +28,27 @@ temp_path = conf['temp_data_dir']
 def get_delays():
     """ Extract delays data from Fleet Focus """
 
-    credentials = general.source['fleet']
-    db = cx_Oracle.connect(credentials)
+    credentials = BaseHook.get_connection(conn_id="oracle_fleet")
+    conn_config = {
+            'user': credentials.login,
+            'password': credentials.password
+        }
+    
+    dsn = credentials.extra_dejson.get('dsn', None)
+    sid = credentials.extra_dejson.get('sid', None)
+    port = credentials.port if credentials.port else 1521
+    conn_config['dsn'] = cx_Oracle.makedsn(dsn, port, sid)
+
+    db = cx_Oracle.connect(conn_config['user'],
+        conn_config['password'],
+        conn_config['dsn'],
+        encoding="UTF-8")
+
     sql= general.file_to_string('./sql/delays-query.sql', __file__)
     
     # This pulls in query results as df
     df = pd.read_sql_query(sql, db)
+    df.columns = [x.lower() for x in df.columns]
 
     logging.info(f'Query returned {df.shape[0]} results')
 
@@ -45,12 +61,27 @@ def get_delays():
 def get_jobs():
     """ Extract work order data from Fleet Focus """
 
-    credentials = general.source['fleet']
-    db = cx_Oracle.connect(credentials)
+    credentials = BaseHook.get_connection(conn_id="oracle_fleet")
+    conn_config = {
+            'user': credentials.login,
+            'password': credentials.password
+        }
+    
+    dsn = credentials.extra_dejson.get('dsn', None)
+    sid = credentials.extra_dejson.get('sid', None)
+    port = credentials.port if credentials.port else 1521
+    conn_config['dsn'] = cx_Oracle.makedsn(dsn, port, sid)
+
+    db = cx_Oracle.connect(conn_config['user'],
+        conn_config['password'],
+        conn_config['dsn'],
+        encoding="UTF-8")
+
     sql= general.file_to_string('./sql/jobs-query.sql', __file__)
     
     # This pulls in query results as df
     df = pd.read_sql_query(sql, db)
+    df.columns = [x.lower() for x in df.columns]
 
     logging.info(f'Query returned {df.shape[0]} results')
 
@@ -63,12 +94,27 @@ def get_jobs():
 def get_vehicles():
     """ Extract vehicles data from Fleet Focus """
 
-    credentials = general.source['fleet']
-    db = cx_Oracle.connect(credentials)
+    credentials = BaseHook.get_connection(conn_id="oracle_fleet")
+    conn_config = {
+            'user': credentials.login,
+            'password': credentials.password
+        }
+    
+    dsn = credentials.extra_dejson.get('dsn', None)
+    sid = credentials.extra_dejson.get('sid', None)
+    port = credentials.port if credentials.port else 1521
+    conn_config['dsn'] = cx_Oracle.makedsn(dsn, port, sid)
+
+    db = cx_Oracle.connect(conn_config['user'],
+        conn_config['password'],
+        conn_config['dsn'],
+        encoding="UTF-8")
+
     sql= general.file_to_string('./sql/vehicles-query.sql', __file__)
     
     # This pulls in query results as df
     df = pd.read_sql_query(sql, db)
+    df.columns = [x.lower() for x in df.columns]
 
     logging.info(f'Query returned {df.shape[0]} results')
 
