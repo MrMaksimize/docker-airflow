@@ -204,7 +204,8 @@ schedule = {
     'sidewalks': '@monthly',
     'amcs': "0 12 * * *", # Daily at 4p UTC / 5a PST
     'ga_portal': '@monthly',
-    'pv_prod':'@hourly'
+    'pv_prod':'@hourly',
+    'fleet':"0 12 * * *", # Daily at 4p UTC / 5a PST
 }
 
 default_date = datetime(2019, 10, 8)
@@ -253,7 +254,8 @@ start_date = {
     'amcs': datetime(2020, 4, 14),
     'pv_prod': datetime(2020, 2, 26),
     'sidewalks':  default_date,
-    'ga_portal': datetime(2020, 5, 19)
+    'ga_portal': datetime(2020, 5, 19),
+    'fleet': datetime(2020, 8, 26)
 }
 
 
@@ -261,7 +263,8 @@ source = {'ttcs': os.environ.get('CONN_ORACLETTCS'),
 'cef':os.environ.get('CONN_ORACLE_CEF'),
 'dsd_permits' : os.environ.get('CONN_ORACLE_PERMITS'),
 'cip': os.environ.get('CONN_ORACLECIP'),
-'risk': os.environ.get('CONN_ORACLE_RISK')
+'risk': os.environ.get('CONN_ORACLE_RISK'),
+'fleet': os.environ.get('CONN_ORACLE_FLEET')
 }
 
 args = {
