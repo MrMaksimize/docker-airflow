@@ -16,87 +16,91 @@ start_date = general.start_date['dsd_approvals']
 
 snowflake_files = ['dsd_approvals_pts','dsd_approvals_accela']
 
-def create_file_subdag():
+def get_create_accela_subdag():
   """
-  Generate a DAG to be used as a subdag 
-  that creates permit files 
+  Generate a DAG to be used as a subdag
+  for Accela tasks
   """
 
   dag_subdag = DAG(
-    dag_id='dsd_permits.create_files',
+    dag_id='dsd_permits.get_create_accela',
     default_args=args,
     start_date=start_date,
     schedule_interval=schedule,
     catchup=False)
 
-  create_accela = PythonOperator(
+  #: Get permits reports
+  get_files = PythonOperator(
+    task_id='get_accela_files',
+    provide_context=True,
+    python_callable=get_permits_files,
+    op_kwargs={'mode': 'accela'},
+    dag=dag_subdag)
+
+  create = PythonOperator(
     task_id=f"create_set2",
     provide_context=True,
     python_callable=build_accela,
     dag=dag_subdag)
 
-  create_pts = PythonOperator(
-    task_id=f"create_set1",
-    provide_context=True,
-    python_callable=build_pts,
-    dag=dag_subdag)
-
-  return dag_subdag
-
-
-def join_subdag():
-  """
-  Generate a DAG to be used as a subdag 
-  that joins BIDs to permit files 
-  """
-
-  dag_subdag = DAG(
-    dag_id='dsd_permits.join_polygons',
-    default_args=args,
-    start_date=start_date,
-    schedule_interval=schedule,
-    catchup=False)
-
-  join_accela = PythonOperator(
+  join = PythonOperator(
     task_id=f"join_accela",
     python_callable=spatial_joins,
     op_kwargs={'pt_file': 'dsd_permits_all_accela'},
     dag=dag_subdag)
 
-  join_pts = PythonOperator(
-    task_id=f"join_pts",
-    python_callable=spatial_joins,
-    op_kwargs={'pt_file': 'dsd_permits_all_pts'},
+  subset = PythonOperator(
+    task_id=f"subset_accela",
+    provide_context=True,
+    python_callable=create_subsets,
+    op_kwargs={'mode': 'set2'},
     dag=dag_subdag)
+
+  get_files>>create>>join>>subset
 
   return dag_subdag
 
-def subsets_subdag():
+def get_create_pts_subdag():
   """
-  Generate a DAG to be used as a subdag 
-  that joins BIDs to permit files 
+  Generate a DAG to be used as a subdag
+  for PTS tasks 
   """
 
   dag_subdag = DAG(
-    dag_id='dsd_permits.create_subsets',
+    dag_id='dsd_permits.get_create_pts',
     default_args=args,
     start_date=start_date,
     schedule_interval=schedule,
     catchup=False)
 
-  subset_accela = PythonOperator(
-      task_id=f"subset_accela",
-      provide_context=True,
-      python_callable=create_subsets,
-      op_kwargs={'mode': 'set2'},
-      dag=dag_subdag)
+  #: Get permits reports
+  get_files = PythonOperator(
+    task_id='get_pts_files',
+    provide_context=True,
+    python_callable=get_permits_files,
+    op_kwargs={'mode': 'pts'},
+    dag=dag_subdag)
 
-  subset_pts = PythonOperator(
+  create = PythonOperator(
+    task_id=f"create_set1",
+    provide_context=True,
+    python_callable=build_pts,
+    dag=dag_subdag)
+
+  join = PythonOperator(
+    task_id=f"join_pts",
+    python_callable=spatial_joins,
+    op_kwargs={'pt_file': 'dsd_permits_all_pts'},
+    dag=dag_subdag)
+
+  subset = PythonOperator(
     task_id=f"subset_pts",
     provide_context=True,
     python_callable=create_subsets,
     op_kwargs={'mode': 'set1'},
     dag=dag_subdag)
+
+  get_files>>create>>join>>subset
 
   return dag_subdag
 

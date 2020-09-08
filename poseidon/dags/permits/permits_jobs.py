@@ -12,15 +12,13 @@ from datetime import datetime as dt
 
 conf = general.config
 
-filelist = {'set1'}
-
-filelist = {'Closed projects':{
+filelist = {'Closed PTS projects':{
                 'name':'P2K_261-Panda_Extract_DSD_Projects_Closed',
                 'ext':'txt'},
-            'Closed approvals since 2019':{
+            'Closed PTS approvals since 2019':{
                 'name':'P2K_261-Panda_Extract_DSD_Permits_Closed',
                 'ext':'txt'},
-            'Active approvals since 2003':{
+            'Active PTS approvals since 2003':{
                 'name':'P2K_261-Panda_Extract_DSD_Permits_Active',
                 'ext':'txt'},
             'Active Accela PV permits all time':{
@@ -36,49 +34,87 @@ filelist = {'Closed projects':{
                 'name':'Accela_Closed_NonPV',
                 'ext':'xls'}}
 
-def get_permits_files(**context):
+def get_permits_files(mode='pts',**context):
     """ Get permit file from ftp site. """
     logging.info('Retrieving permits data.')
 
     exec_date = context['next_execution_date'].in_tz(tz='US/Pacific')
     # Exec date returns a Pendulum object
     # Runs on Monday for data extracted Sunday
-    file_date = exec_date.subtract(days=1)
+    file_date_1 = exec_date.subtract(days=1)
 
     # Need zero-padded month and date
-    filename = f"{file_date.year}" \
-    f"{file_date.strftime('%m')}" \
-    f"{file_date.strftime('%d')}"
+    filename_1 = f"{file_date_1.year}" \
+    f"{file_date_1.strftime('%m')}" \
+    f"{file_date_1.strftime('%d')}"
+
+    file_date_2 = exec_date
+
+    # Need zero-padded month and date
+    filename_2 = f"{file_date_2.year}" \
+    f"{file_date_2.strftime('%m')}" \
+    f"{file_date_2.strftime('%d')}"
 
     files = [*filelist]
 
     for file in files:
 
-        logging.info(f"Checking FTP for {filelist[file].get('name')}")
+        if mode in file.lower():
 
-        fpath = f"{filelist[file].get('name')}_{filename}.{filelist[file].get('ext')}"
+            logging.info(f"Checking for {filelist[file].get('name')}")
 
-        command = "smbclient //ad.sannet.gov/dfs " \
-        + f"--user={conf['svc_acct_user']}%{conf['svc_acct_pass']} -W ad -c " \
-        + "'prompt OFF;"\
-        + " cd \"DSD-Shared/All_DSD/Panda/\";" \
-        + " lcd \"/data/temp/\";" \
-        + f" get {fpath};'"
+            fpath = f"{filelist[file].get('name')}_{filename_1}.{filelist[file].get('ext')}"
 
-        command = command.format(quote(command))
+            command = "smbclient //ad.sannet.gov/dfs " \
+            + f"--user={conf['svc_acct_user']}%{conf['svc_acct_pass']} -W ad -c " \
+            + "'prompt OFF;"\
+            + " cd \"DSD-Shared/All_DSD/Panda/\";" \
+            + " lcd \"/data/temp/\";" \
+            + f" get {fpath};'"
 
-        p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
-        output, error = p.communicate()
-        
-        if p.returncode != 0:
-            logging.info(f"Error with {fpath}")
-            logging.info(output)
-            logging.info(error)
-            raise Exception(p.returncode)
-        else:
-            logging.info(f"Found {fpath}")
+            command = command.format(quote(command))
 
-    return filename
+            p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
+            output, error = p.communicate()
+            
+            if p.returncode != 0:
+
+                logging.info(f"Error with {fpath}")
+
+                logging.info(f"Checking for {filelist[file].get('name')}")
+
+                fpath = f"{filelist[file].get('name')}_{filename_2}.{filelist[file].get('ext')}"
+
+                command = "smbclient //ad.sannet.gov/dfs " \
+                + f"--user={conf['svc_acct_user']}%{conf['svc_acct_pass']} -W ad -c " \
+                + "'prompt OFF;"\
+                + " cd \"DSD-Shared/All_DSD/Panda/\";" \
+                + " lcd \"/data/temp/\";" \
+                + f" get {fpath};'"
+
+                command = command.format(quote(command))
+
+                p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
+                output, error = p.communicate()
+                
+                if p.returncode != 0:
+
+                    logging.info(f"Error with {fpath}")
+                    logging.info("Could not find files for either day")
+                    logging.info(output)
+                    logging.info(error)
+                    raise Exception(p.returncode)
+
+                else:
+
+                    logging.info(f"Found {fpath}")
+                    filedate_final = filename_2
+            else:
+
+                logging.info(f"Found {fpath}")
+                filedate_final = filename_1
+
+    return filedate_final
 
 def build_pts(**context):
     """Get PTS permits and create active and closed"""
@@ -95,13 +131,15 @@ def build_pts(**context):
     'Job ID':'str',
     'Approval ID':'str'}
 
-    filename = context['task_instance'].xcom_pull(dag_id="dsd_permits",
-        task_ids='get_permits_files')
+    filename = context['task_instance'].xcom_pull(dag_id="dsd_permits.get_create_pts",
+        task_ids='get_pts_files')
+
+    #filename = "20200906"
     
     logging.info(f"Reading active permits {filename}")
     active = pd.read_csv(f"{conf['temp_data_dir']}/" \
-        + f"{filelist['Active approvals since 2003'].get('name')}_" \
-        + f"{filename}.{filelist['Active approvals since 2003'].get('ext')}",
+        + f"{filelist['Active PTS approvals since 2003'].get('name')}_" \
+        + f"{filename}.{filelist['Active PTS approvals since 2003'].get('ext')}",
         low_memory=False,
         sep=",",
         encoding="ISO-8859-1",
@@ -111,8 +149,8 @@ def build_pts(**context):
     # Closed permits
     logging.info(f"Reading closed permits {filename}")
     closed = pd.read_csv(f"{conf['temp_data_dir']}/" \
-        + f"{filelist['Closed approvals since 2019'].get('name')}_{filename}." \
-        + f"{filelist['Closed approvals since 2019'].get('ext')}",
+        + f"{filelist['Closed PTS approvals since 2019'].get('name')}_{filename}." \
+        + f"{filelist['Closed PTS approvals since 2019'].get('ext')}",
         low_memory=False,
         sep=",",
         encoding="ISO-8859-1",
@@ -122,8 +160,8 @@ def build_pts(**context):
     # Closed projects, open approvals
     logging.info(f"Reading closed projects {filename}")
     closed_pr = pd.read_csv(f"{conf['temp_data_dir']}/" \
-        + f"{filelist['Closed projects'].get('name')}_{filename}." \
-        + f"{filelist['Closed projects'].get('ext')}",
+        + f"{filelist['Closed PTS projects'].get('name')}_{filename}." \
+        + f"{filelist['Closed PTS projects'].get('ext')}",
         low_memory=False,
         sep=",",
         encoding="ISO-8859-1",
@@ -163,6 +201,8 @@ def build_pts(**context):
     old_filename = f"{old_file_date.year}" \
     f"{old_file_date.strftime('%m')}" \
     f"{old_file_date.strftime('%d')}"
+
+    #old_filename = "20200830"
 
     df_old['file_date'] = old_filename
 
@@ -210,8 +250,10 @@ def build_accela(**context):
     'JOB_BC_CODE_DESCRIPTION':str,
     'APPROVAL_CATEGORY_CODE':str}
 
-    filename = context['task_instance'].xcom_pull(dag_id="dsd_permits",
-        task_ids='get_permits_files')
+    filename = context['task_instance'].xcom_pull(dag_id="dsd_permits.get_create_pts",
+        task_ids='get_accela_files')
+
+    #filename = "20200906"
         
     logging.info(f"Reading active PV permits for {filename}")
     pv_active = pd.read_excel(f"{conf['temp_data_dir']}/" \
@@ -293,6 +335,8 @@ def build_accela(**context):
     f"{old_file_date.strftime('%m')}" \
     f"{old_file_date.strftime('%d')}"
 
+    #old_filename = "20200824"
+
     df_old['file_date'] = old_filename
 
     all_records = pd.concat([df,df_old],
@@ -308,13 +352,33 @@ def build_accela(**context):
 
     logging.info(f"Deduped file has {deduped.shape[0]} records")
 
+    #### Temporary fix due to problems with lat lng cols ####
+
+    logging.info("Running temp fix for lat lng")
+    logging.info("Read in coordinate reference file")
+    accela_coords = pd.read_csv('http://datasd-reference.s3.amazonaws.com/permits_accela_coords.csv',
+        low_memory=False,
+        dtype={'approval_id':str}
+        )
+
+    deduped = deduped.drop(columns=['lng_job','lat_job'])
+
+    coords_merge = pd.merge(deduped,
+        accela_coords,
+        how='left',
+        on=['approval_id']
+        )
+
+    final = coords_merge
+
+
     logging.info("Writing compressed csv")
-    general.sf_write_csv(deduped,'dsd_approvals_accela')
+    general.sf_write_csv(final,'dsd_approvals_accela')
 
     logging.info("Writing file to temp")
 
     general.pos_write_csv(
-    deduped[prod_cols],
+    final[prod_cols],
     f"{conf['temp_data_dir']}/dsd_permits_all_accela.csv",
     date_format=conf['date_format_ymd'])
 
@@ -528,7 +592,9 @@ def create_tsw_subset():
 
     general.pos_write_csv(
         df,
-        f"{conf['prod_data_dir']}/dsd_permits_row.csv")
+        f"{conf['prod_data_dir']}/dsd_permits_row.csv",
+        date_format=conf['date_format_ymd_hms']
+        )
 
     return 'Successfully created TSW subset'
 
