@@ -20,29 +20,16 @@ dag = DAG(dag_id='dsd_permits',
           schedule_interval=schedule,
           catchup=False)
 
-#: Get permits reports
-get_permits_files = PythonOperator(
-    task_id='get_permits_files',
-    provide_context=True,
-    python_callable=get_permits_files,
-    dag=dag)
-
-#: Create 2 Accela files using subdag
-create_files = SubDagOperator(
-  task_id='create_files',
-  subdag=create_file_subdag(),
-  dag=dag)
-
 #: Join BIDs to 4 files using subdag
-join_polygons = SubDagOperator(
-  task_id='join_polygons',
-  subdag=join_subdag(),
+all_accela = SubDagOperator(
+  task_id='get_create_accela',
+  subdag=get_create_accela_subdag(),
   dag=dag)
 
 #: Subset files
-create_subsets = SubDagOperator(
-  task_id='create_subsets',
-  subdag=subsets_subdag(),
+all_pts = SubDagOperator(
+  task_id='get_create_pts',
+  subdag=get_create_pts_subdag(),
   dag=dag)
 
 exec_snowflake = SubDagOperator(
@@ -111,9 +98,12 @@ upload_pw_sap = S3FileTransferOperator(
     )
 
 #: Execution rules
-get_permits_files>>create_files>>join_polygons>>create_subsets>>upload_files
-join_polygons>>exec_snowflake
+all_accela>>exec_snowflake
+all_pts>>exec_snowflake
+all_accela>>upload_files
+all_pts>>upload_files
 upload_files>>[update_set1_md,update_set2_md,update_set1_json_date,update_set2_json_date]
-create_subsets>>[create_tsw_file,create_pw_sap_file]
+all_accela>>[create_tsw_file,create_pw_sap_file]
+all_pts>>[create_tsw_file,create_pw_sap_file]
 create_tsw_file>>upload_tsw
 create_pw_sap_file>>upload_pw_sap
