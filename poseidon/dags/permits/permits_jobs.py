@@ -250,7 +250,7 @@ def build_accela(**context):
     'JOB_BC_CODE_DESCRIPTION':str,
     'APPROVAL_CATEGORY_CODE':str}
 
-    filename = context['task_instance'].xcom_pull(dag_id="dsd_permits.get_create_pts",
+    filename = context['task_instance'].xcom_pull(dag_id="dsd_permits.get_create_accela",
         task_ids='get_accela_files')
 
     #filename = "20200906"
