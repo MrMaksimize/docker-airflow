@@ -135,7 +135,7 @@ def upload_files_subdag():
       replace=True,
       dag=dag_subdag)
 
-  upload_file = S3FileTransferOperator(
+  upload_pts = S3FileTransferOperator(
     task_id="upload_pts_all",
     source_base_path=conf['prod_data_dir'],
     source_key="dsd_permits_all_pts.csv",
@@ -146,7 +146,7 @@ def upload_files_subdag():
     dag=dag_subdag,
     )
 
-  upload_file = S3FileTransferOperator(
+  upload_accela = S3FileTransferOperator(
     task_id="upload_accela_all",
     source_base_path=conf['prod_data_dir'],
     source_key="dsd_permits_all_accela.csv",
@@ -156,6 +156,26 @@ def upload_files_subdag():
     replace=True,
     dag=dag_subdag,
     )
+
+  upload_pts_polygons = S3FileTransferOperator(
+    task_id='upload_pts_polygons',
+    source_base_path=conf['prod_data_dir'],
+    source_key='dsd_permits_all_pts_polygons.csv',
+    dest_s3_conn_id=conf['default_s3_conn_id'],
+    dest_s3_bucket=conf['ref_s3_bucket'],
+    dest_s3_key='dsd_permits_all_pts_polygons',
+    replace=True,
+    dag=dag)
+
+  upload_accela_polygons = S3FileTransferOperator(
+    task_id='upload_accela_polygons',
+    source_base_path=conf['prod_data_dir'],
+    source_key='dsd_permits_all_accela_polygons.csv',
+    dest_s3_conn_id=conf['default_s3_conn_id'],
+    dest_s3_bucket=conf['ref_s3_bucket'],
+    dest_s3_key='dsd_permits_all_accela_polygons',
+    replace=True,
+    dag=dag)
 
   return dag_subdag
 
