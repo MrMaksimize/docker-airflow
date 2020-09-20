@@ -406,57 +406,65 @@ def spatial_joins(pt_file='',**context):
 
     logging.info("Joining BIDS")
 
-    missing = missing.drop(columns=['bid_name','council_district','zip'])
-    
-    bids = spatial_join_pt(missing,
-        f"{conf['prod_data_dir']}/bids_datasd.geojson",
-        lat='lat_job',
-        lon='lng_job')
+    if missing.empty:
 
-    bids = bids.drop(['objectid',
-        'long_name',
-        'status',
-        'link'
-        ], axis=1)
+        logging.info("Do not need any joins. Writing file")
 
-    bids = bids.rename(columns={'name':'bid_name'})
+        final = complete
 
-    logging.info("Joining council districts")
+    else:
 
-    cd = spatial_join_pt(bids,
-        f"{conf['prod_data_dir']}/council_districts_datasd.geojson",
-        lat='lat_job',
-        lon='lng_job')
+        missing = missing.drop(columns=['bid_name','council_district','zip'])
+        
+        bids = spatial_join_pt(missing,
+            f"{conf['prod_data_dir']}/bids_datasd.geojson",
+            lat='lat_job',
+            lon='lng_job')
 
-    cd = cd.drop(['objectid',
-        'name',
-        'phone',
-        'website',
-        'perimeter',
-        'area'
-        ],axis=1)
+        bids = bids.drop(['objectid',
+            'long_name',
+            'status',
+            'link'
+            ], axis=1)
 
-    cd = cd.rename(columns={'district':'council_district'})
+        bids = bids.rename(columns={'name':'bid_name'})
 
-    logging.info("Joining ZIPS")
+        logging.info("Joining council districts")
 
-    zips = spatial_join_pt(cd,
-        f"{conf['prod_data_dir']}/zip_codes_datasd.geojson",
-        lat='lat_job',
-        lon='lng_job')
+        cd = spatial_join_pt(bids,
+            f"{conf['prod_data_dir']}/council_districts_datasd.geojson",
+            lat='lat_job',
+            lon='lng_job')
 
-    zips = zips.drop(['objectid',
-        'community'], axis=1)
+        cd = cd.drop(['objectid',
+            'name',
+            'phone',
+            'website',
+            'perimeter',
+            'area'
+            ],axis=1)
 
-    new_polygon_rows = zips[['approval_id','bid_name','council_district','zip']]
+        cd = cd.rename(columns={'district':'council_district'})
 
-    final_polygons = pd.concat([ref_df,new_polygon_rows],ignore_index=True,sort=False)
+        logging.info("Joining ZIPS")
 
-    general.pos_write_csv(
-        final_polygons,
-        f"{conf['prod_data_dir']}/{pt_file}_polygons.csv")
+        zips = spatial_join_pt(cd,
+            f"{conf['prod_data_dir']}/zip_codes_datasd.geojson",
+            lat='lat_job',
+            lon='lng_job')
 
-    final = pd.concat([complete,zips],ignore_index=True,sort=True)
+        zips = zips.drop(['objectid',
+            'community'], axis=1)
+
+        new_polygon_rows = zips[['approval_id','bid_name','council_district','zip']]
+
+        final_polygons = pd.concat([ref_df,new_polygon_rows],ignore_index=True,sort=False)
+
+        general.pos_write_csv(
+            final_polygons,
+            f"{conf['prod_data_dir']}/{pt_file}_polygons.csv")
+
+        final = pd.concat([complete,zips],ignore_index=True,sort=True)
 
     general.pos_write_csv(
         final[prod_cols],
