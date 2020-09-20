@@ -250,10 +250,10 @@ def build_accela(**context):
     'JOB_BC_CODE_DESCRIPTION':str,
     'APPROVAL_CATEGORY_CODE':str}
 
-    filename = context['task_instance'].xcom_pull(dag_id="dsd_permits.get_create_pts",
+    filename = context['task_instance'].xcom_pull(dag_id="dsd_permits.get_create_accela",
         task_ids='get_accela_files')
 
-    #filename = "20200906"
+    #filename = "20200914"
         
     logging.info(f"Reading active PV permits for {filename}")
     pv_active = pd.read_excel(f"{conf['temp_data_dir']}/" \
@@ -335,7 +335,7 @@ def build_accela(**context):
     f"{old_file_date.strftime('%m')}" \
     f"{old_file_date.strftime('%d')}"
 
-    #old_filename = "20200824"
+    #old_filename = "20200910"
 
     df_old['file_date'] = old_filename
 
@@ -352,33 +352,14 @@ def build_accela(**context):
 
     logging.info(f"Deduped file has {deduped.shape[0]} records")
 
-    #### Temporary fix due to problems with lat lng cols ####
-
-    logging.info("Running temp fix for lat lng")
-    logging.info("Read in coordinate reference file")
-    accela_coords = pd.read_csv('http://datasd-reference.s3.amazonaws.com/permits_accela_coords.csv',
-        low_memory=False,
-        dtype={'approval_id':str}
-        )
-
-    deduped = deduped.drop(columns=['lng_job','lat_job'])
-
-    coords_merge = pd.merge(deduped,
-        accela_coords,
-        how='left',
-        on=['approval_id']
-        )
-
-    final = coords_merge
-
 
     logging.info("Writing compressed csv")
-    general.sf_write_csv(final,'dsd_approvals_accela')
+    general.sf_write_csv(deduped,'dsd_approvals_accela')
 
     logging.info("Writing file to temp")
 
     general.pos_write_csv(
-    final[prod_cols],
+    deduped[prod_cols],
     f"{conf['temp_data_dir']}/dsd_permits_all_accela.csv",
     date_format=conf['date_format_ymd'])
 
@@ -399,7 +380,7 @@ def spatial_joins(pt_file='',**context):
     point_cols = point.columns.tolist()
     prod_cols = point_cols + ['bid_name','council_district','zip']
 
-    ref_df = pd.read_csv('https://datasd-reference.s3.amazonaws.com/permits_polygons_master.csv',
+    ref_df = pd.read_csv(f'https://datasd-reference.s3.amazonaws.com/{pt_file}_polygons.csv',
         low_memory=False,
         dtype={'approval_id':str}
         )
@@ -425,49 +406,65 @@ def spatial_joins(pt_file='',**context):
 
     logging.info("Joining BIDS")
 
-    missing = missing.drop(columns=['bid_name','council_district','zip'])
-    
-    bids = spatial_join_pt(missing,
-        f"{conf['prod_data_dir']}/bids_datasd.geojson",
-        lat='lat_job',
-        lon='lng_job')
+    if missing.empty:
 
-    bids = bids.drop(['objectid',
-        'long_name',
-        'status',
-        'link'
-        ], axis=1)
+        logging.info("Do not need any joins. Writing file")
 
-    bids = bids.rename(columns={'name':'bid_name'})
+        final = complete
 
-    logging.info("Joining council districts")
+    else:
 
-    cd = spatial_join_pt(bids,
-        f"{conf['prod_data_dir']}/council_districts_datasd.geojson",
-        lat='lat_job',
-        lon='lng_job')
+        missing = missing.drop(columns=['bid_name','council_district','zip'])
+        
+        bids = spatial_join_pt(missing,
+            f"{conf['prod_data_dir']}/bids_datasd.geojson",
+            lat='lat_job',
+            lon='lng_job')
 
-    cd = cd.drop(['objectid',
-        'name',
-        'phone',
-        'website',
-        'perimeter',
-        'area'
-        ],axis=1)
+        bids = bids.drop(['objectid',
+            'long_name',
+            'status',
+            'link'
+            ], axis=1)
 
-    cd = cd.rename(columns={'district':'council_district'})
+        bids = bids.rename(columns={'name':'bid_name'})
 
-    logging.info("Joining ZIPS")
+        logging.info("Joining council districts")
 
-    zips = spatial_join_pt(cd,
-        f"{conf['prod_data_dir']}/zip_codes_datasd.geojson",
-        lat='lat_job',
-        lon='lng_job')
+        cd = spatial_join_pt(bids,
+            f"{conf['prod_data_dir']}/council_districts_datasd.geojson",
+            lat='lat_job',
+            lon='lng_job')
 
-    zips = zips.drop(['objectid',
-        'community'], axis=1)
+        cd = cd.drop(['objectid',
+            'name',
+            'phone',
+            'website',
+            'perimeter',
+            'area'
+            ],axis=1)
 
-    final = pd.concat([complete,zips],ignore_index=True,sort=True)
+        cd = cd.rename(columns={'district':'council_district'})
+
+        logging.info("Joining ZIPS")
+
+        zips = spatial_join_pt(cd,
+            f"{conf['prod_data_dir']}/zip_codes_datasd.geojson",
+            lat='lat_job',
+            lon='lng_job')
+
+        zips = zips.drop(['objectid',
+            'community'], axis=1)
+
+        new_polygon_rows = zips[['approval_id','bid_name','council_district','zip']]
+
+        final_polygons = pd.concat([ref_df,new_polygon_rows],ignore_index=True,sort=False)
+
+        general.pos_write_csv(
+            final_polygons,
+            f"{conf['prod_data_dir']}/{pt_file}_polygons.csv")
+
+        final = pd.concat([complete,zips],ignore_index=True,sort=True)
 
     general.pos_write_csv(
         final[prod_cols],
@@ -480,11 +477,11 @@ def create_subsets(mode='set1',**context):
     Create subsets for public use
     """
 
-    date_cols = ['date_project_create',
-    'date_project_complete',
-    'date_approval_issue',
-    'date_approval_create',
-    'date_approval_close']
+    #date_cols = ['date_project_create',
+    #'date_project_complete',
+    #'date_approval_issue',
+    #'date_approval_create',
+    #'date_approval_close']
 
     dtypes = {'development_id':str,
     'project_id':str,
@@ -502,14 +499,20 @@ def create_subsets(mode='set1',**context):
     else:
         raise Exception('Invalid mode')
     
-    df = pd.read_csv(f"{conf['temp_data_dir']}/{filepath}",
-        low_memory=False,
-        parse_dates=date_cols)
+    df = pd.read_csv(f"{conf['prod_data_dir']}/{filepath}",
+        low_memory=False)
+        #parse_dates=date_cols)
 
     logging.info(f"File has {df.shape[0]} records")
 
     closed = df.loc[~df['date_approval_close'].isna()]
-    active = df.loc[(df['date_approval_close'].isna()) & (df['date_project_complete'].isna())]
+
+    if mode == 'set1':
+        active = df.loc[(df['date_approval_close'].isna()) & (df['project_status'] != 'Closed')]
+    elif mode == 'set2':
+        active = df.loc[df['date_approval_close'].isna()]
+    else:
+        raise Exception('Invalid mode')
 
     logging.info(f"{closed.shape[0]} records meet closed criteria")
     logging.info(f"{active.shape[0]} records meet active criteria")
@@ -560,21 +563,37 @@ def create_tsw_subset():
         parse_dates=['date_approval_expire','date_approval_issue'],
         dtype={'approval_id':str,'project_id':str}
         )
+    logging.info(f"Have {pts_active.shape[0]} active PTS permits")
+
     accela_active = pd.read_csv(f"{conf['prod_data_dir']}/permits_set2_active_datasd.csv",
         low_memory=False,
         usecols=usecols,
         parse_dates=['date_approval_expire','date_approval_issue'],
         dtype={'approval_id':str,'project_id':str}
         )
+    logging.info(f"Have {accela_active.shape[0]} active Accela permits")
 
     pts_subset = pts_active.loc[(pts_active['approval_type'].isin(appr_types)) & 
     (pts_active['approval_status'] == 'Issued'),:]
+    logging.info(f"PTS subset has {pts_subset.shape[0]} records")
 
     accela_subset = accela_active.loc[(accela_active['approval_type'].isin(appr_types)) & 
     (accela_active['approval_status'] == 'Issued'),:]
+    logging.info(f"Accela subset has {accela_subset.shape[0]} records")
+
+    test = accela_subset.loc[accela_subset['approval_id'] == 'PMT-3001698']
+
+    if test.empty:
+        logging.info("Accela subset does not contain test permit")
+    else:
+        logging.info("Accela subset does contain test permit")
 
     tsw_all = pd.concat([pts_subset,accela_subset],ignore_index=True,sort=False)
+
+    logging.info(f"Concat has {tsw_all.shape[0]} records")
+
     df = tsw_all[usecols]
+    logging.info(f"Final df has {df.shape[0]} records")
 
     df.columns = ['APPROVAL_TYPE',
     'APPROVAL_ID',
@@ -624,53 +643,27 @@ def create_pw_sap_subset():
     'project_title',
     'address_job']
 
-    pts_active = pd.read_csv(f"{conf['prod_data_dir']}/permits_set1_active_datasd.csv",
-        low_memory=False,
-        usecols=usecols,
-        dtype={'approval_id':str,'project_id':str}
-        )
-
-    pts_closed = pd.read_csv(f"{conf['prod_data_dir']}/permits_set1_closed_datasd.csv",
+    pts = pd.read_csv(f"{conf['prod_data_dir']}/dsd_permits_all_pts.csv",
         low_memory=False,
         usecols=usecols,
         dtype={'approval_id':str,'project_id':str}
         )
     
-    active_subset = pts_active.loc[(pts_active['approval_type'].isin(appr_types)) & 
-    (pts_active['approval_status'].isin(status_types)),:]
+    pts_all = pts.loc[(pts['approval_type'].isin(appr_types)) & 
+    (pts['approval_status'].isin(status_types)),:]
 
-    logging.info(active_subset.shape)
+    logging.info(pts_all.shape)
 
-    closed_subset = pts_closed.loc[(pts_closed['approval_type'].isin(appr_types)) & 
-    (pts_closed['approval_status'].isin(status_types)),:]
-
-    logging.info(closed_subset.shape)
-
-    pts_all = pd.concat([active_subset,closed_subset],ignore_index=True,sort=False)
-
-    accela_active = pd.read_csv(f"{conf['prod_data_dir']}/permits_set2_active_datasd.csv",
+    accela = pd.read_csv(f"{conf['prod_data_dir']}/dsd_permits_all_accela.csv",
         low_memory=False,
         usecols=usecols,
         dtype={'approval_id':str,'project_id':str}
         )
 
-    accela_closed = pd.read_csv(f"{conf['prod_data_dir']}/permits_set2_closed_datasd.csv",
-        low_memory=False,
-        usecols=usecols,
-        dtype={'approval_id':str,'project_id':str}
-        )
+    accela_all = accela.loc[(accela['approval_type'].isin(appr_types)) & 
+    (accela['approval_status'].isin(status_types)),:]
 
-    accela_active_subset = accela_active.loc[(accela_active['approval_type'].isin(appr_types)) & 
-    (accela_active['approval_status'].isin(status_types)),:]
-
-    logging.info(accela_active_subset.shape)
-
-    accela_closed_subset = accela_closed.loc[(accela_closed['approval_type'].isin(appr_types)) & 
-    (accela_closed['approval_status'].isin(status_types)),:]
-
-    logging.info(accela_closed_subset.shape)
-
-    accela_all = pd.concat([accela_active_subset,accela_closed_subset],ignore_index=True,sort=False)
+    logging.info(accela_all.shape)
 
     traffic_title = accela_all.loc[accela_all['approval_type'] == 'Traffic Control Plan-Permit',:].apply(lambda x: f"{x['approval_type']} {x['address_job'].split(',')[0]}", axis=1)
 
