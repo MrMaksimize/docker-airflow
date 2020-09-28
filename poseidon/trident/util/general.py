@@ -271,9 +271,9 @@ args = {
     'owner': 'airflow',
     'depends_on_past': False,
     'email': config['mail_default_receivers'],
-    'email_on_failure': False,
+    'email_on_failure': True,
     'email_on_retry': False,
-    'retries': 1,
+    'retries': 2,
     'retry_delay': timedelta(minutes=5),
     'retry_exponential_backoff': True,
     'max_retry_delay': timedelta(minutes=120)

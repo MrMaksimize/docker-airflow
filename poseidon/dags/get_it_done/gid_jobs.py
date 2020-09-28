@@ -106,8 +106,7 @@ def update_service_name():
 
     logging.info(f"Read {df.shape[0]} records from Salesforce report")
 
-    df.columns = [x.lower().replace(' ','_').replace('/','_') 
-        for x in df.columns]
+    df = df.rename(columns=lambda x: x.lower().replace(' ','_').replace('/','_'))
 
     df = df.fillna('')
 
@@ -184,7 +183,7 @@ def update_service_name():
                        sap_types,
                        dsd_types,
                        parking_types,
-                       parking_72hr_types],ignore_index=True)
+                       parking_72hr_types],sort=True,ignore_index=True)
 
     logging.info('Updating illegal dumping case record type')
 
@@ -208,20 +207,17 @@ def update_service_name():
                                   'hide_from_web'
                                  ],axis=1)
 
-    df_clean = df_clean.rename(columns={'geolocation_(latitude)':'lat',
+    df_rename = df_clean.rename(columns={'geolocation_(latitude)':'lat',
         'geolocation_(longitude)':'long',
         'case_type_new':'case_type',
         'case_sub_type_new':'case_sub_type',
         'age_(days)':'case_age_days',
-        'mobile_web_status':'status'
-    })
-
-    df_clean.loc[df_clean['status'] == 'Referred','case_age_days'] = np.nan
+        'mobile_web_status':'status'})
 
     logging.info('Writing clean gid file')
 
     general.pos_write_csv(
-        df_clean, 
+        df_rename, 
         sname_file_gid, 
         date_format='%Y-%m-%dT%H:%M:%S%z')
 
@@ -399,7 +395,7 @@ def update_close_dates():
             axis=1)
 
     all_records.loc[all_records['min_new_date'].notnull(),
-                          'mobile_web_status'] = 'Closed'
+                          'status'] = 'Closed'
 
     all_records = all_records.drop(['min_new_date'],axis=1)
 
@@ -440,6 +436,11 @@ def update_referral_col():
     df.loc[df['display_referral_information'].notnull(),
         'referred'] = df.loc[df['display_referral_information'].notnull(),
         'display_referral_information']
+
+    # Fix case age days for referred cases
+
+    df.loc[(df.status == 'Referred'), 
+        'case_age_days'] = np.nan
 
     general.pos_write_csv(
         df,
@@ -566,6 +567,8 @@ def create_prod_files():
     'status',
     'lat',
     'lng',
+    'street_address',
+    'zipcode',
     'council_district',
     'comm_plan_code',
     'comm_plan_name',
@@ -573,6 +576,9 @@ def create_prod_files():
     'case_origin',
     'specify_the_issue',
     'referred',
+    'action_taken',
+    'cause_code',
+    'enforcement',
     'public_description',
     'iamfloc',
     'floc'

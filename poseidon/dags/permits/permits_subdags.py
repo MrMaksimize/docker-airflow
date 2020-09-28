@@ -104,24 +104,21 @@ def get_create_pts_subdag():
 
   return dag_subdag
 
-def upload_files_subdag():
+def upload_set1_files_subdag():
   """
   Generate a DAG to be used as a subdag 
   that joins BIDs to permit files 
   """
 
   dag_subdag = DAG(
-    dag_id='dsd_permits.upload_files',
+    dag_id='dsd_permits.upload_set1_files',
     default_args=args,
     start_date=start_date,
     schedule_interval=schedule,
     catchup=False)
 
   files = ['set1_active',
-  'set1_closed',
-  'set2_active',
-  'set2_closed'
-  ]
+  'set1_closed']
 
   for file in files:
 
@@ -146,6 +143,47 @@ def upload_files_subdag():
     dag=dag_subdag,
     )
 
+  upload_pts_polygons = S3FileTransferOperator(
+    task_id='upload_pts_polygons',
+    source_base_path=conf['prod_data_dir'],
+    source_key='dsd_permits_all_pts_polygons.csv',
+    dest_s3_conn_id=conf['default_s3_conn_id'],
+    dest_s3_bucket=conf['ref_s3_bucket'],
+    dest_s3_key='dsd_permits_all_pts_polygons.csv',
+    replace=True,
+    dag=dag_subdag)
+
+  return dag_subdag
+
+def upload_set2_files_subdag():
+  """
+  Generate a DAG to be used as a subdag 
+  that joins BIDs to permit files 
+  """
+
+  dag_subdag = DAG(
+    dag_id='dsd_permits.upload_set2_files',
+    default_args=args,
+    start_date=start_date,
+    schedule_interval=schedule,
+    catchup=False)
+
+  files = ['set2_active',
+  'set2_closed']
+
+  for file in files:
+
+    upload_file = S3FileTransferOperator(
+      task_id=f"upload_{file}",
+      source_base_path=conf['prod_data_dir'],
+      source_key=f"permits_{file}_datasd.csv",
+      dest_s3_bucket=conf['dest_s3_bucket'],
+      dest_s3_conn_id=conf['default_s3_conn_id'],
+      dest_s3_key=f"dsd/permits_{file}_datasd.csv",
+      replace=True,
+      dag=dag_subdag
+      )
+
   upload_accela = S3FileTransferOperator(
     task_id="upload_accela_all",
     source_base_path=conf['prod_data_dir'],
@@ -156,16 +194,6 @@ def upload_files_subdag():
     replace=True,
     dag=dag_subdag,
     )
-
-  upload_pts_polygons = S3FileTransferOperator(
-    task_id='upload_pts_polygons',
-    source_base_path=conf['prod_data_dir'],
-    source_key='dsd_permits_all_pts_polygons.csv',
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_bucket=conf['ref_s3_bucket'],
-    dest_s3_key='dsd_permits_all_pts_polygons.csv',
-    replace=True,
-    dag=dag_subdag)
 
   upload_accela_polygons = S3FileTransferOperator(
     task_id='upload_accela_polygons',
