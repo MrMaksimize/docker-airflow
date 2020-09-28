@@ -459,6 +459,20 @@ def shp2geojsonOgr(layer):
 
     return cmd
 
+def shp2kml(layer):
+    """Shapefile to KML conversion using ogr."""
+    # Rename fields to Name and Description
+    # Or specify them in the command
+    cmd = 'ogr2ogr -f KML'\
+    + f' {layer}.kml'\
+    + f' {layer}.shp'
+    #+ ' -dsco NameField='\
+    #+ ' DescriptionField='
+
+    cmd = cmd.format(layer=layer)
+
+    return cmd
+
 
 def shp2topojson(layer):
     """Shapefile to TopoJSON conversion using mapshaper."""
