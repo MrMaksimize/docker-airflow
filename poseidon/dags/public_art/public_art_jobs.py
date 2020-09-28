@@ -151,7 +151,6 @@ def update_geospatial():
     return overwrite
 
 #def shp_to_kml():
-    """Shapefile to KML"""
     #cmd = shp2kml(f"{conf['prod_data_dir']}/public_art_gis_kml")
     #logging.info(cmd)
     #return cmd

@@ -2,11 +2,9 @@
 from __future__ import print_function
 from airflow.operators.python_operator import PythonOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
-from airflow.operators.bash_operator import BashOperator
 from airflow.models import DAG
 
 from trident.util import general
-from trident.util.geospatial import *
 
 from dags.public_art.public_art_jobs import *
 from trident.util.seaboard_updates import *
