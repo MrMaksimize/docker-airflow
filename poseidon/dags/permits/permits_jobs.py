@@ -543,7 +543,8 @@ def create_tsw_subset():
              'Right Of Way Permit-Const Plan',
              'Subdivision Improvement Agrmnt',
              'ROW Permit-Traffic Control',
-             'Traffic Control Plan-Permit'
+             'Traffic Control Plan-Permit',
+             'Traffic Control Permit'
             ]
 
     usecols = ['approval_type',
@@ -632,7 +633,9 @@ def create_pw_sap_subset():
     'Right Of Way Permit',
     'Grading + Right of Way Permit',
     'ROW Permit-Traffic Control',
-    'Traffic Control Plan-Permit']
+    'Traffic Control Plan-Permit',
+    'Traffic Control Permit'
+    ]
 
     status_types = ['Issued','Completed']
 

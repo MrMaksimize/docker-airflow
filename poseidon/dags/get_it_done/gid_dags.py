@@ -63,6 +63,22 @@ update_referral_col = PythonOperator(
     python_callable=update_referral_col,
     dag=dag)
 
+#: Fix referral column
+create_stormwater_gis = PythonOperator(
+    task_id='stormwater_gis',
+    python_callable=create_stormwater_gis,
+    dag=dag)
+
+upload_stormwater_gis = S3FileTransferOperator(
+    task_id=f'upload_sw_gis',
+    source_base_path=conf['prod_data_dir'],
+    source_key=f'discharges_abated.geojson',
+    dest_s3_conn_id=conf['default_s3_conn_id'],
+    dest_s3_bucket=conf['dest_s3_bucket'],
+    dest_s3_key=f'get_it_done_311/discharges_abated.geojson',
+    replace=True,
+    dag=dag)
+
 spatial_joins = SubDagOperator(
   task_id='spatial_joins',
   subdag=spatial_join_subdag(),
@@ -128,6 +144,7 @@ md_update_task = get_seaboard_update_dag('get-it-done-311.md', dag)
 update_service_name >> update_close_dates
 update_close_dates >> update_referral_col
 update_referral_col >> spatial_joins
-spatial_joins >> create_prod_files >> [service_names, upload_prod_files]
+update_referral_col >> create_stormwater_gis >> upload_stormwater_gis
+spatial_joins >> create_prod_files >> service_names >> upload_prod_files
 create_prod_files >> stage_snowflake >> delete_snowflake >> copy_snowflake
 upload_prod_files >> [md_update_task,update_json_date]
