@@ -478,7 +478,7 @@ def create_stormwater_gis():
     df_csv = gdf.drop(columns=['geometry'])
 
     general.pos_write_csv(
-        df,
+        df_csv,
         f"{conf['prod_data_dir']}/discharges_abated.csv", 
         date_format='%Y-%m-%dT%H:%M:%S%z')
     

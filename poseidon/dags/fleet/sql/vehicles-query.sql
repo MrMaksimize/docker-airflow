@@ -1,5 +1,7 @@
 SELECT EQ_EQUIP_NO as equip_id,
 DESCRIPTION as description,
+ACAT_CATEGORY_NO as acat_cat_no,
+CLASS_CLASS_STDS as stds_class,
 ASSET_TYPE as asset_type,
 PROCST_PROC_STATUS as proc_status,
 PRI_SHOP_PRIORITY as priority_code,
