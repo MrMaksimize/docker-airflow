@@ -20,3 +20,4 @@ PARTS_COST as parts_cost,
 COMML_COST as comml_cost,
 TOTAL_COST as total_cost
 FROM EMSDBA.JOB_MAIN
+WHERE DATETIME_OPEN >= TO_DATE('01/01/2018','mm/dd/yyyy')

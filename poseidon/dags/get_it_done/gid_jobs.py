@@ -136,7 +136,8 @@ def update_service_name():
     case_types_correct = df.loc[(df['case_record_type'] == 'ESD Complaint/Report') |
         (df['case_record_type'] == 'Storm Water Code Enforcement') |
         (df['case_record_type'] == 'TSW ROW') |
-        (df['case_record_type'] == 'Neighborhood Policing')
+        (df['case_record_type'] == 'Neighborhood Policing') |
+        (df['case_record_type'] == 'Special Situation')
         ,:]
 
     case_types_sap = df.loc[(df['case_record_type'] == 'TSW') |
@@ -474,6 +475,13 @@ def create_stormwater_gis():
     
     gdf.to_file(f"{conf['prod_data_dir']}/discharges_abated.geojson", 
         driver='GeoJSON')
+
+    df_csv = gdf.drop(columns=['geometry'])
+
+    general.pos_write_csv(
+        df_csv,
+        f"{conf['prod_data_dir']}/discharges_abated.csv", 
+        date_format='%Y-%m-%dT%H:%M:%S%z')
     
     return "Successfully created stormwater gis file"
     

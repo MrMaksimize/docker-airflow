@@ -45,5 +45,37 @@ get_vehicles = PythonOperator(
     python_callable=get_vehicles,
     dag=dag)
 
-#: Required execution rules
+upload_delays = S3FileTransferOperator(
+    task_id=f'upload_fleet_delays',
+    source_base_path=conf['prod_data_dir'],
+    source_key=f'fleet_delays.csv',
+    dest_s3_conn_id=conf['default_s3_conn_id'],
+    dest_s3_bucket=conf['dest_s3_bucket'],
+    dest_s3_key=f'fleet/fleet_delays.csv',
+    replace=True,
+    dag=dag)
 
+upload_jobs = S3FileTransferOperator(
+    task_id=f'upload_fleet_jobs',
+    source_base_path=conf['prod_data_dir'],
+    source_key=f'fleet_jobs.csv',
+    dest_s3_conn_id=conf['default_s3_conn_id'],
+    dest_s3_bucket=conf['dest_s3_bucket'],
+    dest_s3_key=f'fleet/fleet_jobs.csv',
+    replace=True,
+    dag=dag)
+
+upload_vehicles = S3FileTransferOperator(
+    task_id=f'upload_fleet_veh',
+    source_base_path=conf['prod_data_dir'],
+    source_key=f'fleet_vehicles.csv',
+    dest_s3_conn_id=conf['default_s3_conn_id'],
+    dest_s3_bucket=conf['dest_s3_bucket'],
+    dest_s3_key=f'fleet/fleet_vehicles.csv',
+    replace=True,
+    dag=dag)
+
+#: Required execution rules
+get_delays >> upload_delays
+get_jobs >> upload_jobs
+get_vehicles >> upload_vehicles
