@@ -27,6 +27,12 @@ Navigate to the folder where the repository was cloned, and run the following co
     
 These will first ensure that your local repository is up to date and references the most recently [Docker image](https://hub.docker.com/r/andrell81/docker-airflow) (referenced by the docker-compose files).
 
+Additionally, the following python pacakges must be installed: boto3, crypography, fire & envparse. The most common way to add these dependencies would be:
+
+    python3 -m pip install boto3 crypogaphy fire envparse
+
+Next, ensure that folders **/data/temp** & **/data/prod** exist within the directory. 
+
 
 
 
@@ -34,7 +40,7 @@ For testing and development, run Airflow with **SequentialExecutor** :
 
     python3 commander.py up Sequential
 
-This command will pull the referenced image from Dockerhub, and create a webserver container
+This command will pull the referenced image from Dockerhub, and create a webserver container. 
 
 ## Usage
 
