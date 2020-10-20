@@ -221,7 +221,7 @@ def build_pts(**context):
     logging.info(f"Deduped file has {deduped.shape[0]} records")
 
     logging.info("Writing compressed csv")
-    general.sf_write_csv(deduped,'dsd_approvals_pts')
+    general.sf_write_csv(deduped[prod_cols],'dsd_approvals_pts')
 
     logging.info("Writing file to temp")
 
@@ -354,7 +354,7 @@ def build_accela(**context):
 
 
     logging.info("Writing compressed csv")
-    general.sf_write_csv(deduped,'dsd_approvals_accela')
+    general.sf_write_csv(deduped[prod_cols],'dsd_approvals_accela')
 
     logging.info("Writing file to temp")
 
