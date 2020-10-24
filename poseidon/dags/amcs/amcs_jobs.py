@@ -32,8 +32,6 @@ def write_to_shared_drive():
         + f"--directory='/Tower7Prod/GetitDone' -c '" \
         + f" put {final_file} sites_export.csv'"
 
-    print(command)
-
     command = command.format(quote(command))
 
     p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
