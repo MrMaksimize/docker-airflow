@@ -220,9 +220,6 @@ def build_pts(**context):
 
     logging.info(f"Deduped file has {deduped.shape[0]} records")
 
-    logging.info("Writing compressed csv")
-    general.sf_write_csv(deduped,'dsd_approvals_pts')
-
     logging.info("Writing file to temp")
 
     general.pos_write_csv(
@@ -352,10 +349,6 @@ def build_accela(**context):
 
     logging.info(f"Deduped file has {deduped.shape[0]} records")
 
-
-    logging.info("Writing compressed csv")
-    general.sf_write_csv(deduped,'dsd_approvals_accela')
-
     logging.info("Writing file to temp")
 
     general.pos_write_csv(
@@ -477,11 +470,13 @@ def create_subsets(mode='set1',**context):
     Create subsets for public use
     """
 
-    #date_cols = ['date_project_create',
-    #'date_project_complete',
-    #'date_approval_issue',
-    #'date_approval_create',
-    #'date_approval_close']
+    date_cols = ['date_project_create',
+    'date_project_complete',
+    'date_approval_issue',
+    'date_approval_create',
+    'date_approval_close',
+    'date_approval_expire'
+    ]
 
     dtypes = {'development_id':str,
     'project_id':str,
@@ -491,11 +486,14 @@ def create_subsets(mode='set1',**context):
     }
 
     logging.info(f"Reading in {mode}")
+    logging.info("Writing compressed csv")
 
     if mode == 'set1':
         filepath = "dsd_permits_all_pts.csv"
+        comp_csv_path = 'dsd_approvals_pts'
     elif mode == 'set2':
         filepath = "dsd_permits_all_accela.csv"
+        comp_csv_path = 'dsd_approvals_accela'
     else:
         raise Exception('Invalid mode')
     
@@ -504,6 +502,13 @@ def create_subsets(mode='set1',**context):
         #parse_dates=date_cols)
 
     logging.info(f"File has {df.shape[0]} records")
+
+    logging.info("Converting datetime cols")
+    for col in date_cols:
+        df[col] = pd.to_datetime(df[col],errors='coerce')
+
+    logging.info(f"Writing compressed csv")
+    general.sf_write_csv(df,comp_csv_path)
 
     closed = df.loc[~df['date_approval_close'].isna()]
 

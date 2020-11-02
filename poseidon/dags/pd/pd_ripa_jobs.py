@@ -114,7 +114,8 @@ def process_prod_files(mode='stops',**context):
 
     logging.info("Combining them")
     df = pd.concat([prod_df,new_df])
-
+    logging.info(f"Concat has {df.shape} cols & rows")
+    df = df.drop_duplicates()
     logging.info(f"After dedupe, result has {df.shape} cols & rows")
     logging.info("Sorting and writing data")
     df = df.sort_values(['stop_id','pid'])
