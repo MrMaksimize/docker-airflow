@@ -220,9 +220,6 @@ def build_pts(**context):
 
     logging.info(f"Deduped file has {deduped.shape[0]} records")
 
-    logging.info("Writing compressed csv")
-    general.sf_write_csv(deduped[prod_cols],'dsd_approvals_pts')
-
     logging.info("Writing file to temp")
 
     general.pos_write_csv(
@@ -351,10 +348,6 @@ def build_accela(**context):
     deduped = all_sorted.drop_duplicates(subset='approval_id')
 
     logging.info(f"Deduped file has {deduped.shape[0]} records")
-
-
-    logging.info("Writing compressed csv")
-    general.sf_write_csv(deduped[prod_cols],'dsd_approvals_accela')
 
     logging.info("Writing file to temp")
 
@@ -491,11 +484,14 @@ def create_subsets(mode='set1',**context):
     }
 
     logging.info(f"Reading in {mode}")
+    logging.info("Writing compressed csv")
 
     if mode == 'set1':
         filepath = "dsd_permits_all_pts.csv"
+        comp_csv_path = 'dsd_approvals_pts'
     elif mode == 'set2':
         filepath = "dsd_permits_all_accela.csv"
+        comp_csv_path = 'dsd_approvals_accela'
     else:
         raise Exception('Invalid mode')
     
@@ -504,6 +500,9 @@ def create_subsets(mode='set1',**context):
         #parse_dates=date_cols)
 
     logging.info(f"File has {df.shape[0]} records")
+
+    logging.info(f"Writing compressed csv")
+    general.sf_write_csv(df,comp_csv_path)
 
     closed = df.loc[~df['date_approval_close'].isna()]
 
