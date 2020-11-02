@@ -470,11 +470,13 @@ def create_subsets(mode='set1',**context):
     Create subsets for public use
     """
 
-    #date_cols = ['date_project_create',
-    #'date_project_complete',
-    #'date_approval_issue',
-    #'date_approval_create',
-    #'date_approval_close']
+    date_cols = ['date_project_create',
+    'date_project_complete',
+    'date_approval_issue',
+    'date_approval_create',
+    'date_approval_close',
+    'date_approval_expire'
+    ]
 
     dtypes = {'development_id':str,
     'project_id':str,
@@ -500,6 +502,10 @@ def create_subsets(mode='set1',**context):
         #parse_dates=date_cols)
 
     logging.info(f"File has {df.shape[0]} records")
+
+    logging.info("Converting datetime cols")
+    for col in date_cols:
+        df[col] = pd.to_datetime(df[col],errors='coerce')
 
     logging.info(f"Writing compressed csv")
     general.sf_write_csv(df,comp_csv_path)
