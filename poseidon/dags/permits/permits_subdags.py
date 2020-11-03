@@ -254,4 +254,6 @@ def snowflake_subdag():
       schema="public",
       dag=dag_subdag)
 
+    stage_snowflake>>delete_snowflake>>copy_snowflake
+
   return dag_subdag
