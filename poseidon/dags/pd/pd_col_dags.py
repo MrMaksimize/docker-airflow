@@ -33,6 +33,7 @@ get_collisions_data = SubDagOperator(
 process_collisions_data = PythonOperator(
     task_id='process_collisions_data',
     python_callable=process_collisions_data,
+    provide_context=True,
     dag=dag)
 
 #: Upload prod file to S3
