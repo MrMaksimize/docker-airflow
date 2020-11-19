@@ -24,6 +24,7 @@ import geobuf
 import gzip
 import shutil
 import re
+import datetime
 
 conf = general.config
 
@@ -396,9 +397,15 @@ def extract_sde_data(table, where=''):
 
     df = pd.read_sql(query, sde_conn)
 
+    date_cols = [col for col in df.columns if df[col].dtype == 'datetime64[ns]']
+
+    if len(date_cols) > 0:
+        for dc in date_cols:
+            df[dc] = df[dc].astype(str)
+
+    logging.info(df.columns)
     df.columns = [x.lower() for x in df.columns]
     df = df.drop('shape', 1)
-
     return df
 
 def df2shp(df, folder, layername, dtypes, gtype, epsg):
@@ -431,7 +438,12 @@ def df2shp(df, folder, layername, dtypes, gtype, epsg):
                 geometry = loads(row['geom'])
                 props = {}
                 for prop in dtypes:
-                    props[prop] = row[prop]
+                    if type(row[prop]) is datetime.datetime:
+                        props[prop] = row[prop].strftime('%Y-%m-%d %H:%M:%S')
+                    elif type(row[prop]) is datetime.date:
+                        props[prop] = row[prop].strftime('%Y-%m-%d')
+                    else:
+                        props[prop] = row[prop]
                 shpfile.write({'properties': props, 'geometry': mapping(geometry)})
 
     return 'Extracted {layername} shapefile.'.format(layername=layername)

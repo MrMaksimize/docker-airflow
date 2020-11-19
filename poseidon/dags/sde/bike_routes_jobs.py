@@ -14,7 +14,6 @@ layer = f"{prod_dir}/{layername}"
 dtypes = OrderedDict([
         ('objectid', 'int:6'),
         ('rd20full', 'str:30'),
-        ('max_elev', 'float:7.3'),
         ('route', 'int:2'),
         ('class', 'str:30')
     ])

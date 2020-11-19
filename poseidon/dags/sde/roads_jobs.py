@@ -93,15 +93,15 @@ def sde_to_shp():
         nad_from_y = row['nad_from_y']
         wgs_from_x, wgs_from_y = geospatial.pt_proj_conversion(lon=nad_from_x,
                                                                lat=nad_from_y)
-        df.set_value(index, 'wgs_from_x', wgs_from_x)
-        df.set_value(index, 'wgs_from_y', wgs_from_y)
+        df.at[index, 'wgs_from_x'] = wgs_from_x
+        df.at[index, 'wgs_from_y'] = wgs_from_y
 
         nad_to_x = row['nad_to_x']
         nad_to_y = row['nad_to_y']
         wgs_to_x, wgs_to_y = geospatial.pt_proj_conversion(lon=nad_to_x,
                                                            lat=nad_to_y)
-        df.set_value(index, 'wgs_to_x', wgs_to_x)
-        df.set_value(index, 'wgs_to_y', wgs_to_y)
+        df.at[index, 'wgs_to_x'] = wgs_to_x
+        df.at[index, 'wgs_to_y'] = wgs_to_y
 
     logging.info(f'Converting {layername} df to shapefile.')
     geospatial.df2shp(df=df,

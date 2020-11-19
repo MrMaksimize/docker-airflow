@@ -18,8 +18,7 @@ dtypes = OrderedDict([
         ('city', 'str:20'),
         ('zip', 'str:5'),
         ('phone', 'str:20'),
-        ('website', 'str:50'),
-        ('tb', 'str:12')
+        ('website', 'str:50')
     ])
 
 gtype = 'Point'
