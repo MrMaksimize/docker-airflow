@@ -2,6 +2,7 @@
 import os
 import boto3
 import pandas as pd
+import geopandas as gpd
 import logging
 import datetime as dt
 import numpy as np
@@ -9,6 +10,7 @@ from trident.util import general
 from trident.util.sf_client import Salesforce
 from trident.util.geospatial import spatial_join_pt
 import csv
+from trident.util.geospatial import df_to_geodf_pt
 
 conf = general.config
 
@@ -106,8 +108,7 @@ def update_service_name():
 
     logging.info(f"Read {df.shape[0]} records from Salesforce report")
 
-    df.columns = [x.lower().replace(' ','_').replace('/','_') 
-        for x in df.columns]
+    df = df.rename(columns=lambda x: x.lower().replace(' ','_').replace('/','_'))
 
     df = df.fillna('')
 
@@ -135,7 +136,8 @@ def update_service_name():
     case_types_correct = df.loc[(df['case_record_type'] == 'ESD Complaint/Report') |
         (df['case_record_type'] == 'Storm Water Code Enforcement') |
         (df['case_record_type'] == 'TSW ROW') |
-        (df['case_record_type'] == 'Neighborhood Policing')
+        (df['case_record_type'] == 'Neighborhood Policing') |
+        (df['case_record_type'] == 'Special Situation')
         ,:]
 
     case_types_sap = df.loc[(df['case_record_type'] == 'TSW') |
@@ -184,7 +186,7 @@ def update_service_name():
                        sap_types,
                        dsd_types,
                        parking_types,
-                       parking_72hr_types],ignore_index=True)
+                       parking_72hr_types],sort=True,ignore_index=True)
 
     logging.info('Updating illegal dumping case record type')
 
@@ -208,20 +210,16 @@ def update_service_name():
                                   'hide_from_web'
                                  ],axis=1)
 
-    df_clean = df_clean.rename(columns={'geolocation_(latitude)':'lat',
+    df_rename = df_clean.rename(columns={'geolocation_(latitude)':'lat',
         'geolocation_(longitude)':'long',
         'case_type_new':'case_type',
         'case_sub_type_new':'case_sub_type',
-        'age_(days)':'case_age_days',
-        'mobile_web_status':'status'
-    })
-
-    df_clean.loc[df_clean['status'] == 'Referred','case_age_days'] = np.nan
+        'age_(days)':'case_age_days'})
 
     logging.info('Writing clean gid file')
 
     general.pos_write_csv(
-        df_clean, 
+        df_rename, 
         sname_file_gid, 
         date_format='%Y-%m-%dT%H:%M:%S%z')
 
@@ -441,12 +439,52 @@ def update_referral_col():
         'referred'] = df.loc[df['display_referral_information'].notnull(),
         'display_referral_information']
 
+    # Fix case age days for referred cases
+
+    df.loc[(df.status == 'Referred'), 
+        'case_age_days'] = np.nan
+
     general.pos_write_csv(
         df,
         ref_file_gid, 
         date_format='%Y-%m-%dT%H:%M:%S%z')
 
-    return "Successfully updated referral col" 
+    return "Successfully updated referral col"
+
+def create_stormwater_gis():
+    """ Create a subset for GIS mapping of stormwater cases """
+    
+    df = pd.read_csv(ref_file_gid,low_memory=False)
+    logging.info(f"Original file has {df.shape[0]} records")
+    
+    subset = df.loc[df['case_record_type'] == 'Storm Water Code Enforcement',
+    ['case_number',
+    'parent_case_number',
+    'status',
+    'street_address',
+    'zipcode',
+    'date_time_opened',
+    'lat',
+    'long',
+    'case_record_type']]
+
+    logging.info(f"Subset has {subset.shape[0]} records")
+
+    gdf = df_to_geodf_pt(subset,lat='lat',lon='long')
+    gdf = gdf.set_crs(epsg=4326)
+    
+    gdf.to_file(f"{conf['prod_data_dir']}/discharges_abated.geojson", 
+        driver='GeoJSON')
+
+    df_csv = gdf.drop(columns=['geometry'])
+
+    general.pos_write_csv(
+        df_csv,
+        f"{conf['prod_data_dir']}/discharges_abated.csv", 
+        date_format='%Y-%m-%dT%H:%M:%S%z')
+    
+    return "Successfully created stormwater gis file"
+    
 
 def join_requests_polygons(tempfile='',
     geofile='',
@@ -483,6 +521,11 @@ def create_prod_files():
         parse_dates=['date_time_opened',
         'date_time_closed']
         )
+
+    # Must drop status column here to rename
+    # mobile_web_status to status
+
+    df = df.drop(['status'],axis=1)
 
     logging.info("Changing float dtypes to int")
     
@@ -544,14 +587,15 @@ def create_prod_files():
         'parent_case_number':'service_request_parent_id',
         'case_category':'service_name',
         'date_time_opened':'date_requested',
-        'date_time_closed':'date_updated',
+        'date_time_closed':'date_closed',
         'district':'council_district',
         'cpcode':'comm_plan_code',
         'cpname':'comm_plan_name',
         'name':'park_name',
         'long':'lng',
         'iam_functional_location':'iamfloc',
-        'functional_location':'floc'
+        'functional_location':'floc',
+        'mobile_web_status':'status'
         })
 
     final_reports = final_reports[[
@@ -562,10 +606,12 @@ def create_prod_files():
     'case_age_days',
     'service_name',
     'case_record_type',
-    'date_updated',
+    'date_closed',
     'status',
     'lat',
     'lng',
+    'street_address',
+    'zipcode',
     'council_district',
     'comm_plan_code',
     'comm_plan_name',
@@ -578,7 +624,7 @@ def create_prod_files():
     'floc'
     ]]
 
-    final_reports = final_reports.sort_values(by=['service_request_id','date_requested','date_updated'])
+    final_reports = final_reports.sort_values(by=['service_request_id','date_requested','date_closed'])
     
     logging.info(f"Full dataset contains {final_reports.shape[0]} records")
     

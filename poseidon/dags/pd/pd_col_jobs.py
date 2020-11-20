@@ -1,55 +1,123 @@
 """PD collisions _jobs file."""
-import ftplib
-import operator
-import string
 import logging
 import pandas as pd
-from datetime import datetime
 from trident.util import general
+from airflow.hooks.base_hook import BaseHook
+from subprocess import Popen, PIPE
+import subprocess
+from shlex import quote
 
 conf = general.config
 
-
-def get_collisions_data():
+def get_collisions_data(mode="activities",**context):
     """Download most recent collisions data from FTP."""
-    # find most recent file
-    filename = conf['temp_data_dir']+'/temp_collisions.csv'
-    file = open(filename, 'wb')
-    ftp = ftplib.FTP('ftp.datasd.org')
+    exec_date = context['next_execution_date'].in_tz(tz='US/Pacific')
+    # Exec date returns a Pendulum object
+    # Running this job at 5p should capture files for the day
+    # the dag runs
 
-    ftp.login(user=conf['ftp_datasd_user'], passwd=conf['ftp_datasd_pass'])
-    ftp.cwd('uploads/sdpd/collisions')
-    ls = []
-    # this is a nonstandard way to list files by time,
-    # or modification date, using the proprietary t flag
-    ftp.dir('-t', ls.append)
-    name = ls[0].split()[8]
+    # File name does not have zero-padded numbers
+    # But month is spelled, abbreviated
+    # Pattern is month_day_year
+    filename = f"{exec_date.strftime('%b')}_" \
+    f"{exec_date.day}_" \
+    f"{exec_date.year}"
 
-    ftp.retrbinary('RETR %s' % name, file.write)
-    ftp.close
+    if mode == "activities":
+        filetype = "Activity"
+    elif mode == "details":
+        filetype = "Person"
+    else:
+        raise Exception("Mode is invalid")
 
-    return "Successfully retrieved collision data."
+    # Collisions is misspelled
+    fpath = f"Collissions_{filetype}_{filename}.csv"
 
+    logging.info(f"Checking FTP for {fpath}")
 
-def process_collisions_data():
+    temp_dir = conf['temp_data_dir']
+
+    command = f"cd {conf['temp_data_dir']} && " \
+    f"curl --user {conf['ftp_datasd_user']}:{conf['ftp_datasd_pass']} " \
+    f"-o {fpath} " \
+    f"ftp://ftp.datasd.org/uploads/sdpd/collisions/" \
+    f"{fpath} -sk"
+
+    command = command.format(quote(command))
+
+    p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
+    output, error = p.communicate()
+    
+    if p.returncode != 0:
+        raise Exception(p.returncode)
+    else:
+        logging.info("Found file")
+        # return filename as context for next task
+        return filename
+
+def process_collisions_data(**context):
     """Process collision data."""
-    prod_file = conf['prod_data_dir']+'/pd_collisions_datasd_v1.csv'
-    df = pd.read_csv(conf['temp_data_dir']+'/temp_collisions.csv',
-                     header=None,
-                     error_bad_lines=False)
+    activity_date = context['task_instance'].xcom_pull(dag_id="pd_col.get_files",
+        task_ids='get_activities')
+    details_date = context['task_instance'].xcom_pull(dag_id="pd_col.get_files",
+        task_ids='get_activities')
+   
+    if activity_date != details_date:
 
-    df.columns = [
-        'report_id', 'date_time', 'police_beat', 'address_number_primary', 
-        'address_pd_primary', 'address_road_primary',
-        'address_sfx_primary', 'address_pd_intersecting', 'address_name_intersecting',
-        'address_sfx_intersecting', 'violation_section', 'violation_type',
-        'charge_desc', 'injured', 'killed', 'hit_run_lvl'
-    ]
+        raise Exception("Date of activity does not match date of details")
+
+    else:
+        logging.info("Reading in activity file")
+        activity = pd.read_csv(f"{conf['temp_data_dir']}/Collissions_Activity_{activity_date}.csv",
+            header=None,
+            error_bad_lines=False,
+            low_memory=False)
+        logging.info("Reading in details file")
+        details = pd.read_csv(f"{conf['temp_data_dir']}/Collissions_Person_{details_date}.csv",
+            header=None,
+            error_bad_lines=False,
+            low_memory=False)
+
+        activity.columns = ['report_id',
+        'date_time',
+        'police_beat',
+        'address_no_primary',
+        'address_pd_primary',
+        'address_road_primary',
+        'address_sfx_primary',
+        'address_pd_intersecting',
+        'address_name_intersecting',
+        'address_sfx_intersecting',
+        'violation_section',
+        'violation_type',
+        'charge_desc',
+        'injured',
+        'killed',
+        'hit_run_lvl',
+        ]
+
+        details.columns = ['report_id',
+        'date_time',
+        'person_role',
+        'person_injury_lvl',
+        'person_veh_type',
+        'veh_type',
+        'veh_make',
+        'veh_model']
+
+        activity['date_time'] = pd.to_datetime(activity['date_time'],errors="coerce")
+        details['date_time'] = pd.to_datetime(details['date_time'],errors="coerce")
+
+    df = pd.merge(details,activity,how="outer",on=["report_id","date_time"])
+
+    general.pos_write_csv(
+        activity,
+        f"{conf['prod_data_dir']}/pd_collisions_datasd_v1.csv",
+        date_format="%Y-%m-%d %H:%M:%S")
 
     general.pos_write_csv(
         df,
-        prod_file,
-        date_format=conf['date_format_ymd_hms']
-    )
+        f"{conf['prod_data_dir']}/pd_collisions_details_datasd.csv",
+        date_format="%Y-%m-%d %H:%M:%S")
 
     return 'Successfully processed collisions data.'

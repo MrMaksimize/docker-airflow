@@ -28,15 +28,12 @@ dag = DAG(
 get_traffic_counts = PythonOperator(
     task_id='get_traffic_counts',
     python_callable=get_traffic_counts,
-    email=['data@sandiego.gov'],
-    email_on_failure=True,
     dag=dag)
 
 #: Cleans the downloaded XLSX file, converts it to CSV data.
 clean_traffic_counts = PythonOperator(
     task_id='clean_traffic_counts',
     python_callable=clean_traffic_counts,
-    
     dag=dag
 )
 
@@ -44,7 +41,6 @@ clean_traffic_counts = PythonOperator(
 build_traffic_counts = PythonOperator(
     task_id='build_traffic_counts',
     python_callable=build_traffic_counts,
-    
     dag=dag
 )
 
@@ -57,7 +53,6 @@ upload_traffic_counts = S3FileTransferOperator(
     dest_s3_conn_id=conf['default_s3_conn_id'],
     dest_s3_key='traffic_counts/traffic_counts_datasd_v1.csv',
     replace=True,
-    
     dag=dag)
 
 update_json_date = PythonOperator(
@@ -65,7 +60,6 @@ update_json_date = PythonOperator(
     python_callable=update_json_date,
     provide_context=True,
     op_kwargs={'ds_fname': 'traffic_volumes'},
-    
     dag=dag)
 
 #: Update portal modified date

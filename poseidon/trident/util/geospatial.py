@@ -24,6 +24,7 @@ import geobuf
 import gzip
 import shutil
 import re
+import datetime
 
 conf = general.config
 
@@ -325,8 +326,15 @@ def spatial_join_pt(pt_file, poly_file, lat='lat', lon='lon'):
 
     This function returns a DataFrame, not a Geodataframe.
     """
-    logging.info('Loading point file')
-    df = pd.read_csv(pt_file,low_memory=False)
+    if isinstance(pt_file,str):
+
+        logging.info('Loading point file')
+        df = pd.read_csv(pt_file,low_memory=False)
+
+    elif isinstance(pt_file,pd.DataFrame):
+
+        logging.info('Point file already loaded')
+        df = pt_file
 
     logging.info('Starting with {} rows in point file'.format(df.shape[0]))
 
@@ -338,6 +346,7 @@ def spatial_join_pt(pt_file, poly_file, lat='lat', lon='lon'):
     logging.info('Loading poly file as geodf')
     poly = geojson_to_geodf(poly_file)
     pt.crs = poly.crs
+    logging.info(f'Set point to {pt.crs} to match {poly.crs}')
     
     logging.info('Operating spatial join.')
     pt_join = sjoin(pt, poly, how='left')
@@ -388,9 +397,15 @@ def extract_sde_data(table, where=''):
 
     df = pd.read_sql(query, sde_conn)
 
+    date_cols = [col for col in df.columns if df[col].dtype == 'datetime64[ns]']
+
+    if len(date_cols) > 0:
+        for dc in date_cols:
+            df[dc] = df[dc].astype(str)
+
+    logging.info(df.columns)
     df.columns = [x.lower() for x in df.columns]
     df = df.drop('shape', 1)
-
     return df
 
 def df2shp(df, folder, layername, dtypes, gtype, epsg):
@@ -423,7 +438,12 @@ def df2shp(df, folder, layername, dtypes, gtype, epsg):
                 geometry = loads(row['geom'])
                 props = {}
                 for prop in dtypes:
-                    props[prop] = row[prop]
+                    if type(row[prop]) is datetime.datetime:
+                        props[prop] = row[prop].strftime('%Y-%m-%d %H:%M:%S')
+                    elif type(row[prop]) is datetime.date:
+                        props[prop] = row[prop].strftime('%Y-%m-%d')
+                    else:
+                        props[prop] = row[prop]
                 shpfile.write({'properties': props, 'geometry': mapping(geometry)})
 
     return 'Extracted {layername} shapefile.'.format(layername=layername)
@@ -446,6 +466,20 @@ def shp2geojsonOgr(layer):
         + ' crs:84'\
         + ' {layer}.geojson'\
         + ' {layer}.shp'
+
+    cmd = cmd.format(layer=layer)
+
+    return cmd
+
+def shp2kml(layer):
+    """Shapefile to KML conversion using ogr."""
+    # Rename fields to Name and Description
+    # Or specify them in the command
+    cmd = 'ogr2ogr -f KML'\
+    + f' {layer}.kml'\
+    + f' {layer}.shp'
+    #+ ' -dsco NameField='\
+    #+ ' DescriptionField='
 
     cmd = cmd.format(layer=layer)
 

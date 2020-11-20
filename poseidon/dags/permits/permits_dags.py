@@ -20,30 +20,17 @@ dag = DAG(dag_id='dsd_permits',
           schedule_interval=schedule,
           catchup=False)
 
-#: Get permits reports
-get_permits_files = PythonOperator(
-    task_id='get_permits_files',
-    provide_context=True,
-    python_callable=get_permits_files,
-    dag=dag)
-
-#: Create 4 files using subdag
-create_files = SubDagOperator(
-  task_id='create_files',
-  subdag=create_file_subdag(),
-  dag=dag)
-
 #: Join BIDs to 4 files using subdag
-join_bids = SubDagOperator(
-  task_id='join_bids',
-  subdag=join_bids_subdag(),
+all_accela = SubDagOperator(
+  task_id='get_create_accela',
+  subdag=get_create_accela_subdag(),
   dag=dag)
 
-#: Create full sets for internal
-create_full = PythonOperator(
-    task_id='create_full_sets',
-    python_callable=create_full_set,
-    dag=dag)
+#: Subset files
+all_pts = SubDagOperator(
+  task_id='get_create_pts',
+  subdag=get_create_pts_subdag(),
+  dag=dag)
 
 exec_snowflake = SubDagOperator(
   task_id="snowflake",
@@ -51,9 +38,15 @@ exec_snowflake = SubDagOperator(
   dag=dag)
 
 #: Upload 4 files using subdag
-upload_files = SubDagOperator(
-  task_id='upload_files',
-  subdag=upload_files_subdag(),
+upload_set1_files = SubDagOperator(
+  task_id='upload_set1_files',
+  subdag=upload_set1_files_subdag(),
+  dag=dag)
+
+#: Upload 4 files using subdag
+upload_set2_files = SubDagOperator(
+  task_id='upload_set2_files',
+  subdag=upload_set2_files_subdag(),
   dag=dag)
 
 update_set1_md = get_seaboard_update_dag('development-permits-set1.md', dag)
@@ -111,9 +104,13 @@ upload_pw_sap = S3FileTransferOperator(
     )
 
 #: Execution rules
-get_permits_files>>create_files>>join_bids>>create_full>>upload_files
-create_full>>exec_snowflake
-upload_files>>[update_set1_md,update_set2_md,update_set1_json_date,update_set2_json_date]
-upload_files>>[create_tsw_file,create_pw_sap_file]
+all_accela>>exec_snowflake
+all_pts>>exec_snowflake
+all_accela>>upload_set2_files
+all_pts>>upload_set1_files
+upload_set1_files>>[update_set1_md,update_set1_json_date]
+upload_set2_files>>[update_set2_md,update_set2_json_date]
+all_accela>>[create_tsw_file,create_pw_sap_file]
+all_pts>>[create_tsw_file,create_pw_sap_file]
 create_tsw_file>>upload_tsw
 create_pw_sap_file>>upload_pw_sap
