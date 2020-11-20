@@ -250,7 +250,7 @@ def build_accela(**context):
     filename = context['task_instance'].xcom_pull(dag_id="dsd_permits.get_create_accela",
         task_ids='get_accela_files')
 
-    #filename = "20200914"
+    #filename = "20201116"
         
     logging.info(f"Reading active PV permits for {filename}")
     pv_active = pd.read_excel(f"{conf['temp_data_dir']}/" \
@@ -332,7 +332,7 @@ def build_accela(**context):
     f"{old_file_date.strftime('%m')}" \
     f"{old_file_date.strftime('%d')}"
 
-    #old_filename = "20200910"
+    #old_filename = "20201102"
 
     df_old['file_date'] = old_filename
 
@@ -452,6 +452,8 @@ def spatial_joins(pt_file='',**context):
         new_polygon_rows = zips[['approval_id','bid_name','council_district','zip']]
 
         final_polygons = pd.concat([ref_df,new_polygon_rows],ignore_index=True,sort=False)
+
+        final_polygons = final_polygons.drop_duplicates()
 
         general.pos_write_csv(
             final_polygons,
