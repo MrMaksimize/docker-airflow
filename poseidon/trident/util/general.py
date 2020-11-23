@@ -176,6 +176,7 @@ schedule = {
     'pd_hc': None,
     'ttcs': '0 10 * * *', # daily at 10 am UTC / 3am PST
     'indicator_bacteria_tests': "0 8 * * *", # daily at 8am UTC / 1am PST
+    'chem_analytes': "0 8 * * *", # daily at 8am UTC / 1am PST
     'parking_meters': '0 19 * * *', # daily at 7pm UTC, Noon PST
     'traffic_counts': "@weekly",
     'read': "0 8 * * *", # daily at 8am UTC / 1am PST
@@ -219,6 +220,7 @@ start_date = {
     'claims_stat': default_date,
     'ttcs': default_date,
     'indicator_bacteria_tests': default_date,
+    'chem_analytes': datetime(2020, 11, 21),
     'parking_meters': default_date,
     'traffic_counts': default_date,
     'read': default_date,
