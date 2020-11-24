@@ -157,6 +157,10 @@ def buildConfig(env):
         'lucid_api_pass': os.environ.get("LUCID_PASS"),
         'ga_client_secrets': os.environ.get("GA_CLIENT_SECRETS"),
         'crb_xls': os.environ.get("CRB_XLS"),
+        'migration_aws_key': os.environ.get('MIGRATION_ACCESS_KEY'),
+        'migration_aws_secret': os.environ.get('MIGRATION_ACCESS_SECRET'),
+        'migration_aws_region': os.environ.get('MIGRATION_REGION'),
+        'migration_dest_s3_bucket': os.environ.get('MIGRATION_BUCKET', 'datasd.dev')
     }
     return config
 
@@ -176,8 +180,8 @@ schedule = {
     'parking_meters': '0 19 * * *', # daily at 7pm UTC, Noon PST
     'traffic_counts': "@weekly",
     'read': "0 8 * * *", # daily at 8am UTC / 1am PST
-    'dsd_approvals': "0 16 * * 1", # Weekly on Monday at 4p UTC / 9a PST
-    'streets':"0 0,1,2,3,4,13,14,15,16,17,18,19,20,21,22,23 * * 1-6", # every hour, 7am to 7pm, Mon-Fri PST
+    'dsd_approvals': "0 16 * * 1", # Weekly on Monday at 4p UTC / 8a PST
+    'streets':"0 0,1,2,3,4,14,15,16,17,18,19,20,21,22,23 * * 1-6", # every hour, 6am to 7pm, Mon-Fri PST
     'get_it_done': "0 7 * * *", # daily at 7am UTC / 11pm PST
     'special_events': "0 8 * * *", # daily at 8am UTC / 1am PST
     'waze': "*/5 * * * *",  # every 5 minutes
@@ -188,12 +192,12 @@ schedule = {
     'campaign_fin': "0 11 * * *", # daily at 11am UTC / 4am PST
     'public_art': "0 11 * * *", # daily at 11am UTC / 4am PST
     'sire': "0 8 * * 1-5", # 8am UTC / 12am PST every Mon-Fri
-    'onbase': "*/5 0,1,2,3,4,13,14,15,16,17,18,19,20,21,22,23 * * 1-6", # every 5 mins, 7am to 7pm, Mon-Fri PST
+    'onbase': "*/5 0,1,2,3,4,15,16,17,18,19,20,21,22,23 * * 1-6", # every 5 mins, 7am to 7pm, Mon-Fri PST
     'documentum_daily' : "0 8 * * 1-5", # 8am UTC / 12am PST every Mon-Fri
-    'documentum_hr_30' : "30 0,1,2,3,4,13,14,15,16,17,18,19,20,21,22,23 * * 1-6", # 30 mins past the hour, 7am to 7pm, Mon-Fri PST
-    'documentum_hr_15': "15 0,1,2,3,4,13,14,15,16,17,18,19,20,21,22,23 * * 1-6", # 15 mins past the hour, 7am to 7pm, Mon-Fri PST
+    'documentum_hr_30' : "30 0,1,2,3,4,15,16,17,18,19,20,21,22,23 * * 1-6", # 30 mins past the hour, 7am to 7pm, Mon-Fri PST
+    'documentum_hr_15': "15 0,1,2,3,4,15,16,17,18,19,20,21,22,23 * * 1-6", # 15 mins past the hour, 7am to 7pm, Mon-Fri PST
     'tsw_integration': '0 6 * * *',  # daily at 6am UTC / 10pm PST
-    'crb': '0 6 * * *',
+    'crb': None,
     'cip': "0 8 * * *", # daily at 8am UTC / 1am PST
 	'cityiq': '@daily',
     'onbase_test': '*/15 * * * *',
@@ -202,7 +206,8 @@ schedule = {
     'sidewalks': '@monthly',
     'amcs': "0 12 * * *", # Daily at 4p UTC / 5a PST
     'ga_portal': '@monthly',
-    'pv_prod':'@hourly'
+    'pv_prod':'@hourly',
+    'fleet':"0 12 * * *", # Daily at 4p UTC / 5a PST
 }
 
 default_date = datetime(2019, 10, 8)
@@ -244,7 +249,7 @@ start_date = {
     'documentum_hr_15': datetime(2019, 10, 29),
     'tsw_integration': default_date,
     'cip': default_date,
-    'crb': datetime(2019, 8, 25),
+    'crb': datetime(2020, 11, 24),
     'parking_meter_locs': datetime(2019, 12, 25),
     'amcs': datetime(2020, 4, 14),
     'pv_prod': datetime(2020, 2, 26),
@@ -253,6 +258,7 @@ start_date = {
     'onbase_test': default_date,
     'gis_tree_canopy': default_date,
     'cityiq': default_date,
+    'fleet': datetime(2020, 8, 26)
 }
 
 
@@ -260,16 +266,17 @@ source = {'ttcs': os.environ.get('CONN_ORACLETTCS'),
 'cef':os.environ.get('CONN_ORACLE_CEF'),
 'dsd_permits' : os.environ.get('CONN_ORACLE_PERMITS'),
 'cip': os.environ.get('CONN_ORACLECIP'),
-'risk': os.environ.get('CONN_ORACLE_RISK')
+'risk': os.environ.get('CONN_ORACLE_RISK'),
+'fleet': os.environ.get('CONN_ORACLE_FLEET')
 }
 
 args = {
     'owner': 'airflow',
     'depends_on_past': False,
     'email': config['mail_default_receivers'],
-    'email_on_failure': False,
+    'email_on_failure': True,
     'email_on_retry': False,
-    'retries': 1,
+    'retries': 2,
     'retry_delay': timedelta(minutes=5),
     'retry_exponential_backoff': True,
     'max_retry_delay': timedelta(minutes=120)
@@ -314,6 +321,22 @@ def pos_write_csv(df, fname, **kwargs):
 
     df.to_csv(fname, **csv_args)
 
+def sf_write_csv(df, fname, **kwargs):
+    """ Write compressed csv for snowflake """
+    fname_full = f"{config['prod_data_dir']}/{fname}_snowflake.csv.gz"
+    default = {
+        'index':False,
+        'header':False,
+        'quoting':csv.QUOTE_MINIMAL,
+        'compression':'gzip',
+        'doublequote':True,
+        'na_rep':"NULL",
+        'date_format':"%Y-%m-%d %H:%M:%S",
+        'escapechar':'\\'
+    }
+    csv_args = default.copy()
+    csv_args.update(kwargs)
+    df.to_csv(fname_full, **csv_args)
 
 def file_to_string(rel_file_path, caller=None):
     """Read a file into a string variable.  Caller is __file___."""

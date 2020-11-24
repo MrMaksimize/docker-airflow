@@ -98,12 +98,12 @@ def get_documentum(mode, test=False, conn_id='docm_sql', **kwargs):
         table_name = dn.table_name(mode)
     
     save_path_pre = f"{conf['prod_data_dir']}/documentum_"
+    documentum_conn = MsSqlHook(mssql_conn_id=conn_id)
     
     for name in table_name:
         logging.info(f'Querying for {name} table')
         query_string = f'SELECT * FROM SCSLEGIS.dbo.{name};'
         logging.info('Connecting to MS Database')
-        documentum_conn = MsSqlHook(mssql_conn_id=conn_id)
         logging.info('Reading data to Pandas DataFrame')
 
         try:
@@ -121,7 +121,7 @@ def get_documentum(mode, test=False, conn_id='docm_sql', **kwargs):
 
         except Exception as e:
             
-            logging.info(f'Could not read {0} because {e}')
+            logging.info(f'Could not read {name} because {e}')
 
     return "Successfully retrieved Documentum tables"
 

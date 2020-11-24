@@ -101,6 +101,7 @@ def ga_batch_get(view_id="",
     mets=[],
     dims=[],
     out_path="",
+    range="",
     **context):
     """ 
     Run a batch get for a specific analytics report
@@ -120,12 +121,28 @@ def ga_batch_get(view_id="",
 
     analytics = build('analyticsreporting', 'v4', credentials=credentials)
     
-    exec_date = context['execution_date']
-    
-    #start = exec_date.strftime('%Y-%m-%d')
-    #end = exec_date.add(months=1).strftime('%Y-%m-%d')
-    start = exec_date.subtract(months=1).strftime('%Y-%m-%d')
+    exec_date = context['next_execution_date']
     end = exec_date.strftime('%Y-%m-%d')
+    
+    # Working backward, subtract range
+
+    if range == "monthly":
+
+        start = exec_date.subtract(months=1).strftime('%Y-%m-%d')
+
+    elif range == "weekly":
+
+        start = exec_date.subtract(weeks=1).strftime('%Y-%m-%d')
+
+    elif range == "daily":
+
+        start = exec_date.subtract(days=1).strftime('%Y-%m-%d')
+
+    else:
+
+        raise Exception("Range is not specified")
+    
+    logging.info(f"Pulling {start} through {end}")
 
     logging.info("Creating metrics dictionary")
 
@@ -149,7 +166,7 @@ def ga_batch_get(view_id="",
                 'samplingLevel': 'LARGE',
                 'metrics': metrics,
                 'dimensions': dimensions,
-                 'pageSize':10000
+                'pageSize':100000
                 }
             ]}).execute()
 
@@ -159,7 +176,21 @@ def ga_batch_get(view_id="",
 
     dims_df = getDimensions(report[0])
     mets_df = getMetrics(report[0])
+    
     df = pd.merge(dims_df,mets_df,how="left",left_index=True,right_index=True)
+
+    general.pos_write_csv(
+        df,
+        f"{temp_path}/{out_path}.csv",
+        date_format=conf['date_format_ymd'])
+
+    return f"Successfully pulled batch report for {out_path}"
+
+def process_batch_get(dims=[],out_path=""):
+    """ Process report """
+
+    df = pd.read_csv(f"{temp_path}/{out_path}.csv",
+        low_memory=False)
 
     logging.info("Reading in prod file")
 
@@ -169,7 +200,7 @@ def ga_batch_get(view_id="",
         )
 
     # Dedupe will not work without making formats consistent
-    df['date'] = pd.to_datetime(df['date'],errors='coerce',format="%Y-%m-%d")
+    df['date'] = pd.to_datetime(df['date'],errors='coerce',format="%Y%m%d")
     prod_df['date'] = pd.to_datetime(prod_df['date'],errors='coerce',format="%Y-%m-%d")
 
     if "hour" in dims:

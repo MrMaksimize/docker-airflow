@@ -27,9 +27,9 @@ server_ip = conf['amcs_ip']
 def write_to_shared_drive():
     """Write the file to the share location"""
     logging.info('Retrieving data for current FY.')
-    command = "smbclient //csdldcamcsappp/GetItDone -W ad -mSMB3 " \
+    command = "smbclient //csdsdcamcsappt/TOWER7 -W ad -mSMB3 " \
         + f"--user={conf['svc_acct_user']}%{conf['svc_acct_pass']} --ip-address={server_ip} " \
-        + f"--directory='/' -c '" \
+        + f"--directory='/Tower7Prod/GetitDone' -c '" \
         + f" put {final_file} sites_export.csv'"
 
     command = command.format(quote(command))
@@ -77,7 +77,10 @@ def get_updates_only():
         shutil.copyfile(previous_run_temp_file1, previous_run_temp_file1 + '.' + datetime.date.today().isoformat())
         # delete old backup file
         ten_days_ago = (datetime.date.today() - datetime.timedelta(days=10)).isoformat()
-        os.remove(previous_run_temp_file1 + '.' + ten_days_ago)
+        try:
+            os.remove(previous_run_temp_file1 + '.' + ten_days_ago)
+        except:
+            pass
 
 
         get_diff(previous_file=previous_run_temp_file1, current_file=temp_file1, output_file=temp_file2)

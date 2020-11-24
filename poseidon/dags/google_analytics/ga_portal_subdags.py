@@ -55,14 +55,25 @@ def create_subdag_operators():
 
     request_params = reports_kwargs.get(report)
 
-    report_task = PythonOperator(
+    get_task = PythonOperator(
         task_id=f'get_{report}',
         op_kwargs={'view_id': '124490020',
         'mets':request_params.get('mets'),
         'dims':request_params.get('dims'),
-        'out_path':report},
+        'out_path':report,
+        'range':'monthly' # can be monthly, weekly, daily
+        },
         provide_context=True,
         python_callable=ga_batch_get,
+        dag=dag_subdag,
+      )
+
+    process_task = PythonOperator(
+        task_id=f'process_{report}',
+        op_kwargs={'out_path':report,
+        'dims':request_params.get('dims')
+        },
+        python_callable=process_batch_get,
         dag=dag_subdag,
       )
 
@@ -76,6 +87,6 @@ def create_subdag_operators():
             replace=True,
             dag=dag_subdag)
 
-    report_task >> upload_task
+    get_task >> process_task >> upload_task
 
   return dag_subdag

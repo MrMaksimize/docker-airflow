@@ -17,6 +17,12 @@ bwc_fname = 'crb_cases_bwc_datasd'
 
 def get_crb_excel():
     """Use mget on to download CRB Excel files."""
+
+    # The exact name of the needed Excel is
+    # impossible to predict
+    # The name is stored as an environment
+    # variable in AWS
+
     logging.info('Retrieving CRB Excel files.')
     command = "smbclient //ad.sannet.gov/dfs " \
         + "--user={adname}%{adpass} -W ad -c " \
@@ -31,8 +37,6 @@ def get_crb_excel():
     command = command.format(adname=conf['svc_acct_user'],
                              adpass=conf['svc_acct_pass'],
                              temp_dir=conf['temp_data_dir'])
-
-    logging.info(command)
 
     try:
         p = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
@@ -76,10 +80,10 @@ def create_crb_cases_prod():
     'pd_division',
     'bwc_viewed_by_crb_team',
     'bwc_on/off',
-    "complainant's_name",
+    "complainants_name",
     'race_0',
     'gender_0',
-    "officer's_name",
+    "officers_name",
     'race',
     'gender',
     'years_of_service']
@@ -98,10 +102,15 @@ def create_crb_cases_prod():
             df = df.loc[:,'#':'Years of Service']
             df.columns = temp_cols
 
-            df['allegation'] = df['allegation'].fillna(method='ffill')
-            df['#'] = df['#'].fillna(method='ffill')
-            df['case'] = df['case'].fillna(method='ffill')
-            df["officer's_name"] = df["officer's_name"].fillna(method='ffill')
+            # check data entry. If a case has multiple rows
+            # because of multiple allegations against multiple
+            # officers, cells might be blank that need to be
+            # forward filled
+
+            #df['allegation'] = df['allegation'].fillna(method='ffill')
+            #df['#'] = df['#'].fillna(method='ffill')
+            #df['case'] = df['case'].fillna(method='ffill')
+            #df["officer's_name"] = df["officer's_name"].fillna(method='ffill')
             
             logging.info(f"Read {ky} sheet from {f}")
 
@@ -120,10 +129,10 @@ def create_crb_cases_prod():
     '90days_or_less':'days_90_or_less',
     '120days_or_less':'days_120_or_less',
     'bwc_viewed_by_crb_team':'body_camera',
-    "complainant's_name":'complainant_name',
+    "complainants_name":'complainant_name',
     'race_0':'complainant_race',
     'gender_0':'complainant_gender',
-    "officer's_name":'officer_name',
+    "officers_name":'officer_name',
     'race':'officer_race',
     'gender':'officer_gender',
     'years_of_service':'officer_yrs_of_svce',

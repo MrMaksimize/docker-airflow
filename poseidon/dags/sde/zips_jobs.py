@@ -1,4 +1,4 @@
-"""_jobs file for 'libraries' layer sde extraction."""
+"""_jobs file for 'zip codes' layer sde extraction."""
 from trident.util import general
 from trident.util import geospatial
 import pandas as pd
@@ -6,29 +6,24 @@ from collections import OrderedDict
 import logging
 
 conf = general.config
-table = 'LIBRARY'
+table = 'ZIPCODE'
 prod_dir = conf['prod_data_dir']
-layername = 'libraries_datasd'
+layername = 'zip_codes_datasd'
 layer = f"{prod_dir}/{layername}"
 
 dtypes = OrderedDict([
-        ('objectid', 'int:2'),
-        ('name', 'str:30'),
-        ('address', 'str:30'),
-        ('city', 'str:20'),
-        ('zip', 'str:5'),
-        ('phone', 'str:20'),
-        ('website', 'str:50')
+        ('objectid', 'int'),
+        ('zip', 'int'),
+        ('community', 'str:20')
     ])
 
-gtype = 'Point'
+gtype = 'Polygon'
 
 
 def sde_to_shp():
     """SDE table to Shapefile."""
     logging.info(f'Extracting {layername} layer from SDE.')
-    df = geospatial.extract_sde_data(table=table,
-                                     where="DISTRICT = 'San Diego Public (City)'")
+    df = geospatial.extract_sde_data(table=table)
 
     logging.info(f'Processing {layername} df.')
 
