@@ -11,8 +11,8 @@ from shlex import quote
 
 conf = general.config
 prod_path = conf['prod_data_dir']
-adname = conf['alb_sannet_user']
-adpass = conf['alb_sannet_pass']
+adname = conf['svc_acct_user']
+adpass = conf['svc_acct_pass']
 fy_pattern = re.compile(r'([0-9][0-9])')
 
 def get_accounts_chart():
