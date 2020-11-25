@@ -12,11 +12,11 @@ Date last updated: Tue Nov 24 2020
 
 ## To Dos
 
-None
+Solve upload problem. A file name cannot easily be specified in file transfer operator, and the files must be uploaded manually.
 
 ## Data transformations
 
-This job should be kicked off manually, so it does not have a schedule. It may even need to be run locally if changes need to be made to the code to accommodate changes in data entry.
+This job should be kicked off manually, so it does not have a schedule (and currently it needs to be run locally until the upload problem can be solved). This is because of the sensitive nature of the data and inconsistencies in data entry year over year.
 
 The first step is to review the source Excel file and ensure that data was entered in a way that will work with the function to process the Excel. The second step is to update the environment variable for the name of the Excel sheet in AWS Parameter Store.
 
