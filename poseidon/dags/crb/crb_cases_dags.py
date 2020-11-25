@@ -18,9 +18,9 @@ start_date = general.start_date['crb']
 dag = DAG(dag_id='crb_cases',
         default_args=args,
         schedule_interval=schedule,
-        start_date=start_date)
-
-crb_latest_only = LatestOnlyOperator(task_id='crb_latest_only', dag=dag)
+        start_date=start_date,
+        catchup=False
+        )
 
 #: Get the CRB cases Excel file from shared drive
 get_crb_excel = PythonOperator(
@@ -44,17 +44,22 @@ crb_upload = S3FileTransferOperator(
     dest_s3_key=f'crb/crb_cases_datasd.csv',
     replace=True,
     dag=dag)
+
+#: Upload prod file to S3
+crb_bwc_upload = S3FileTransferOperator(
+    task_id='upload_crb_cases',
+    source_base_path=conf['prod_data_dir'],
+    source_key=f'crb_cases_datasd.csv',
+    dest_s3_conn_id=conf['default_s3_conn_id'],
+    dest_s3_bucket=conf['dest_s3_bucket'],
+    dest_s3_key=f'crb/crb_cases_bwc_datasd.csv',
+    replace=True,
+    dag=dag)
     
 #: Update dataset page on Seaboard
 crb_md_update = get_seaboard_update_dag('crb_cases.md', dag)
 
 #: Execution rules
-#: latest_only must run before anything else
-get_crb_excel.set_upstream(crb_latest_only)
-#: get_crb_excel must run before create_crb_prod
-create_crb_cases_prod.set_upstream(get_crb_excel)
-#: create_crb_prod must run before crb_upload
-crb_upload.set_upstream(create_crb_cases_prod)
-#: update md must run after crb upload
-crb_md_update.set_upstream(crb_upload)
+
+get_crb_excel >> create_crb_cases_prod >> [crb_upload,crb_bwc_upload] >> crb_md_update
 

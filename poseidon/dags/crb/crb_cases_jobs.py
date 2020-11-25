@@ -11,17 +11,15 @@ conf = general.config
 prod_path = conf['prod_data_dir']
 temp_path = conf['temp_data_dir']
 path_xlsx = conf['crb_xls']
-cases_fname = 'crb_cases_datasd'
-bwc_fname = 'crb_cases_bwc_datasd'
+cases_fname = 'crb_cases'
+bwc_fname = 'crb_cases_bwc'
 
 
 def get_crb_excel():
     """Use mget on to download CRB Excel files."""
 
-    # The exact name of the needed Excel is
-    # impossible to predict
-    # The name is stored as an environment
-    # variable in AWS
+    # The exact name of the needed Excel is impossible to predict
+    # The name is stored as an environment variable in AWS
 
     logging.info('Retrieving CRB Excel files.')
     command = "smbclient //ad.sannet.gov/dfs " \
@@ -57,7 +55,7 @@ def create_crb_cases_prod():
     """ Pick up CRB excel from temp and process """
 
     # Regex pattern to use for finding correct sheet
-    fy_regx = re.compile(r'^[fF][yY][0-9][0-9]$')
+    fy_regx = re.compile(r'(fy[0-9]+)',flags=re.IGNORECASE)
     
     temp_cols = ['#',
     'case',
@@ -93,8 +91,13 @@ def create_crb_cases_prod():
     file_read = pd.read_excel(file_path,sheet_name=None)
     keys = file_read.keys()
     logging.info("Looking in Excel for fy sheet")
+    file_fy_match = re.search(fy_regx, path_xlsx)
+    file_fy = file_fy_match.group(0).lower()
+    logging.info(path_xlsx)
+    logging.info(file_fy)
     
     for ky in keys:
+        logging.info(ky)
         if fy_regx.match(ky):
             logging.info(f"Using sheet {ky}")
             
@@ -102,17 +105,15 @@ def create_crb_cases_prod():
             df = df.loc[:,'#':'Years of Service']
             df.columns = temp_cols
 
-            # check data entry. If a case has multiple rows
-            # because of multiple allegations against multiple
-            # officers, cells might be blank that need to be
-            # forward filled
+            # check data entry for missing cells
+            # they may need to be forward filled
 
             #df['allegation'] = df['allegation'].fillna(method='ffill')
             #df['#'] = df['#'].fillna(method='ffill')
             #df['case'] = df['case'].fillna(method='ffill')
             #df["officer's_name"] = df["officer's_name"].fillna(method='ffill')
             
-            logging.info(f"Read {ky} sheet from {f}")
+            logging.info(f"Read {ky} sheet from {path_xlsx}")
 
     df['vote'] = df['vote'].str.split('-').str.join(' ')
 
@@ -164,20 +165,14 @@ def create_crb_cases_prod():
     bwc_rows = officers_final[['id','pid','case_number','bwc_on']]
     bwc_rows = bwc_rows.sort_values(by=['id','pid'],ascending=[False,True])
 
-    logging.info(f"Have {bwc_rows.shape[0]} rows to append")
+    logging.info(f"Have {bwc_rows.shape[0]} rows in bwc data")
     
-    prod_bwc = pd.read_csv(f"{prod_path}/{bwc_fname}.csv")
-    logging.info(f"Prod file has {prod_bwc.shape[0]}")
-
-    final_bwc = pd.concat(prod_bwc,bwc_rows,ignore_index=True,sort=False)
-    logging.info(f"Before dedupe: {final_bwc.shape[0]} rows")
-    
-    final_bwc = final_bwc.drop_duplicates(['id','pid','case_number'])
+    final_bwc = bwc_rows.drop_duplicates(['id','pid','case_number'])
     logging.info(f"After dedupe: {final_bwc.shape[0]} rows")
 
-    #general.pos_write_csv(
-        #final_bwc,
-        #f"{prod_path}/{bwc_fname}.csv")
+    general.pos_write_csv(
+        final_bwc,
+        f"{prod_path}/{bwc_fname}_{file_fy}_datasd.csv")
 
     # Cannot publish officer name, complainant name,
     # officer race, gender, or yrs of service
@@ -190,29 +185,16 @@ def create_crb_cases_prod():
         'bwc_viewed_by_crb_team'
         ],axis=1)
 
-    logging.info("Filling in missing values for rows belonging to same case")
-
-    df_anon = df_anon.fillna(method='ffill')
     df_anon = df_anon.sort_values(by=['id','pid'],ascending=[False,True])
     prod_cols = list(df_anon.columns)
     prod_cols = [prod_cols[0]] + [prod_cols[-1]] + prod_cols[1:-1]
     prod_rows = df_anon[prod_cols].copy()
     
     prod_rows = prod_rows.drop(['bwc_on'],axis=1)
-    logging.info(f"Have {prod_rows.shape[0]} rows to append")
+    logging.info(f"Have {prod_rows.shape[0]} case rows")
     
-    prod_cases = pd.read_csv(f"{prod_path}/{cases_fname}.csv")
-    logging.info(f"Prod file has {prod_file.shape[0]}")
-    
-    final_cases = pd.concat(prod_cases,prod_rows,ignore_index=True,sort=False)
-    logging.info(f"Before dedupe: {final.shape[0]} rows")
-    
-    final_cases = final_cases.drop_duplicates(['id','pid','case_number'])
-    logging.info(f"After dedupe: {final.shape[0]} rows")
-
-
-    #general.pos_write_csv(
-        #final_cases,
-        #f"{prod_path}/{cases_fname}.csv")
+    general.pos_write_csv(
+        prod_rows,
+        f"{prod_path}/{cases_fname}_{file_fy}_datasd.csv")
 
     return "Successfully processed CRB cases"
