@@ -85,7 +85,6 @@ def process_data(mode='drinking',**context):
         logging.info(f"Have {nitrate.shape[0]} records for Nitrate")
         nitrate.loc[:,'analyte'] = "Nitrate (as N)"
         nitrate.loc[:,'analyte_value'] = nitrate.loc[:,'analyte_value'].apply(lambda x: round(x*0.2259,4))
-
         rus_nitrate = pd.concat([results_units_sources,nitrate],ignore_index=True)
     
     logging.info(f"Ending with {rus_nitrate.shape[0]} records after adding Nitrate as N")
