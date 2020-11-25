@@ -90,15 +90,15 @@ def create_crb_cases_prod():
     file_path = f"{temp_path}/{path_xlsx}"
     file_read = pd.read_excel(file_path,sheet_name=None)
     keys = file_read.keys()
+    
     logging.info("Looking in Excel for fy sheet")
+    
     file_fy_match = re.search(fy_regx, path_xlsx)
-    file_fy = file_fy_match.group(0).lower()
-    logging.info(path_xlsx)
-    logging.info(file_fy)
+    file_fy_str = file_fy_match.group(0).lower()
+    file_fy_yr = int(file_fy_str[2:])
     
     for ky in keys:
-        logging.info(ky)
-        if fy_regx.match(ky):
+        if ky == f"FY{file_fy_yr}" or ky == f"FY{file_fy_yr-2000}":
             logging.info(f"Using sheet {ky}")
             
             df = file_read[ky]
@@ -108,6 +108,7 @@ def create_crb_cases_prod():
             # check data entry for missing cells
             # they may need to be forward filled
 
+            df['bwc_viewed_by_crb_team'] = df['bwc_viewed_by_crb_team'].fillna(method='ffill')
             #df['allegation'] = df['allegation'].fillna(method='ffill')
             #df['#'] = df['#'].fillna(method='ffill')
             #df['case'] = df['case'].fillna(method='ffill')
@@ -129,7 +130,7 @@ def create_crb_cases_prod():
     '60_days_or_less':'days_60_or_less', 
     '90days_or_less':'days_90_or_less',
     '120days_or_less':'days_120_or_less',
-    'bwc_viewed_by_crb_team':'body_camera',
+    'bwc_viewed_by_crb_team':'crb_viewed_bwc',
     "complainants_name":'complainant_name',
     'race_0':'complainant_race',
     'gender_0':'complainant_gender',
@@ -172,7 +173,7 @@ def create_crb_cases_prod():
 
     general.pos_write_csv(
         final_bwc,
-        f"{prod_path}/{bwc_fname}_{file_fy}_datasd.csv")
+        f"{prod_path}/{bwc_fname}_{file_fy_str}_datasd.csv")
 
     # Cannot publish officer name, complainant name,
     # officer race, gender, or yrs of service
@@ -182,7 +183,6 @@ def create_crb_cases_prod():
         'officer_gender',
         'incident_address',
         'officer_yrs_of_svce',
-        'bwc_viewed_by_crb_team'
         ],axis=1)
 
     df_anon = df_anon.sort_values(by=['id','pid'],ascending=[False,True])
@@ -195,6 +195,6 @@ def create_crb_cases_prod():
     
     general.pos_write_csv(
         prod_rows,
-        f"{prod_path}/{cases_fname}_{file_fy}_datasd.csv")
+        f"{prod_path}/{cases_fname}_{file_fy_str}_datasd.csv")
 
     return "Successfully processed CRB cases"
