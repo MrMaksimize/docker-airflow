@@ -12,6 +12,7 @@ prod_path = conf['prod_data_dir']
 temp_path = conf['temp_data_dir']
 path_xlsx = conf['crb_xls']
 cases_fname = 'crb_cases'
+alleg_fname = 'crb_allegations'
 bwc_fname = 'crb_cases_bwc'
 
 
@@ -102,25 +103,43 @@ def create_crb_cases_prod():
             logging.info(f"Using sheet {ky}")
             
             df = file_read[ky]
-            df = df.loc[:,'#':'Years of Service']
             df.columns = temp_cols
 
-            # check data entry for missing cells
-            # they may need to be forward filled
-
-            df['bwc_viewed_by_crb_team'] = df['bwc_viewed_by_crb_team'].fillna(method='ffill')
-            #df['allegation'] = df['allegation'].fillna(method='ffill')
-            #df['#'] = df['#'].fillna(method='ffill')
-            #df['case'] = df['case'].fillna(method='ffill')
-            #df["officer's_name"] = df["officer's_name"].fillna(method='ffill')
+            cases = df.loc[:,['#',
+                'case',
+                'team',
+                'assigned',
+                'completed',
+                'presented',
+                'days',
+                '30_days_or_less',
+                '60_days_or_less', 
+                '90_days_or_less',
+                '120_days_or_less',
+                'changes',
+                'pd_division',
+                'bwc_viewed_by_crb_team',
+                'race_0',
+                'gender_0']].copy()
+            
+            allegations = df.loc[:,['#',
+                'case',
+                "officers_name",
+                'allegation',
+                'ia_finding',
+                'crb_decision',
+                'vote',
+                'unanimous_vote',
+                'bwc_on/off',
+                ]].copy()
             
             logging.info(f"Read {ky} sheet from {path_xlsx}")
 
-    df['vote'] = df['vote'].str.split('-').str.join(' ')
+    allegations['vote'] = allegations['vote'].str.split('-').str.join(' ')
 
-    logging.info("Renaming columns")
+    logging.info("Renaming columns for cases")
 
-    df = df.rename(columns={'#':'id',
+    cases = cases.rename(columns={'#':'id',
     'case':'case_number',
     'assigned':'date_assigned',
     'completed':'date_completed',
@@ -131,31 +150,42 @@ def create_crb_cases_prod():
     '90days_or_less':'days_90_or_less',
     '120days_or_less':'days_120_or_less',
     'bwc_viewed_by_crb_team':'crb_viewed_bwc',
-    "complainants_name":'complainant_name',
     'race_0':'complainant_race',
     'gender_0':'complainant_gender',
+    })
+
+    logging.info(f"Starting with {cases.shape[0]} rows in cases")
+    cases = cases.dropna(subset=['crb_viewed_bwc'])
+    cases = cases.drop_duplicates(subset='id')
+
+    logging.info(f"Ending with {cases.shape[0]} rows after deduplicating on ID")
+    
+    general.pos_write_csv(
+        cases,
+        f"{prod_path}/{cases_fname}_{file_fy_str}_datasd.csv")
+
+    logging.info("Renaming columns for allegations")
+
+    allegations = allegations.rename(columns={'#':'id',
+    'case':'case_number',
     "officers_name":'officer_name',
-    'race':'officer_race',
-    'gender':'officer_gender',
-    'years_of_service':'officer_yrs_of_svce',
-    'bwc_on/off':'bwc_on'})
+    'bwc_on/off':'bwc_on'
+    })
 
     # Need to add an anonymize officer id
     # Cannot stay consistent, so using simple incrementor
-    officers = df.loc[:,['id',
-    'case_number',
-    'officer_name',
-    'bwc_on']]
+    officers = allegations.copy()
 
     officers_dedupe = officers.copy().dropna(subset=['bwc_on'])
-    officers_dedupe = officers_dedupe.drop_duplicates(['id','officer_name'])
+    officers_dedupe = officers_dedupe.drop_duplicates(['id',
+        'officer_name'])
 
     officers_dedupe['pid'] = -1
 
     officers_anon = officers_dedupe.groupby(['id']).apply(get_officer_anon)
     officers_final = officers_anon.dropna()
 
-    df_anon = pd.merge(df,officers_final[['id','case_number','officer_name','pid']],
+    allegations_anon = pd.merge(allegations,officers_final[['id','case_number','officer_name','pid']],
         how='left',
         right_on=['id','case_number','officer_name'],
         left_on=['id','case_number','officer_name'])
@@ -177,24 +207,18 @@ def create_crb_cases_prod():
 
     # Cannot publish officer name, complainant name,
     # officer race, gender, or yrs of service
-    df_anon = df_anon.drop(['complainant_name',
-        'officer_name',
-        'officer_race',
-        'officer_gender',
-        'incident_address',
-        'officer_yrs_of_svce',
-        ],axis=1)
-
-    df_anon = df_anon.sort_values(by=['id','pid'],ascending=[False,True])
-    prod_cols = list(df_anon.columns)
-    prod_cols = [prod_cols[0]] + [prod_cols[-1]] + prod_cols[1:-1]
-    prod_rows = df_anon[prod_cols].copy()
+    allegations_anon = allegations_anon.drop(['officer_name','bwc_on'],axis=1)
+    allegations_anon = allegations_anon.sort_values(by=['id','pid'],ascending=[False,True])
     
-    prod_rows = prod_rows.drop(['bwc_on'],axis=1)
-    logging.info(f"Have {prod_rows.shape[0]} case rows")
+
+    prod_cols = list(allegations_anon.columns)
+    prod_cols = [prod_cols[0]] + [prod_cols[-1]] + prod_cols[1:-1]
+    #prod_rows = df_anon[prod_cols].copy()
+    
+    logging.info(f"Have {allegations_anon.shape[0]} allegation rows")
     
     general.pos_write_csv(
-        prod_rows,
-        f"{prod_path}/{cases_fname}_{file_fy_str}_datasd.csv")
+        allegations_anon[prod_cols],
+        f"{prod_path}/{alleg_fname}_{file_fy_str}_datasd.csv")
 
     return "Successfully processed CRB cases"

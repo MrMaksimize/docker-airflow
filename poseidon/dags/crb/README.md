@@ -22,9 +22,11 @@ The first step is to review the source Excel file and ensure that data was enter
 
 ### Read in the correct sheet
 
-The code uses regex to get the fiscal year from the file name specified in the parameter store variable and uses that to find a sheet named FYXX or FY20XX.
+The code uses regex to get the fiscal year from the file name specified in the parameter store variable and uses that to find a sheet named FYXX or FY20XX. The Excel workbooks have all kinds of extra sheets, and the naming convention from year to year is not consistent.
 
-Each row of the Excel is an allegation and officer in a case. One case can have multiple officers involved in multiple allegations. There may be blank cells where case-level information needs to be populated for each row of the case. Use Pandas fillna with forward-fill method.
+Each row of the Excel is an allegation and officer in a case. One case can have multiple officers involved in multiple allegations. There may be blank cells where case-level information is not filled in for all allegation/officer rows. Usually, whomever is maintaining the Excel workbook and entering data uses cell colors to convey information.
+
+Out of the fields we publish, below is how they can be divided along case/allegation lines.
 
 Fields that contain case-level information include:
 
@@ -36,6 +38,7 @@ Fields that contain case-level information include:
 - Presented date
 - Days
 - All of the days or less fields
+- Changes
 - PD division
 - Whether CRB viewed body camera footage
 - Complainant race
@@ -46,22 +49,22 @@ Fields that contain allegation/officer information include:
 - Allegation
 - IA finding
 - CRB decision
-- Changes
 - Vote
 - Unanimous vote
 - Officer
+- BWC ON/OFF
+
+### Separate cases, allegations, and bwc data for officers
+
+This became necessary to avoid confusion about body worn cameras. There are two fields related to body-worn cameras: one with a yes/no depending on whether the CRB reviewed any footage while considering the case, and one with a yes if the officer had his or her camera turned on during the incident. The first field pertains only to the case, and the second field pertains only to the officer. It became necessary to have a dataset of cases that includes the field BWC Viewed by CRB Team, a dataset of allegations that has no body-worn camera information, and a dataset of (anonymized) officers with the field BWC ON/OFF.
 
 ### Anonymize officer
 
 Officer names are replaced with an anonymous person id (pid). Officers are only tracked within cases and not across cases, so if an officer has multiple allegations for a single case, all those allegations will have the same pid. The pid is assigned by getting a unique list of officers involved in a case (in order of data entry) and numbering them, starting with 1. This is then joined back to the original case records on case number and officer name, then officer name is dropped.
 
-### Split off BWC turned on/off for a separate dataset
+### Omit fields that contain information that is not public
 
-Whether the body-worn camera was turned on or off is per officer per case. If an officer has multiple allegations, the BWC on/off will be the same value for each. Because the cases dataset is per allegation per officer per case, and BWC on/off is per officer per case, this has been split off into a separate dataset.
-
-### Remove fields that contain information that is not public
-
-This is very important. Do not change this without speaking to SME.
+This is very important. Do not change this without speaking to SME. When the Excel is first loaded, it is divided into cases and allegations by selecting fields TO INCLUDE. This way, we will not forget to DROP fields we should not publish.
 
 ### Final field name map
 
