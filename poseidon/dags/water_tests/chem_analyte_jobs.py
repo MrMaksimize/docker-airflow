@@ -110,7 +110,7 @@ def process_data(mode='drinking',**context):
     "COLOR":'Color',
     "BROMIDE":'Bromide',
     "CHLORIDE":'Chloride',
-    "FLUORIDE":'Flouride',
+    "FLUORIDE":'Fluoride',
     "NITRATE":'Nitrate',
     "Nitrate (as N)":'Nitrate (as N)',
     "PHOSPHATE_O":'Ortho Phosphate',
