@@ -18,7 +18,7 @@ Solve upload problem. A file name cannot easily be specified in file transfer op
 
 This job should be kicked off manually, so it does not have a schedule (and currently it needs to be run locally until the upload problem can be solved). This is because of the sensitive nature of the data and inconsistencies in data entry year over year.
 
-The first step is to review the source Excel file and ensure that data was entered in a way that will work with the function to process the Excel. The second step is to update the environment variable for the name of the Excel sheet in AWS Parameter Store.
+The first step is to review the source Excel file and ensure that data was entered in a way that will work with the function to process the Excel. The second step is to update the environment variable for the name of the Excel workbook in AWS Parameter Store.
 
 ### Read in the correct sheet
 
@@ -68,36 +68,36 @@ This is very important. Do not change this without speaking to SME. When the Exc
 
 ### Final field name map
 
-| Field in FY2020 Excel | Field in prod file |
-|-----------------------|--------------------|
-| # | id |
-| Officer's Name | pid (anonymized) |
-| Case | case_number |
-| Team | team |
-| Assigned | date_assigned |
-| Completed | date_completed |
-| Presented | date_presented |
-| Days | days_number |
-| 30 days or less | days_30_or_less |
-| 60 days or less | days_60_or_less |
-| 90 days or less | 90_days_or_less |
-| 120 days or less | 120_days_or_less |
-| Allegation | allegation |
-| IA Finding | ia_finding |
-| CRB Decision | crb_decision |
-| Changes | changes |
-| Vote | vote |
-| Unanimous Vote | unanimous_vote |
-| Incident Address | *dropped* |
-| PD Division | pd_division |
-| BWC Viewed by CRB Team | crb_viewed_bwc |
-| BWC ON/OFF | *dropped* (added to another dataset) |
-| Complainant's Name | *dropped* |
-| Race (complainant) | complainant_race |
-| Gender (complainant) | complainant_gender |
-| Race (officer) | *dropped* |
-| Gender (officer) | *dropped* |
-| Years of Service (officer) | *dropped* |
+| Field in FY2020 Excel      | Field in prod file                   |
+|----------------------------|--------------------------------------|
+| #                          | id                                   |
+| Officer's Name             | pid (anonymized)                     |
+| Case                       | case_number                          |
+| Team                       | team                                 |
+| Assigned                   | date_assigned                        |
+| Completed                  | date_completed                       |
+| Presented                  | date_presented                       |
+| Days                       | days_number                          |
+| 30 days or less            | days_30_or_less                      |
+| 60 days or less            | days_60_or_less                      |
+| 90 days or less            | 90_days_or_less                      |
+| 120 days or less           | 120_days_or_less                     |
+| Allegation                 | allegation                           |
+| IA Finding                 | ia_finding                           |
+| CRB Decision               | crb_decision                         |
+| Changes                    | changes                              |
+| Vote                       | vote                                 |
+| Unanimous Vote             | unanimous_vote                       |
+| Incident Address           | *dropped*                            |
+| PD Division                | pd_division                          |
+| BWC Viewed by CRB Team     | crb_viewed_bwc                       |
+| BWC ON/OFF                 | *dropped* (added to another dataset) |
+| Complainant's Name         | *dropped*                            |
+| Race (complainant)         | complainant_race                     |
+| Gender (complainant)       | complainant_gender                   |
+| Race (officer)             | *dropped*                            |
+| Gender (officer)           | *dropped*                            |
+| Years of Service (officer) | *dropped*                            |
 
 ## Notes from SME
 
