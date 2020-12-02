@@ -50,6 +50,8 @@ def process_data(mode='drinking',**context):
     exp_results = df.groupby(['SAMPLE_ID','ANALYTE']).ngroups
     logging.info(f"This compares to {exp_results} expected results")
 
+    mean_results['VALUE'] = mean_results['VALUE'].apply(lambda x: round(x,3))
+
     logging.info("Merge units back")
     results_units = pd.merge(mean_results,
         quals_units,
