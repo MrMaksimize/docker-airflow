@@ -2,6 +2,7 @@ import cx_Oracle
 import pandas as pd
 import string
 import logging
+from datetime import datetime as dt
 
 from trident.util import general
 
@@ -11,24 +12,42 @@ conf = general.config
 def get_oracle_data(mode='drinking',**context):
     """ Extract data from Oracle database """
 
+    exec_date = context['next_execution_date'].in_tz(tz='US/Pacific')
+    today = exec_date.subtract(days=1)
+
+    this_yr = today.year
+    this_mo = today.strftime("%m")
+    this_day = today.strftime("%d")
+
     credentials = conf['oracle_wpl']
     db = cx_Oracle.connect(credentials)
     sql = general.file_to_string(f'./sql/analytes_{mode}.sql', __file__)
     
+    sql += f"AND (TRUNC(SAMPLE.SAMPLE_DATE) >= DATE '{this_yr}-01-01') " \
+    + f"AND (TRUNC(SAMPLE.SAMPLE_DATE) < DATE '{this_yr}-{this_mo}-{this_day}' )) " \
+    + "ORDER BY SAMPLE.SAMPLE_DATE, SAMPLE.SOURCE, " \
+    + "RESULT.ANALYTE, RESULT.TEST_NUMBER"
+    
+
     df = pd.read_sql_query(sql, db)
+
+    fname_yr = f"{this_yr}"
 
     general.pos_write_csv(
     df,
-    f"{conf['temp_data_dir']}/analytes_{mode}.csv",
+    f"{conf['temp_data_dir']}/analytes_{mode}_{fname_yr}.csv",
     date_format=conf['date_format_ymd'])
 
-    return f"Successfully queried Oracle data source for {mode}"
+    return fname_yr
 
 def process_data(mode='drinking',**context):
     """ Create production output """
 
+    fname_yr = context['task_instance'].xcom_pull(dag_id=f"chem_analytes.get_create_{mode}",
+        task_ids=f'get_{mode}_sql')
+
     logging.info(f"Reading in sql output for {mode}")
-    df = pd.read_csv(f"{conf['temp_data_dir']}/analytes_{mode}.csv",
+    df = pd.read_csv(f"{conf['temp_data_dir']}/analytes_{mode}_{fname_yr}.csv",
         low_memory=False)
 
     logging.info("Isolate qualifiers and units")
@@ -144,14 +163,14 @@ def process_data(mode='drinking',**context):
     if mode == 'drinking':
         
         final = rus_nitrate.copy()
-        file_name = 'analyte_tests_drinking_water_datasd'
+        file_name = f'analyte_tests_drinking_water_{fname_yr}_datasd'
 
     elif mode == 'plants':
 
         final = rus_nitrate.loc[rus_nitrate['analyte'].isin(analytes_effluent)]
         logging.info(f"Filtering on analytes results in {final.shape[0]} records")
         final['analyte'] = final['analyte'].apply(lambda x: analytes_effluent_map.get(x, x))
-        file_name = 'analyte_tests_effluent_datasd'
+        file_name = f'analyte_tests_effluent_{fname_yr}_datasd'
 
     else:
 
