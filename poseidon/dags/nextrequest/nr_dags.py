@@ -29,7 +29,7 @@ get_nr_data_write_temp = PythonOperator(
     dag=dag)
 
 #: Joins downloaded files from API to production
-update_pv_prod = PythonOperator(
+update_prod = PythonOperator(
     task_id='update_prod',
     python_callable=update_prod,
     provide_context=True,
