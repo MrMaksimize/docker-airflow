@@ -23,8 +23,8 @@ dag = DAG(
 
 #: Downloads nextrequest data from API
 get_nr_data_write_temp = PythonOperator(
-    task_id='request_pra_date',
-    python_callable=request_pra_date,
+    task_id='get_nr_data_write_temp',
+    python_callable=get_nr_data_write_temp,
     provide_context=True,
     dag=dag)
 
@@ -49,11 +49,6 @@ s3_upload = S3FileTransferOperator( # creating a different upload object for eac
     dag=dag)
 '''
 
-#TODO execution rules
-#: Update portal modified date
-#update_pv_md = get_seaboard_update_dag('pv_production.md', dag)
-
-#: Execution rules
-#get_pv_data_write_temp >> [update_pv_prod,get_lucid_token]
-#update_pv_prod >> check_upload_time >> s3_upload >> update_pv_md
-#get_lucid_token >> push_lucid_data
+#TODO
+#update_nr_md = get_seaboard_update_dag('nr_production.md', dag)
+#get_nr_data_write_temp >> update_prod >> s3_upload >> snowflake_upload >> update_nr_md

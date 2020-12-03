@@ -159,7 +159,8 @@ def buildConfig(env):
         'migration_aws_key': os.environ.get('MIGRATION_ACCESS_KEY'),
         'migration_aws_secret': os.environ.get('MIGRATION_ACCESS_SECRET'),
         'migration_aws_region': os.environ.get('MIGRATION_REGION'),
-        'migration_dest_s3_bucket': os.environ.get('MIGRATION_BUCKET', 'datasd.dev')
+        'migration_dest_s3_bucket': os.environ.get('MIGRATION_BUCKET', 'datasd.dev'),
+        'nextrequest_token': os.environ.get('NEXTREQUEST_TOKEN')
     }
     return config
 
