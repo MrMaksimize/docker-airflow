@@ -156,6 +156,7 @@ def buildConfig(env):
         'lucid_api_user': os.environ.get("LUCID_USER"),
         'lucid_api_pass': os.environ.get("LUCID_PASS"),
         'ga_client_secrets': os.environ.get("GA_CLIENT_SECRETS"),
+        'crb_xls': os.environ.get("CRB_XLS"),
         'migration_aws_key': os.environ.get('MIGRATION_ACCESS_KEY'),
         'migration_aws_secret': os.environ.get('MIGRATION_ACCESS_SECRET'),
         'migration_aws_region': os.environ.get('MIGRATION_REGION'),
@@ -196,6 +197,7 @@ schedule = {
     'documentum_hr_30' : "30 0,1,2,3,4,15,16,17,18,19,20,21,22,23 * * 1-6", # 30 mins past the hour, 7am to 7pm, Mon-Fri PST
     'documentum_hr_15': "15 0,1,2,3,4,15,16,17,18,19,20,21,22,23 * * 1-6", # 15 mins past the hour, 7am to 7pm, Mon-Fri PST
     'tsw_integration': '0 6 * * *',  # daily at 6am UTC / 10pm PST
+    'crb': None,
     'cip': "0 8 * * *", # daily at 8am UTC / 1am PST
 	'cityiq': '@daily',
     'onbase_test': '*/15 * * * *',
@@ -247,14 +249,15 @@ start_date = {
     'documentum_hr_15': datetime(2019, 10, 29),
     'tsw_integration': default_date,
     'cip': default_date,
-    'cityiq': default_date,
-    'onbase_test': default_date,
-    'gis_tree_canopy': default_date,
+    'crb': datetime(2020, 11, 24),
     'parking_meter_locs': datetime(2019, 12, 25),
     'amcs': datetime(2020, 4, 14),
     'pv_prod': datetime(2020, 2, 26),
     'sidewalks':  default_date,
     'ga_portal': datetime(2020, 5, 19),
+    'onbase_test': default_date,
+    'gis_tree_canopy': default_date,
+    'cityiq': default_date,
     'fleet': datetime(2020, 8, 26)
 }
 
