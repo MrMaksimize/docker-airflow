@@ -43,8 +43,10 @@ def get_oracle_data(mode='drinking',**context):
 def process_data(mode='drinking',**context):
     """ Create production output """
 
-    fname_yr = context['task_instance'].xcom_pull(dag_id=f"chem_analytes.get_create_{mode}",
-        task_ids=f'get_{mode}_sql')
+    #fname_yr = context['task_instance'].xcom_pull(dag_id=f"chem_analytes.get_create_{mode}",
+        #task_ids=f'get_{mode}_sql')
+
+    fname_yr = "2020"
 
     logging.info(f"Reading in sql output for {mode}")
     df = pd.read_csv(f"{conf['temp_data_dir']}/analytes_{mode}_{fname_yr}.csv",
@@ -162,23 +164,45 @@ def process_data(mode='drinking',**context):
 
     if mode == 'drinking':
         
-        final = rus_nitrate.copy()
-        file_name = f'analyte_tests_drinking_water_{fname_yr}_datasd'
+        current = rus_nitrate.copy()
+        file_name = f'analyte_tests_drinking_water_datasd'
+        
+        logging.info("Reading in prod file")
+        prod_df = pd.read_csv(f"{conf['prod_data_dir']}/{file_name}.csv",
+            low_memory=False)
 
     elif mode == 'plants':
 
-        final = rus_nitrate.loc[rus_nitrate['analyte'].isin(analytes_effluent)]
-        logging.info(f"Filtering on analytes results in {final.shape[0]} records")
-        final['analyte'] = final['analyte'].apply(lambda x: analytes_effluent_map.get(x, x))
-        file_name = f'analyte_tests_effluent_{fname_yr}_datasd'
+        current = rus_nitrate.loc[rus_nitrate['analyte'].isin(analytes_effluent)]
+        logging.info(f"Filtering on analytes results in {current.shape[0]} records")
+        current['analyte'] = current['analyte'].apply(lambda x: analytes_effluent_map.get(x, x))
+        
+        file_name = f'analyte_tests_effluent_datasd'
+
+        logging.info("Reading in prod file")
+        prod_df = pd.read_csv(f"{conf['prod_data_dir']}/{file_name}.csv",
+            low_memory=False)
 
     else:
 
         raise Exception('Invalid mode')
 
+    logging.info(f"Prod file has {prod_df.shape[0]} records")
+
+    final = pd.concat([current[prod_order],prod_df],ignore_index=True)
+
+    logging.info(f"Concat has {final.shape[0]} records")
+
+    final = final.drop_duplicates(subset=['date_sample',
+        'sample_source',
+        'sample_id',
+        'analyte'])
+
+    logging.info(f"Final has {final.shape[0]} records after deduplicating")
+
 
     general.pos_write_csv(
-    final[prod_order],
+    final,
     f"{conf['prod_data_dir']}/{file_name}.csv",
     date_format=conf['date_format_ymd'])
 
