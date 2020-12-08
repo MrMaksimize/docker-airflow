@@ -19,7 +19,7 @@ def get_traffic_counts(out_fname='traffic_counts_file'):
         + f"--user={conn.login}%{conn.password} -W ad -c " \
         + "'cd \"TSW-TEO-Shared/TEO/" \
         + "TEO-Transportation-Systems-and-Safety-Programs/" \
-        + f"Traffic Data/{fy}/RECORD FINDER\";" \
+        + f"Traffic Data/{fy}/Record Finders\";" \
         + f" ls; get Machine_Count_Index.xlsx {conf['temp_data_dir']}/{out_fname}.xlsx;'"
 
     command = command.format(quote(command))

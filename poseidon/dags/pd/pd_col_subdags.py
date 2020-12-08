@@ -2,7 +2,6 @@
 from airflow.operators.python_operator import PythonOperator
 from airflow.models import DAG
 from trident.util import general
-from trident.util.notifications import afsys_send_email
 from dags.pd.pd_col_jobs import *
 
 from trident.util.seaboard_updates import *

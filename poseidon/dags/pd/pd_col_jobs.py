@@ -59,14 +59,12 @@ def get_collisions_data(mode="activities",**context):
 
 def process_collisions_data(**context):
     """Process collision data."""
-    #activity_date = context['task_instance'].xcom_pull(dag_id="pd_col.get_files",
-        #task_ids='get_activities')
-    #details_date = context['task_instance'].xcom_pull(dag_id="pd_col.get_files",
-        #task_ids='get_activities')
 
-    activity_date = "Aug_12_2020"
-    details_date = "Aug_12_2020"
-    
+    activity_date = context['task_instance'].xcom_pull(dag_id="pd_col.get_files",
+        task_ids='get_activities')
+    details_date = context['task_instance'].xcom_pull(dag_id="pd_col.get_files",
+        task_ids='get_activities')
+   
     if activity_date != details_date:
 
         raise Exception("Date of activity does not match date of details")

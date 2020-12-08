@@ -29,9 +29,10 @@ def write_to_shared_drive():
     logging.info('Retrieving data for current FY.')
     conn = BaseHook.get_connection(conn_id="SVC_ACCT")
     server_ip = Variable.get("AMCS_IP_ADDRESS")
-    command = "smbclient //csdldcamcsappp/GetItDone -W ad -mSMB3 " \
-        + f"--user={conn.login}%{conn.password} --ip-address={server_ip} " \
-        + f"--directory='/' -c '" \
+    
+    command = "smbclient //csdsdcamcsappt/TOWER7 -W ad -mSMB3 " \
+        + f"--user={conf['svc_acct_user']}%{conf['svc_acct_pass']} --ip-address={server_ip} " \
+        + f"--directory='/Tower7Prod/GetitDone' -c '" \
         + f" put {final_file} sites_export.csv'"
 
     command = command.format(quote(command))

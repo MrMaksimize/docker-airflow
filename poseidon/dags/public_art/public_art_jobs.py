@@ -1,11 +1,15 @@
 """_jobs file for public art."""
 import os
 import pandas as pd
+import geopandas as gpd
 import logging
 from trident.util import general
 import requests
+from arcgis import GIS
+from arcgis.features import FeatureLayerCollection
 
 conf = general.config
+prod_dir = conf['prod_data_dir']
 prod_file = conf['prod_data_dir'] + '/public_art_locations_datasd_v1.csv'
 temp_file = conf['temp_data_dir'] + '/public_art_assets.csv'
 
@@ -131,3 +135,22 @@ def process_public_art():
         final, prod_file)
 
     return "Successfully processed public art"
+
+def update_geospatial():
+    """ Converting CSV to geospatial formats """
+
+    df = pd.read_csv(prod_file)
+
+    arc_gis = GIS("https://SanDiego.maps.arcgis.com",conf["arc_online_user"],conf["arc_online_pass"])
+    lyr_id = '62be6801a23c4170851772d6a8184020'
+    feature_layer = arc_gis.content.get(lyr_id)
+    flayer_collection = FeatureLayerCollection.fromitem(feature_layer)
+    logging.info("Overwriting public art feature layer collection")
+    overwrite = flayer_collection.manager.overwrite(prod_file)
+
+    return overwrite
+
+#def shp_to_kml():
+    #cmd = shp2kml(f"{conf['prod_data_dir']}/public_art_gis_kml")
+    #logging.info(cmd)
+    #return cmd

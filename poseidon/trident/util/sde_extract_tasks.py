@@ -69,21 +69,18 @@ def create_sde_tasks(dag,
     to_shp = PythonOperator(
         task_id=f'{layer}_to_shp',
         python_callable=sde_to_shp,
-        
         dag=dag)
 
     #: Convert shapefile to GeoJSON format
     to_geojson = BashOperator(
         task_id=f'{layer}_to_geojson',
         bash_command=shp_to_geojson(path_to_file),
-        
         dag=dag)
 
     #: Convert shapefile to TopoJSON format
     to_topojson = BashOperator(
         task_id=f'{layer}_to_topojson',
         bash_command=shp_to_topojson(path_to_file),
-        
         dag=dag)
 
     #: Compress shapefile components
@@ -91,7 +88,6 @@ def create_sde_tasks(dag,
         task_id=f'{layer}_shp_to_zip',
         python_callable=shp_to_zip,
         op_kwargs={'datasd_name': datasd_name},
-        
         dag=dag)
 
     #: Upload shapefile to S3
@@ -102,7 +98,6 @@ def create_sde_tasks(dag,
         dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
         dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
         dest_s3_key=f'sde/{folder}/{datasd_name}.zip',
-        
         replace=True,
         dag=dag)
 
@@ -114,7 +109,6 @@ def create_sde_tasks(dag,
         dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
         dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
         dest_s3_key=f'sde/{folder}/{datasd_name}.geojson',
-        
         replace=True,
         dag=dag)
 
@@ -126,7 +120,6 @@ def create_sde_tasks(dag,
         dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
         dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
         dest_s3_key=f'sde/{folder}/{datasd_name}.topojson',
-        
         replace=True,
         dag=dag)
 
@@ -139,7 +132,6 @@ def create_sde_tasks(dag,
             task_id=f'{layer}_to_geobuf',
             python_callable=geojson_to_geobuf,
             op_kwargs={'path_to_file': path_to_file},
-            
             dag=dag)
 
         #: Convert geobuf to gzipped geobuf
@@ -147,7 +139,6 @@ def create_sde_tasks(dag,
             task_id=f'{layer}_geobuf_to_gzip',
             python_callable=geobuf_to_gzip,
             op_kwargs={'datasd_name': datasd_name},
-            
             dag=dag)
 
         #: Upload geobuf to S3
@@ -158,7 +149,6 @@ def create_sde_tasks(dag,
             dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
             dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
             dest_s3_key=f'sde/{folder}/{datasd_name}.pbf',
-            
             replace=True,
             use_gzip=True,
             dag=dag)

@@ -14,88 +14,111 @@ args = general.args
 schedule = general.schedule['dsd_approvals']
 start_date = general.start_date['dsd_approvals']
 
-files = ['set1_active',
-'set1_closed',
-'set1_closed_projects',
-'set2_active',
-'set2_closed']
-
 snowflake_files = ['dsd_approvals_pts','dsd_approvals_accela']
 
-def create_file_subdag():
+def get_create_accela_subdag():
   """
-  Generate a DAG to be used as a subdag 
-  that creates permit files 
+  Generate a DAG to be used as a subdag
+  for Accela tasks
   """
 
   dag_subdag = DAG(
-    dag_id='dsd_permits.create_files',
+    dag_id='dsd_permits.get_create_accela',
     default_args=args,
     start_date=start_date,
     schedule_interval=schedule,
     catchup=False)
 
-  for file in files:
-    mode = file.split('_')[-1]
-    sys = file.split('_')[0]
+  #: Get permits reports
+  get_files = PythonOperator(
+    task_id='get_accela_files',
+    provide_context=True,
+    python_callable=get_permits_files,
+    op_kwargs={'mode': 'accela'},
+    dag=dag_subdag)
 
-    if sys == 'set1': 
+  create = PythonOperator(
+    task_id=f"create_set2",
+    provide_context=True,
+    python_callable=build_accela,
+    dag=dag_subdag)
 
-      create_file = PythonOperator(
-        task_id=f"create_{file}",
-        provide_context=True,
-        python_callable=build_pts,
-        op_kwargs={'mode': mode},
-        dag=dag_subdag)
+  join = PythonOperator(
+    task_id=f"join_accela",
+    python_callable=spatial_joins,
+    op_kwargs={'pt_file': 'dsd_permits_all_accela'},
+    dag=dag_subdag)
 
-    else:
+  subset = PythonOperator(
+    task_id=f"subset_accela",
+    provide_context=True,
+    python_callable=create_subsets,
+    op_kwargs={'mode': 'set2'},
+    dag=dag_subdag)
 
-      create_file = PythonOperator(
-        task_id=f"create_{file}",
-        provide_context=True,
-        python_callable=build_accela,
-        op_kwargs={'mode': mode},
-        dag=dag_subdag)
+  get_files>>create>>join>>subset
 
   return dag_subdag
 
+def get_create_pts_subdag():
+  """
+  Generate a DAG to be used as a subdag
+  for PTS tasks 
+  """
 
-def join_bids_subdag():
+  dag_subdag = DAG(
+    dag_id='dsd_permits.get_create_pts',
+    default_args=args,
+    start_date=start_date,
+    schedule_interval=schedule,
+    catchup=False)
+
+  #: Get permits reports
+  get_files = PythonOperator(
+    task_id='get_pts_files',
+    provide_context=True,
+    python_callable=get_permits_files,
+    op_kwargs={'mode': 'pts'},
+    dag=dag_subdag)
+
+  create = PythonOperator(
+    task_id=f"create_set1",
+    provide_context=True,
+    python_callable=build_pts,
+    dag=dag_subdag)
+
+  join = PythonOperator(
+    task_id=f"join_pts",
+    python_callable=spatial_joins,
+    op_kwargs={'pt_file': 'dsd_permits_all_pts'},
+    dag=dag_subdag)
+
+  subset = PythonOperator(
+    task_id=f"subset_pts",
+    provide_context=True,
+    python_callable=create_subsets,
+    op_kwargs={'mode': 'set1'},
+    dag=dag_subdag)
+
+  get_files>>create>>join>>subset
+
+  return dag_subdag
+
+def upload_set1_files_subdag():
   """
   Generate a DAG to be used as a subdag 
   that joins BIDs to permit files 
   """
 
   dag_subdag = DAG(
-    dag_id='dsd_permits.join_bids',
+    dag_id='dsd_permits.upload_set1_files',
     default_args=args,
     start_date=start_date,
     schedule_interval=schedule,
     catchup=False)
 
-  for file in files:
-
-    join_bids = PythonOperator(
-        task_id=f"join_bids_{file}",
-        provide_context=True,
-        python_callable=join_bids_permits,
-        op_kwargs={'pt_file': file},
-        dag=dag_subdag)
-
-  return dag_subdag
-
-def upload_files_subdag():
-  """
-  Generate a DAG to be used as a subdag 
-  that joins BIDs to permit files 
-  """
-
-  dag_subdag = DAG(
-    dag_id='dsd_permits.upload_files',
-    default_args=args,
-    start_date=start_date,
-    schedule_interval=schedule,
-    catchup=False)
+  files = ['set1_active',
+  'set1_closed']
 
   for file in files:
 
@@ -109,7 +132,7 @@ def upload_files_subdag():
       replace=True,
       dag=dag_subdag)
 
-  upload_file = S3FileTransferOperator(
+  upload_pts = S3FileTransferOperator(
     task_id="upload_pts_all",
     source_base_path=conf['prod_data_dir'],
     source_key="dsd_permits_all_pts.csv",
@@ -120,7 +143,48 @@ def upload_files_subdag():
     dag=dag_subdag,
     )
 
-  upload_file = S3FileTransferOperator(
+  upload_pts_polygons = S3FileTransferOperator(
+    task_id='upload_pts_polygons',
+    source_base_path=conf['prod_data_dir'],
+    source_key='dsd_permits_all_pts_polygons.csv',
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_REF_BUCKET }}",
+    dest_s3_key='dsd_permits_all_pts_polygons.csv',
+    replace=True,
+    dag=dag_subdag)
+
+  return dag_subdag
+
+def upload_set2_files_subdag():
+  """
+  Generate a DAG to be used as a subdag 
+  that joins BIDs to permit files 
+  """
+
+  dag_subdag = DAG(
+    dag_id='dsd_permits.upload_set2_files',
+    default_args=args,
+    start_date=start_date,
+    schedule_interval=schedule,
+    catchup=False)
+
+  files = ['set2_active',
+  'set2_closed']
+
+  for file in files:
+
+    upload_file = S3FileTransferOperator(
+      task_id=f"upload_{file}",
+      source_base_path=conf['prod_data_dir'],
+      source_key=f"permits_{file}_datasd.csv",
+      dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
+      dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+      dest_s3_key=f"dsd/permits_{file}_datasd.csv",
+      replace=True,
+      dag=dag_subdag
+      )
+
+  upload_accela = S3FileTransferOperator(
     task_id="upload_accela_all",
     source_base_path=conf['prod_data_dir'],
     source_key="dsd_permits_all_accela.csv",
@@ -130,6 +194,16 @@ def upload_files_subdag():
     replace=True,
     dag=dag_subdag,
     )
+
+  upload_accela_polygons = S3FileTransferOperator(
+    task_id='upload_accela_polygons',
+    source_base_path=conf['prod_data_dir'],
+    source_key='dsd_permits_all_accela_polygons.csv',
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_REF_BUCKET }}",
+    dest_s3_key='dsd_permits_all_accela_polygons.csv',
+    replace=True,
+    dag=dag_subdag)
 
   return dag_subdag
 
@@ -179,5 +253,7 @@ def snowflake_subdag():
       database="open_data",
       schema="public",
       dag=dag_subdag)
+
+    stage_snowflake>>delete_snowflake>>copy_snowflake
 
   return dag_subdag

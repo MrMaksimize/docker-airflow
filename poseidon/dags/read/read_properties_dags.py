@@ -52,7 +52,7 @@ update_json = PythonOperator(
     dag=dag)
 
 #: Update leases portal modified date
-update_leases_md = get_seaboard_update_dag('city-owned-properties-leases.md', dag)
+update_leases_md = get_seaboard_update_dag('city-owned-properties-details.md', dag)
 
 #: Execution Rules
 

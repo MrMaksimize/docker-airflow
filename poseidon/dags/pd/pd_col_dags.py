@@ -7,7 +7,6 @@ from datetime import datetime, timedelta
 from dags.pd.pd_col_jobs import *
 from dags.pd.pd_col_subdags import *
 from trident.util import general
-from trident.util.notifications import afsys_send_email
 
 from trident.util.seaboard_updates import *
 
@@ -34,6 +33,7 @@ get_collisions_data = SubDagOperator(
 process_collisions_data = PythonOperator(
     task_id='process_collisions_data',
     python_callable=process_collisions_data,
+    provide_context=True,
     dag=dag)
 
 #: Upload prod file to S3
@@ -68,4 +68,7 @@ update_json_date = PythonOperator(
 update_pd_cls_md = get_seaboard_update_dag('police-collisions.md', dag)
 
 #: Execution rules:
-get_collisions_data >> process_collisions_data >> [activities_to_S3,details_to_S3] >> [update_pd_cls_md,update_json_date]
+
+get_collisions_data >> process_collisions_data >> [activities_to_S3,details_to_S3]
+activities_to_S3 >> [update_pd_cls_md,update_json_date]
+details_to_S3 >> [update_pd_cls_md,update_json_date]
