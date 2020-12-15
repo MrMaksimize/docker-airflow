@@ -45,7 +45,17 @@ def get_create_drinking_subdag():
       dag=dag_subdag,
     )
 
-  query_oracle >> create_prod
+  upload_prod = S3FileTransferOperator(
+    task_id=f'upload_drinking',
+    source_base_path=conf['prod_data_dir'],
+    source_key=f'analyte_tests_drinking_water_datasd.csv',
+    dest_s3_conn_id=conf['default_s3_conn_id'],
+    dest_s3_bucket=conf['dest_s3_bucket'],
+    dest_s3_key=f'pud/chem/analyte_tests_drinking_water_datasd.csv',
+    replace=True,
+    dag=dag_subdag)
+
+  query_oracle >> create_prod >> upload_prod
 
   return dag_subdag
 
@@ -79,6 +89,16 @@ def get_create_plants_subdag():
       dag=dag_subdag,
     )
 
-  query_oracle >> create_prod
+  upload_prod = S3FileTransferOperator(
+    task_id=f'upload_drinking',
+    source_base_path=conf['prod_data_dir'],
+    source_key=f'analyte_tests_effluent_datasd.csv',
+    dest_s3_conn_id=conf['default_s3_conn_id'],
+    dest_s3_bucket=conf['dest_s3_bucket'],
+    dest_s3_key=f'pud/chem/analyte_tests_effluent_datasd.csv',
+    replace=True,
+    dag=dag_subdag)
+
+  query_oracle >> create_prod >> upload_prod
 
   return dag_subdag

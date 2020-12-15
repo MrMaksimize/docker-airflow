@@ -8,7 +8,6 @@ from trident.util import general
 
 conf = general.config
 
-
 def get_oracle_data(mode='drinking',**context):
     """ Extract data from Oracle database """
 
@@ -43,10 +42,9 @@ def get_oracle_data(mode='drinking',**context):
 def process_data(mode='drinking',**context):
     """ Create production output """
 
-    #fname_yr = context['task_instance'].xcom_pull(dag_id=f"chem_analytes.get_create_{mode}",
-        #task_ids=f'get_{mode}_sql')
+    fname_yr = context['task_instance'].xcom_pull(dag_id=f"chem_analytes.get_create_{mode}",
+        task_ids=f'get_{mode}_sql')
 
-    fname_yr = "2020"
 
     logging.info(f"Reading in sql output for {mode}")
     df = pd.read_csv(f"{conf['temp_data_dir']}/analytes_{mode}_{fname_yr}.csv",
@@ -54,12 +52,18 @@ def process_data(mode='drinking',**context):
 
     logging.info("Isolate qualifiers and units")
     quals_units = df[['SAMPLE_ID','ANALYTE','QUALIFIER','UNITS']]
-    quals_units = quals_units.drop_duplicates()
+    # Inconsistencies in having qualifier filled out cause us to have to
+    # sort before deduplicating
+    # This sort and dedupe will keep any rows that have a qualifier
+    # for that analyte. It does not control for situations
+    # Where an analyte has different qualifiers
+    quals_units = quals_units.sort_values(['SAMPLE_ID','ANALYTE','QUALIFIER','UNITS'],na_position='last')
+    quals_units = quals_units.drop_duplicates(['SAMPLE_ID','ANALYTE'])
 
     logging.info("Isolate sources and descriptions")
     source_desc = df[['SOURCE','DESCRIPTION']]
     source_desc = source_desc.drop_duplicates()
-
+    
     logging.info("Get mean results for multiple tests")
     mean_results = df.groupby(['SAMPLE_DATE',
         'SOURCE',
@@ -72,6 +76,7 @@ def process_data(mode='drinking',**context):
     logging.info(f"This compares to {exp_results} expected results")
 
     mean_results['VALUE'] = mean_results['VALUE'].apply(lambda x: round(x,3))
+    logging.info(f"Mean results has {mean_results.shape[0]} records")
 
     logging.info("Merge units back")
     results_units = pd.merge(mean_results,
@@ -173,7 +178,7 @@ def process_data(mode='drinking',**context):
 
     elif mode == 'plants':
 
-        current = rus_nitrate.loc[rus_nitrate['analyte'].isin(analytes_effluent)]
+        current = rus_nitrate.loc[rus_nitrate['analyte'].isin(analytes_effluent)].copy()
         logging.info(f"Filtering on analytes results in {current.shape[0]} records")
         current['analyte'] = current['analyte'].apply(lambda x: analytes_effluent_map.get(x, x))
         
