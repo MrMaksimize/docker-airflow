@@ -24,6 +24,8 @@ import geobuf
 import gzip
 import shutil
 import re
+from airflow.models import Variable
+from airflow.hooks.base_hook import BaseHook
 import datetime
 
 conf = general.config
@@ -104,7 +106,7 @@ def google_address_geocoder(address_line='',
     else:
         zip_append = ''
 
-    google_token = conf['google_token']
+    google_token = Variable.get("GOOGLE_TOKEN")
 
     if bounds == 'yes':
 
@@ -190,7 +192,7 @@ def geocode_address_google(address_line='',
     address_line = str(address_line)
     locality = str(locality)
     state = str(state)
-    google_token = conf['google_token']
+    google_token = Variable.get("GOOGLE_TOKEN")
     url = 'https://maps.googleapis.com/maps/api/geocode/json?'\
           + 'address={address}&'\
           + 'components=country:US|'\
@@ -230,7 +232,7 @@ def geocode_address_google(address_line='',
 
 def reverse_geocode_google(lat='', lon='', **kwargs):
     """Reverse geocoding function using Google geocoding API."""
-    google_token = conf['google_token']
+    google_token = Variable.get("GOOGLE_TOKEN")
     lat = str(lat)
     lon = str(lon)
     url = 'https://maps.googleapis.com/maps/api/geocode/json?'\
@@ -375,16 +377,18 @@ def extract_sde_data(table, where=''):
     'where': where clause to refine results (e.g County scale datasets).
 
     """
-    sde_server = conf['sde_server']
-    sde_user = conf['sde_user']
-    sde_pw = conf['sde_pw']
+    conn = BaseHook.get_connection(conn_id="SDE")
+    sde_server = conn.host
+    sde_user = conn.login
+    sde_pw = conn.password
+    sde_schema = conn.schema
 
     sde_conn = pymssql.connect(
         server=sde_server,
         port=1433,
         user=sde_user,
         password=sde_pw,
-        database='sdw')
+        database=sde_schema)
 
     if where == '':
         query = "SELECT *, [Shape].STAsText() as geom FROM SDW.CITY.{table}"

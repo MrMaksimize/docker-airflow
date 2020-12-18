@@ -27,7 +27,6 @@ dag = DAG(
 get_accounts = PythonOperator(
     task_id='get_chart_of_accounts',
     python_callable=get_accounts_chart,
-    
     dag=dag)
 
 get_files = SubDagOperator(
@@ -38,7 +37,6 @@ get_files = SubDagOperator(
 get_refs = PythonOperator(
     task_id='get_reference_sets',
     python_callable=get_ref_sets,
-    
     dag=dag)
 
 create_files = SubDagOperator(

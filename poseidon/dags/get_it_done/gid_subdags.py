@@ -106,8 +106,8 @@ def service_name_subdag():
             task_id=f"upload_{machine_service_name}",
             source_base_path=conf['prod_data_dir'],
             source_key=f"get_it_done_{machine_service_name}_requests_datasd_v1.csv",
-            dest_s3_conn_id=conf['default_s3_conn_id'],
-            dest_s3_bucket=conf['dest_s3_bucket'],
+            dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+            dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
             dest_s3_key=f"get_it_done_311/{machine_service_name}_requests_datasd_v1.csv",
             replace=True,
             dag=dag_subdag)
@@ -139,8 +139,8 @@ def upload_files_subdag():
             task_id=f'upload_{year}',
             source_base_path=conf['prod_data_dir'],
             source_key=f'get_it_done_{year}_requests_datasd_v1.csv',
-            dest_s3_conn_id=conf['default_s3_conn_id'],
-            dest_s3_bucket=conf['dest_s3_bucket'],
+            dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+            dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
             dest_s3_key=f'get_it_done_311/get_it_done_{year}_requests_datasd_v1.csv',
             replace=True,
             dag=dag_subdag)
@@ -149,8 +149,8 @@ def upload_files_subdag():
         task_id=f'upload_full',
         source_base_path=conf['prod_data_dir'],
         source_key=f'get_it_done_requests_datasd.csv',
-        dest_s3_conn_id=conf['default_s3_conn_id'],
-        dest_s3_bucket=conf['dest_s3_bucket'],
+        dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+        dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
         dest_s3_key=f'get_it_done_311/get_it_done_requests_datasd.csv',
         replace=True,
         dag=dag_subdag)
@@ -159,8 +159,8 @@ def upload_files_subdag():
         task_id=f'upload_json',
         source_base_path=conf['prod_data_dir'],
         source_key=f'get_it_done_requests_datasd.json',
-        dest_s3_conn_id=conf['default_s3_conn_id'],
-        dest_s3_bucket=conf['dest_s3_bucket'],
+        dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+        dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
         dest_s3_key=f'get_it_done_311/get_it_done_requests_datasd.json',
         replace=True,
         dag=dag_subdag)

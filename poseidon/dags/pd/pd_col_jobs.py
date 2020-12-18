@@ -35,10 +35,12 @@ def get_collisions_data(mode="activities",**context):
 
     logging.info(f"Checking FTP for {fpath}")
 
+    ftp_conn = BaseHook.get_connection(conn_id="FTP_DATASD")
+
     temp_dir = conf['temp_data_dir']
 
     command = f"cd {conf['temp_data_dir']} && " \
-    f"curl --user {conf['ftp_datasd_user']}:{conf['ftp_datasd_pass']} " \
+    f"curl --user {ftp_conn.login}:{ftp_conn.password} " \
     f"-o {fpath} " \
     f"ftp://ftp.datasd.org/uploads/sdpd/collisions/" \
     f"{fpath} -sk"
@@ -57,6 +59,7 @@ def get_collisions_data(mode="activities",**context):
 
 def process_collisions_data(**context):
     """Process collision data."""
+
     activity_date = context['task_instance'].xcom_pull(dag_id="pd_col.get_files",
         task_ids='get_activities')
     details_date = context['task_instance'].xcom_pull(dag_id="pd_col.get_files",

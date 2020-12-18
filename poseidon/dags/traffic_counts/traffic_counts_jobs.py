@@ -4,6 +4,7 @@ import logging
 from subprocess import Popen, PIPE
 from trident.util import general
 from shlex import quote
+from airflow.hooks.base_hook import BaseHook
 
 conf = general.config
 fy = general.get_FY_year()
@@ -13,8 +14,9 @@ def get_traffic_counts(out_fname='traffic_counts_file'):
     """Get traffic counts file from shared drive."""
     
     logging.info(f'Retrieving data for FY {fy}.')
+    conn = BaseHook.get_connection(conn_id="SVC_ACCT")
     command = "smbclient //ad.sannet.gov/dfs " \
-        + f"--user={conf['svc_acct_user']}%{conf['svc_acct_pass']} -W ad -c " \
+        + f"--user={conn.login}%{conn.password} -W ad -c " \
         + "'cd \"TSW-TEO-Shared/TEO/" \
         + "TEO-Transportation-Systems-and-Safety-Programs/" \
         + f"Traffic Data/{fy}/Record Finders\";" \
@@ -58,7 +60,7 @@ def clean_traffic_counts(src_fname='traffic_counts_file',
     general.pos_write_csv(
         worksheet,
         out_csv_file,
-        date_format=conf['date_format_ymd_hms'])
+        date_format="%Y-%m-%d %H:%M:%S")
 
     return "Successfully cleaned traffic counts data."
 
@@ -94,6 +96,6 @@ def build_traffic_counts(src_fname='traffic_counts_raw_clean',
     general.pos_write_csv(
         counts,
         new_file_path,
-        date_format=conf['date_format_ymd_hms'])
+        date_format="%Y-%m-%d %H:%M:%S")
 
     return "Successfully built traffic counts production file."

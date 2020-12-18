@@ -1,11 +1,12 @@
 version: '2.1'
 services:
     webserver:
-        image: andrell81/docker-airflow:1.2.3
+        image: cityofsandiego/airflow:latest
         restart: always
         volumes:
             - ./poseidon:/usr/local/airflow/poseidon
             - ./data:/data
+            - ~/.aws:/usr/local/airflow/.aws
         environment:
             - AIRFLOW_HOME=/usr/local/airflow
             - LOAD_EX=n
@@ -20,6 +21,7 @@ services:
             - AIRFLOW_CONN_S3LOG="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@poseidon-logs-${SD_ENV}"
             - PYTHONPATH="/usr/local/airflow/poseidon"
             - AIRFLOW__EMAIL__EMAIL_BACKEND=trident.util.notifications.afsys_send_email
+            - AIRFLOW__CORE__FERNET_KEY=${FERNET_KEY}
             
         ports:
             - "1187:1187"

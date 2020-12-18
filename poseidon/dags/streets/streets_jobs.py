@@ -15,6 +15,7 @@ from trident.util.geospatial import shp2zip
 from collections import OrderedDict
 from arcgis import GIS
 from arcgis.features import FeatureLayerCollection
+from airflow.hooks.base_hook import BaseHook
 
 conf = general.config
 
@@ -77,7 +78,7 @@ def get_streets_paving_data():
     """Get streets paving data from DB."""
     
     pv_query = general.file_to_string('./sql/pavement_ex.sql', __file__)
-    pv_conn = MsSqlHook(mssql_conn_id='streets_cg_sql')
+    pv_conn = MsSqlHook(mssql_conn_id='STREETS_CG_SQL')
 
     df = pv_conn.get_pandas_df(pv_query)
 
@@ -271,7 +272,7 @@ def create_base_data():
     # Write csv
     logging.info('Writing base data')
     general.pos_write_csv(
-        df, temp_file, date_format=conf['date_format_ymd'])
+        df, temp_file, date_format="%Y-%m-%d")
     
     return "Successfully wrote base file"
 
@@ -400,7 +401,7 @@ def create_mode_data(mode='sdif', **context):
     # Write csv
     logging.info('Writing ' + str(df_final.shape[0]) + ' rows in mode ' + mode)
     general.pos_write_csv(
-        df_final, prod_file[mode], date_format=conf['date_format_ymd'])
+        df_final, prod_file[mode], date_format="%Y-%m-%d")
 
     return "Successfully wrote prod file at " + prod_file[mode]
 
@@ -477,7 +478,7 @@ def create_arcgis_base():
     general.pos_write_csv(
         final_pave_gis,
         temp_gis,
-        date_format=conf['date_format_ymd'])
+        date_format="%Y-%m-%d")
 
     return "Successfully created GIS base for ESRI"
 
@@ -563,7 +564,9 @@ def send_arcgis(mode=['completed'], **context):
 
         shp2zip(layer_name)
 
-        arc_gis = GIS("https://SanDiego.maps.arcgis.com",conf["arc_online_user"],conf["arc_online_pass"])
+        conn = BaseHook.get_connection(conn_id="ARC_ONLINE"),
+
+        arc_gis = GIS(conn.host,conn.login,conn.password)
         # This depends on mode
         lyr_id = esri_layer[mode].get('feature_lyr')
         shape_file = arc_gis.content.get(lyr_id)

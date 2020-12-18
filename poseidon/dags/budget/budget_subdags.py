@@ -85,7 +85,6 @@ def create_files_subdag():
         task_id=f'create_{mode_str}_{path_str}',
         python_callable=create_file,
         op_kwargs={'mode': mode_str, 'path':path_str},
-        
         dag=dag_subdag)
 
   return dag_subdag
@@ -120,10 +119,9 @@ def upload_files_subdag():
           task_id=f'upload_{task}',
           source_base_path=conf['prod_data_dir'],
           source_key=f'{task}_datasd.csv',
-          dest_s3_conn_id=conf['default_s3_conn_id'],
-          dest_s3_bucket=conf['dest_s3_bucket'],
+          dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+          dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
           dest_s3_key=f'budget/{task}_datasd.csv',
-          
           replace=True,
           dag=dag_subdag)
 
@@ -149,10 +147,9 @@ def upload_ref_files_subdag():
       task_id=f'upload_{ref}_ref',
       source_base_path=conf['prod_data_dir'],
       source_key=f'budget_reference_{ref}_datasd_v1.csv',
-      dest_s3_conn_id=conf['default_s3_conn_id'],
-      dest_s3_bucket=conf['dest_s3_bucket'],
+      dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+      dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
       dest_s3_key=f'budget/budget_reference_{ref}_datasd_v1.csv',
-      
       replace=True,
       dag=dag_subdag)
 

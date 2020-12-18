@@ -8,6 +8,7 @@ import glob
 from subprocess import Popen, PIPE
 from trident.util import general
 from shlex import quote
+from airflow.hooks.base_hook import BaseHook
 
 conf = general.config
 
@@ -30,8 +31,10 @@ def get_cfs_data(**context):
 
     logging.info(f"Checking FTP for {filename}")
 
+    ftp_conn = BaseHook.get_connection(conn_id="FTP_DATASD")
+
     command = f"cd {conf['temp_data_dir']} && " \
-    f"curl --user {conf['ftp_datasd_user']}:{conf['ftp_datasd_pass']} " \
+    f"curl --user {ftp_conn.login}:{ftp_conn.password} " \
     f"-o {fpath} " \
     f"ftp://ftp.datasd.org/uploads/sdpd/calls_for_service/" \
     f"{fpath} -sk"
@@ -104,7 +107,7 @@ def process_cfs_data(**context):
     general.pos_write_csv(
         prod_frame,
         prod_file,
-        date_format=conf['date_format_ymd_hms'])
+        date_format="%Y-%m-%d %H:%M:%S")
 
     logging.info('Splitting off CY files')
 
@@ -125,7 +128,7 @@ def process_cfs_data(**context):
             general.pos_write_csv(
                 yr_subset,
                 yr_file,
-                date_format=conf['date_format_ymd_hms'])
+                date_format="%Y-%m-%d %H:%M:%S")
 
     else:
 
@@ -136,6 +139,6 @@ def process_cfs_data(**context):
         general.pos_write_csv(
             yr_subset,
             yr_file,
-            date_format=conf['date_format_ymd_hms'])
+            date_format="%Y-%m-%d %H:%M:%S")
 
     return 'Successfully processed CFS data.'

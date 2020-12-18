@@ -17,7 +17,6 @@ args = general.args
 conf = general.config
 schedule = general.schedule
 start_date = general.start_date['claims_stat']
-email_recips = conf['mail_notify_claims']
 
 
 #: Dag definition
@@ -49,8 +48,8 @@ upload_claimstat_clean = S3FileTransferOperator(
     task_id='upload_claimstat_clean',
     source_base_path=conf['prod_data_dir'],
     source_key='claim_stat_datasd.csv',
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_bucket=conf['dest_s3_bucket'],
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
     dest_s3_key='risk/claims_clean_datasd_v1.csv',
     
     replace=True,
@@ -60,8 +59,8 @@ upload_addresses_to_S3 = S3FileTransferOperator(
     task_id='upload_claims_address_book',
     source_base_path=conf['temp_data_dir'],
     source_key='claims_address_book.csv',
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_bucket=conf['ref_s3_bucket'],
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_REF_BUCKET }}",
     dest_s3_key='claims_address_book.csv',
     
     replace=True,
@@ -79,7 +78,7 @@ deploy_dashboard = BashOperator(
 #: send file update email to interested parties
 send_last_file_updated_email = PoseidonEmailFileUpdatedOperator(
     task_id='send_dashboard_updated',
-    to=email_recips,
+    to="{{ var.value.MAIL_NOTIFY_CLAIMS }}",
     subject='Dashboard Updated',
     file_url=f"https://sandiego-panda.shinyapps.io/claims_{conf['env'].lower()}/",
     message='<p>The ClaimStat tool has been updated.</p>' \

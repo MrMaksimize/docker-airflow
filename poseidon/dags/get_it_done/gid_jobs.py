@@ -10,6 +10,7 @@ from trident.util import general
 from trident.util.sf_client import Salesforce
 from trident.util.geospatial import spatial_join_pt
 import csv
+from airflow.hooks.base_hook import BaseHook
 from trident.util.geospatial import df_to_geodf_pt
 
 conf = general.config
@@ -52,14 +53,16 @@ def sap_case_sub_type(row):
 
 def get_gid_streets():
     """Get requests from sf, creates prod file."""
-    username = conf['dpint_sf_user']
-    password = conf['dpint_sf_pass']
-    security_token = conf['dpint_sf_token']
+    sf_conn = BaseHook.get_connection(conn_id="DPINT_SF")
+
+    username = sf_conn.login
+    password = sf_conn.password
+    security_token = sf_conn.extra_dejson
 
     report_id = "00Ot0000000ogtBEAQ"
 
     # Init salesforce client
-    sf = Salesforce(username, password, security_token)
+    sf = Salesforce(username, password, security_token.token)
 
     # Pull dataframe
     logging.info(f'Pull report {report_id} from SF')
@@ -72,14 +75,17 @@ def get_gid_streets():
 
 def get_gid_other():
     """Get requests from sf, creates prod file."""
-    username = conf['dpint_sf_user']
-    password = conf['dpint_sf_pass']
-    security_token = conf['dpint_sf_token']
+
+    sf_conn = BaseHook.get_connection(conn_id="DPINT_SF")
+
+    username = sf_conn.login
+    password = sf_conn.password
+    security_token = sf_conn.extra_dejson
 
     report_id = "00Ot0000000TUnb"
 
     # Init salesforce client
-    sf = Salesforce(username, password, security_token)
+    sf = Salesforce(username, password, security_token.token)
 
     # Pull dataframe
     logging.info(f'Pull report {report_id} from SF')

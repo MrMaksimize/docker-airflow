@@ -9,6 +9,7 @@ import logging
 from subprocess import Popen, PIPE
 from shlex import quote
 from datetime import datetime as dt
+from airflow.hooks.base_hook import BaseHook
 
 conf = general.config
 
@@ -57,6 +58,8 @@ def get_permits_files(mode='pts',**context):
 
     files = [*filelist]
 
+    conn = BaseHook.get_connection(conn_id="SVC_ACCT")
+
     for file in files:
 
         if mode in file.lower():
@@ -66,7 +69,7 @@ def get_permits_files(mode='pts',**context):
             fpath = f"{filelist[file].get('name')}_{filename_1}.{filelist[file].get('ext')}"
 
             command = "smbclient //ad.sannet.gov/dfs " \
-            + f"--user={conf['svc_acct_user']}%{conf['svc_acct_pass']} -W ad -c " \
+            + f"--user={conn.login}%{conn.password} -W ad -c " \
             + "'prompt OFF;"\
             + " cd \"DSD-Shared/All_DSD/Panda/\";" \
             + " lcd \"/data/temp/\";" \
@@ -86,7 +89,7 @@ def get_permits_files(mode='pts',**context):
                 fpath = f"{filelist[file].get('name')}_{filename_2}.{filelist[file].get('ext')}"
 
                 command = "smbclient //ad.sannet.gov/dfs " \
-                + f"--user={conf['svc_acct_user']}%{conf['svc_acct_pass']} -W ad -c " \
+                + f"--user={conn.login}%{conn.password} -W ad -c " \
                 + "'prompt OFF;"\
                 + " cd \"DSD-Shared/All_DSD/Panda/\";" \
                 + " lcd \"/data/temp/\";" \
@@ -487,8 +490,8 @@ def create_subsets(mode='set1',**context):
     'job_bc_code':str
     }
 
+
     logging.info(f"Reading in {mode}")
-    logging.info("Writing compressed csv")
 
     if mode == 'set1':
         filepath = "dsd_permits_all_pts.csv"

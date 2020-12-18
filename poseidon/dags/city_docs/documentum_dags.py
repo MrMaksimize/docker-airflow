@@ -35,7 +35,7 @@ get_doc_tables = PythonOperator(
     python_callable=get_documentum,
     op_kwargs={'mode': schedule_mode,
     'test':False,
-    'conn_id':'docm_sql'},
+    'conn_id':'DOCM_SQL'},
     dag=dag)
 
 div_doc_table = PythonOperator(
@@ -48,8 +48,8 @@ upload_reso_ord = S3FileTransferOperator(
     task_id='upload_documentum_reso_ordinance_latest',
     source_base_path=conf['prod_data_dir'],
     source_key='documentum_scs_council_reso_ordinance_v_2016_current.csv',
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_bucket=conf['dest_s3_bucket'],
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
     dest_s3_key='city_docs/documentum_scs_council_reso_ordinance_v_2016_current.csv',
     replace=True,
     dag=dag)

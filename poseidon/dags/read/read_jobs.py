@@ -7,6 +7,7 @@ import subprocess
 from subprocess import Popen, PIPE
 from shlex import quote
 import logging
+from airflow.hooks.base_hook import BaseHook
 
 conf = general.config
 
@@ -35,11 +36,13 @@ def get_file(mode=''):
     mode_files = datasets.get(mode)
     out_file = f"{conf['temp_data_dir']}/{mode_files.get('prod')}.csv"
     fpath = f"ToSanDiego/{mode_files['ftp']}"
+
+    ftp_conn = BaseHook.get_connection(conn_id="FTP_READ")
     
     command = f"curl -o {out_file} " \
             + "sftp://sftp.wizardsoftware.net/"\
             + f"{fpath} " \
-            + f"-u {conf['ftp_read_user']}:{conf['ftp_read_pass']} -k"
+            + f"-u {ftp_conn.login}:{ftp_conn.password} -k"
 
     command = command.format(quote(command))
 
@@ -78,7 +81,7 @@ def process_billing():
     general.pos_write_csv(
         df,
         f"{conf['prod_data_dir']}/city_property_billing_datasd_v1.csv",
-        date_format=conf['date_format_ymd_hms'])
+        date_format="%Y-%m-%d %H:%M:%S")
 
     return 'Successfully processed billing data.'
 
@@ -113,7 +116,7 @@ def process_leases():
     general.pos_write_csv(
         df,
         f"{conf['prod_data_dir']}/city_property_leases_datasd_v1.csv",
-        date_format=conf['date_format_ymd_hms'])
+        date_format="%Y-%m-%d %H:%M:%S")
 
     return 'Successfully processed leases data.'
 
@@ -133,7 +136,7 @@ def process_parcels():
     general.pos_write_csv(
         df,
         f"{conf['prod_data_dir']}/city_property_parcels_datasd_v1.csv",
-        date_format=conf['date_format_ymd_hms'])
+        date_format="%Y-%m-%d %H:%M:%S")
 
     return 'Successfully processed parcels data.'
 
@@ -173,6 +176,6 @@ def process_properties_details():
     general.pos_write_csv(
         df,
         f"{conf['prod_data_dir']}/city_property_details_datasd_v1.csv",
-        date_format=conf['date_format_ymd_hms'])
+        date_format="%Y-%m-%d %H:%M:%S")
 
     return 'Successfully processed properties details data.'

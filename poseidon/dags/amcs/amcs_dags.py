@@ -23,8 +23,8 @@ dag = DAG(
 get_sites = PythonOperator(
     task_id='get_sites',
     python_callable=get_sites,
-    email=['data@sandiego.gov'],
-    email_on_failure=True,
+    #email=['data@sandiego.gov'],
+    #email_on_failure=True,
     dag=dag
 )
 
@@ -32,8 +32,8 @@ get_sites = PythonOperator(
 group_site_containers = PythonOperator(
     task_id='group_site_containers',
     python_callable=group_site_containers,
-    email=['data@sandiego.gov'],
-    email_on_failure=True,
+    #email=['data@sandiego.gov'],
+    #email_on_failure=True,
     dag=dag
 )
 
@@ -42,8 +42,8 @@ group_site_containers = PythonOperator(
 add_all_columns = PythonOperator(
     task_id='add_all_columns',
     python_callable=add_all_columns,
-    email=['data@sandiego.gov'],
-    email_on_failure=True,
+    #email=['data@sandiego.gov'],
+    #email_on_failure=True,
     dag=dag
 )
 
@@ -51,8 +51,8 @@ add_all_columns = PythonOperator(
 get_updates_only = PythonOperator(
     task_id='get_updates_only',
     python_callable=get_updates_only,
-    email=['data@sandiego.gov'],
-    email_on_failure=True,
+    #email=['data@sandiego.gov'],
+    #email_on_failure=True,
     dag=dag
 )
 
@@ -61,8 +61,8 @@ get_updates_only = PythonOperator(
 write_to_shared_drive = PythonOperator(
     task_id='write_to_shared_drive',
     python_callable=write_to_shared_drive,
-    email=['data@sandiego.gov'],
-    email_on_failure=True,
+    #email=['data@sandiego.gov'],
+    #email_on_failure=True,
     dag=dag
 )
 

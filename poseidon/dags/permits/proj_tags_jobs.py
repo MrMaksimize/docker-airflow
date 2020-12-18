@@ -8,6 +8,7 @@ from trident.util.geospatial import spatial_join_pt
 import logging
 from subprocess import Popen, PIPE
 from shlex import quote
+from airflow.hooks.base_hook import BaseHook
 
 conf = general.config
 
@@ -94,8 +95,10 @@ def build_tags(**context):
     'PROJ_ID':'str',
     'PROJ_TAG_ID':'str'}
 
-    filename = context['task_instance'].xcom_pull(dag_id="dsd_proj_tags",
-        task_ids='get_tags_files')
+    #filename = context['task_instance'].xcom_pull(dag_id="dsd_proj_tags",
+        #task_ids='get_tags_files')
+
+    filename = "20200726"
 
     logging.info("Reading in project tag file")
     df = pd.read_csv(f"{conf['temp_data_dir']}/P2K_261-Panda_Extract_DSD_Projects_Tags_{filename}.txt",

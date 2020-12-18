@@ -20,6 +20,7 @@ from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
 from trident.util import general
 import boto3
+from airflow.models import Variable
 
 conf = general.config
 
@@ -98,10 +99,11 @@ class S3FileTransferOperator(BaseOperator):
         return url
 
     def execute_migration(self):
-        aws_key = conf['migration_aws_key']
-        aws_secret_key = conf['migration_aws_secret']
-        aws_region = conf['migration_aws_region']
-        migration_s3_bucket = conf['migration_dest_s3_bucket']
+
+        aws_key = Variable.get('MIGRATION_ACCESS_KEY'),
+        aws_secret_key = Variable.get('MIGRATION_ACCESS_SECRET'),
+        aws_region = Variable.get('MIGRATION_REGION'),
+        migration_s3_bucket = Variable.get('MIGRATION_BUCKET', 'datasd.dev')
 
         local_filepath = f'{self.source_base_path}/{self.source_key}'
         logging.info(f'{local_filepath} >>>>> {migration_s3_bucket}/{self.dest_s3_key}')

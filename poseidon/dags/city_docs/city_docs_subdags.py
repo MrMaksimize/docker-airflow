@@ -61,8 +61,8 @@ def upload_files_subdag(files,parent_dag,test):
       task_id=f"upload_{filename}",
       source_base_path=conf['prod_data_dir'],
       source_key=f"documentum_{filename}.csv",
-      dest_s3_bucket=conf['dest_s3_bucket'],
-      dest_s3_conn_id=conf['default_s3_conn_id'],
+      dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
+      dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
       dest_s3_key=f"city_docs/documentum_{filename}.csv",
       replace=True,
       
@@ -95,8 +95,8 @@ def upload_div_files_subdag(files,parent_dag,test):
       task_id=f"upload_{filename}",
       source_base_path=conf['prod_data_dir'],
       source_key=f"{filename}.csv",
-      dest_s3_bucket=conf['dest_s3_bucket'],
-      dest_s3_conn_id=conf['default_s3_conn_id'],
+      dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
+      dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
       dest_s3_key=f"city_docs/{filename}.csv",
       replace=True,
       
