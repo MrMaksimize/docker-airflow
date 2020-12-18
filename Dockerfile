@@ -12,9 +12,10 @@ ENV DEBIAN_FRONTEND noninteractive
 ENV TERM linux
 
 # Airflow
-ARG AIRFLOW_VERSION=1.10.11
+ARG AIRFLOW_VERSION=1.10.12
 ARG AIRFLOW_HOME=/usr/local/airflow
 ARG GDAL_VERSION=2.1.0
+ARG CONSTRAINT_URL="https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-3.7.txt"
 
 ENV AIRFLOW_GPL_UNIDECODE yes
 
@@ -45,14 +46,14 @@ RUN apt-get update -yqq \
         curl \
         freetds-bin \
         freetds-dev \
-	gdal-bin \
+        gdal-bin \
         git \
         gnupg2 \
         less \
         locales \
         libaio1 \
         libcurl4-gnutls-dev \
-	libgdal20 \
+        libgdal20 \
         libgdal-dev \
         libgeos-dev \
         libhdf4-alt-dev \
@@ -91,23 +92,24 @@ RUN curl -sL https://deb.nodesource.com/setup_10.x | bash - \
     && npm install -g geobuf
 
 
-RUN pip install -U pip setuptools wheel \
+RUN pip install -U pip==20.2.4 setuptools wheel \
     && pip install apache-airflow[crypto,celery,postgres,s3,jdbc,mysql,mssql,oracle,ssh,password,rabbitmq,samba]==${AIRFLOW_VERSION} \
-    "arcgis==1.8.1" \
-    "boto3==1.12.26" \
-    "fiona==1.8.13.post1" \
+    arcgis \
+    boto3 \
+    fiona \
     "gdal==2.1.0" \
     git+https://github.com/jguthmiller/pygeobuf.git@geobuf-v3 \
-    "geojson==2.5.0" \
-    "geopandas==0.8.0" \
-    "google-api-python-client==1.9.3" \
-    "oauth2client==4.1.3" \
-    "pandas==1.0.5" \
-    "PyGithub==1.51" \
-    "redis==3.5.3" \
-    "requests>=2.20" \
-    "shapely==1.7.0" \
-    "snowflake-connector-python==2.2.8" 
+    geojson \
+    geopandas \
+    google-api-python-client \
+    oauth2client \
+    pandas \
+    PyGithub \
+    redis \
+    requests \
+    shapely \
+    snowflake-connector-python \
+    --constraint "${CONSTRAINT_URL}"
 
 RUN apt-get autoremove -yqq --purge \
     && apt-get clean \
