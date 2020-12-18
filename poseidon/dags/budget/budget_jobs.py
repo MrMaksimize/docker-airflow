@@ -17,7 +17,7 @@ fy_pattern = re.compile(r'([0-9][0-9])')
 def get_accounts_chart():
     """Get chart of accounts from shared drive."""
     logging.info('Retrieving chart of accounts file.')
-    conn = BaseHook.get_connection(conn_id="ALB_SANNET")
+    conn = BaseHook.get_connection(conn_id="SVC_ACCT")
     command = "smbclient //ad.sannet.gov/dfs " \
         + f"--user={conn.login}%{conn.password} -W ad -c " \
         + "'prompt OFF;"\
@@ -41,7 +41,7 @@ def get_accounts_chart():
 def get_budget_files(mode='', path=''):
     """Get latest actuals from shared drive."""
     logging.info(f'Retrieving {mode} for {path}')
-    conn = BaseHook.get_connection(conn_id="ALB_SANNET")
+    conn = BaseHook.get_connection(conn_id="SVC_ACCT")
     command = "smbclient //ad.sannet.gov/dfs " \
         + f"--user={conn.login}%{conn.password} -W ad -c " \
         + "'prompt OFF;"\
