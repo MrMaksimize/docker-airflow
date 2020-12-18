@@ -44,6 +44,7 @@ services:
         volumes:
             - ./poseidon:/usr/local/airflow/poseidon
             - ./data:/data
+            - ~/.aws:/usr/local/airflow/.aws
         ports:
             - "1187:1187"
         command: webserver
@@ -87,6 +88,7 @@ services:
         volumes:
             - ./poseidon:/usr/local/airflow/poseidon
             - ./data:/data
+            - ~/.aws:/usr/local/airflow/.aws
         environment:
             - AIRFLOW_HOME=/usr/local/airflow
             - LOAD_EX=n
@@ -115,6 +117,7 @@ services:
         volumes:
             - ./poseidon:/usr/local/airflow/poseidon
             - ./data:/data
+            - ~/.aws:/usr/local/airflow/.aws
         environment:
             - AIRFLOW_HOME=/usr/local/airflow
             - LOAD_EX=n
