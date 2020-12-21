@@ -40,10 +40,12 @@ services:
             - AIRFLOW_CONN_S3DATA="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@S3"
             - AIRFLOW_CONN_S3LOG="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@poseidon-logs-${SD_ENV}"
             - AIRFLOW__EMAIL__EMAIL_BACKEND=trident.util.notifications.afsys_send_email
+            - AIRFLOW__CORE__FERNET_KEY=${FERNET_KEY}
 
         volumes:
             - ./poseidon:/usr/local/airflow/poseidon
             - ./data:/data
+            - ~/.aws:/usr/local/airflow/.aws
         ports:
             - "1187:1187"
         command: webserver
@@ -75,6 +77,7 @@ services:
             - AIRFLOW_CONN_S3DATA="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@S3"
             - AIRFLOW_CONN_S3LOG="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@poseidon-logs-${SD_ENV}"
             - AIRFLOW__EMAIL__EMAIL_BACKEND=trident.util.notifications.afsys_send_email
+            - AIRFLOW__CORE__FERNET_KEY=${FERNET_KEY}
         ports:
             - "5555:5555"
         command: flower
@@ -87,6 +90,7 @@ services:
         volumes:
             - ./poseidon:/usr/local/airflow/poseidon
             - ./data:/data
+            - ~/.aws:/usr/local/airflow/.aws
         environment:
             - AIRFLOW_HOME=/usr/local/airflow
             - LOAD_EX=n
@@ -104,6 +108,7 @@ services:
             - AIRFLOW_CONN_S3DATA="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@S3"
             - AIRFLOW_CONN_S3LOG="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@poseidon-logs-${SD_ENV}"
             - AIRFLOW__EMAIL__EMAIL_BACKEND=trident.util.notifications.afsys_send_email
+            - AIRFLOW__CORE__FERNET_KEY=${FERNET_KEY}
 
         command: scheduler
 
@@ -115,6 +120,7 @@ services:
         volumes:
             - ./poseidon:/usr/local/airflow/poseidon
             - ./data:/data
+            - ~/.aws:/usr/local/airflow/.aws
         environment:
             - AIRFLOW_HOME=/usr/local/airflow
             - LOAD_EX=n
@@ -132,4 +138,5 @@ services:
             - AIRFLOW_CONN_S3DATA="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@S3"
             - AIRFLOW_CONN_S3LOG="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@poseidon-logs-${SD_ENV}"
             - AIRFLOW__EMAIL__EMAIL_BACKEND=trident.util.notifications.afsys_send_email
+            - AIRFLOW__CORE__FERNET_KEY=${FERNET_KEY}
         command: worker

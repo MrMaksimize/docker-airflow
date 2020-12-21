@@ -52,6 +52,7 @@ class PoseidonEmailOperator(BaseOperator):
     :type bcc: string
     """
     ui_color = '#ffefeb'
+    template_fields = ('file_url')
 
     @apply_defaults
     def __init__(

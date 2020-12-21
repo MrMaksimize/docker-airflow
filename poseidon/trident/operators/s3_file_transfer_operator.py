@@ -43,6 +43,9 @@ class S3FileTransferOperator(BaseOperator):
     """
 
     ui_color = '#f9c915'
+    template_fields = ('source_base_path',
+        'dest_s3_conn_id',
+        'dest_s3_bucket')
 
     @apply_defaults
     def __init__(self,

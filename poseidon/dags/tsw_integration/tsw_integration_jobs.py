@@ -105,9 +105,10 @@ def get_vpm_violations_wget():
 
 def get_sf_violations():
     """Get violations from sf, creates temp file."""
-    username = conf['dpint_sf_user']
-    password = conf['dpint_sf_pass']
-    security_token = conf['dpint_sf_token']
+    sf_conn = BaseHook.get_connection(conn_id="DPINT_SF")
+    username = sf_conn.login
+    password = sf_conn.password
+    security_token = sf_conn.extra_dejson
 
     report_id = "00Ot0000000TPXC"
 
