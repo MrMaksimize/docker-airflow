@@ -7,7 +7,6 @@ from airflow.operators.python_operator import ShortCircuitOperator
 from trident.operators.poseidon_email_operator import PoseidonEmailFileUpdatedOperator
 from trident.operators.poseidon_sonar_operator import PoseidonSonarCreator
 from airflow.models import DAG
-from airflow.operators.bash_operator import BashOperator
 
 from trident.util import general
 from trident.util.notifications import afsys_send_email
@@ -30,11 +29,6 @@ dag = DAG(dag_id='streets',
     schedule_interval=schedule,
     catchup=False
     )
-
-test_var = BashOperator(
-    task_id='test_var',
-    bash_command="echo {{ var.value.PROD_DATA_DIR }}",
-    dag=dag)
 
 #: Get streets data from DB
 get_streets_data = PythonOperator(
