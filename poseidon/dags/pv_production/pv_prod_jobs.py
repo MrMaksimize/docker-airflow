@@ -145,7 +145,7 @@ def build_production_files(prod_file, temp_file, **context):
 def get_lucid_token(**context):
 	conn = BaseHook.get_connection(conn_id="LUCID")
 	url = "https://api.buildingos.com/o/token/"
-	payload = f'client_id={conn.user}&client_secret={conn.password}&grant_type=client_credentials'
+	payload = f'client_id={conn.login}&client_secret={conn.password}&grant_type=client_credentials'
 	headers = {'Content-Type': 'application/x-www-form-urlencoded'}
 	response = requests.request("POST", url, headers=headers, data = payload)
 	token_data = json.loads(response.text)
