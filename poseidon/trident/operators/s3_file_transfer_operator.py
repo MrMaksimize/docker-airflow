@@ -43,6 +43,9 @@ class S3FileTransferOperator(BaseOperator):
     """
 
     ui_color = '#f9c915'
+    template_fields = ('source_base_path',
+        'dest_s3_conn_id',
+        'dest_s3_bucket')
 
     @apply_defaults
     def __init__(self,
@@ -69,9 +72,12 @@ class S3FileTransferOperator(BaseOperator):
         self.dest_s3_key = dest_s3_key
 
     def execute(self, context):
+
+        logging.info(self.source_base_path)
         
         ti = context['ti']
         dest_s3 = S3Hook(aws_conn_id=self.dest_s3_conn_id)
+        dest_bucket = self.dest_s3_bucket
         local_fpath = "%s/%s" % (self.source_base_path, self.source_key)
         logging.info("%s >>>>> %s/%s" %
                      (local_fpath, self.dest_s3_bucket, self.dest_s3_key))
