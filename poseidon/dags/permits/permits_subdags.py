@@ -230,7 +230,7 @@ def snowflake_subdag():
     stage_snowflake = SnowflakeOperator(
       task_id=f"stage_snowflake_{file}",
       sql=snowflake_stage,
-      snowflake_conn_id="snowflake",
+      snowflake_conn_id="SNOWFLAKE",
       warehouse="etl_load",
       database="open_data",
       schema="public",
@@ -239,7 +239,7 @@ def snowflake_subdag():
     delete_snowflake = SnowflakeOperator(
       task_id=f"del_snowflake_{file}",
       sql=snowflake_del,
-      snowflake_conn_id="snowflake",
+      snowflake_conn_id="SNOWFLAKE",
       warehouse="etl_load",
       database="open_data",
       schema="public",
@@ -248,7 +248,7 @@ def snowflake_subdag():
     copy_snowflake = SnowflakeOperator(
       task_id=f"copy_snowflake_{file}",
       sql=snowflake_copy,
-      snowflake_conn_id="snowflake",
+      snowflake_conn_id="SNOWFLAKE",
       warehouse="etl_load",
       database="open_data",
       schema="public",

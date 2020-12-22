@@ -520,12 +520,14 @@ def geobuf2gzip(layername):
             shutil.copyfileobj(f_in, f_out)
     os.rename('{layername}.pbf.gz'.format(layername=layername),
               '{layername}.pbf'.format(layername=layername))
-    os.chdir(conf['home_dir'])
+    os.chdir(os.environ.get("AIRFLOW_HOME", ""))
     return 'Sucessfully gzipped geobuf file.'
 
 
 def shp2zip(layername):
     """Transfer shapefile component files to .zip archive."""
+    home_dir = os.environ.get("AIRFLOW_HOME", "")
+    logging.info(home_dir)
     os.chdir(conf['prod_data_dir'])
     list_files = [
         '{layername}.shp'.format(layername=layername),
@@ -540,7 +542,7 @@ def shp2zip(layername):
             zipfolder.write(file)
             os.remove(file)
 
-    os.chdir(conf['home_dir'])
+    os.chdir(home_dir)
 
     return 'Successfully zipped shapefile.'
 
