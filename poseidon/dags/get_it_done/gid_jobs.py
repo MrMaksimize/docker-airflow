@@ -62,7 +62,7 @@ def get_gid_streets():
     report_id = "00Ot0000000ogtBEAQ"
 
     # Init salesforce client
-    sf = Salesforce(username, password, security_token.token)
+    sf = Salesforce(username, password, security_token.get('token'))
 
     # Pull dataframe
     logging.info(f'Pull report {report_id} from SF')
@@ -85,7 +85,7 @@ def get_gid_other():
     report_id = "00Ot0000000TUnb"
 
     # Init salesforce client
-    sf = Salesforce(username, password, security_token.token)
+    sf = Salesforce(username, password, security_token.get('token'))
 
     # Pull dataframe
     logging.info(f'Pull report {report_id} from SF')
