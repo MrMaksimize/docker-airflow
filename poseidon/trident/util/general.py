@@ -199,7 +199,7 @@ start_date = {
 args = {
     'owner': 'airflow',
     'depends_on_past': False,
-    'email': Variable.get("MAIL_DEFAULT_RECEIVERS"),
+    'email': "data@sandiego.gov",
     'email_on_failure': True,
     'email_on_retry': False,
     'retries': 2,

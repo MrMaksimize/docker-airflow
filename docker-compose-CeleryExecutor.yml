@@ -41,6 +41,7 @@ services:
             - AIRFLOW_CONN_S3LOG="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@poseidon-logs-${SD_ENV}"
             - AIRFLOW__EMAIL__EMAIL_BACKEND=trident.util.notifications.afsys_send_email
             - AIRFLOW__CORE__FERNET_KEY=${FERNET_KEY}
+            - 'AIRFLOW__SECRETS__BACKEND_KWARGS={"connections_prefix": "/airflow/connections/${SD_ENV}", "variables_prefix":"/airflow/variables/${SD_ENV}", "profile_name": "airflowssm"}'
 
         volumes:
             - ./poseidon:/usr/local/airflow/poseidon
@@ -78,6 +79,8 @@ services:
             - AIRFLOW_CONN_S3LOG="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@poseidon-logs-${SD_ENV}"
             - AIRFLOW__EMAIL__EMAIL_BACKEND=trident.util.notifications.afsys_send_email
             - AIRFLOW__CORE__FERNET_KEY=${FERNET_KEY}
+            - 'AIRFLOW__SECRETS__BACKEND_KWARGS={"connections_prefix": "/airflow/connections/${SD_ENV}", "variables_prefix":"/airflow/variables/${SD_ENV}", "profile_name": "airflowssm"}'
+
         ports:
             - "5555:5555"
         command: flower
@@ -109,6 +112,7 @@ services:
             - AIRFLOW_CONN_S3LOG="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@poseidon-logs-${SD_ENV}"
             - AIRFLOW__EMAIL__EMAIL_BACKEND=trident.util.notifications.afsys_send_email
             - AIRFLOW__CORE__FERNET_KEY=${FERNET_KEY}
+            - 'AIRFLOW__SECRETS__BACKEND_KWARGS={"connections_prefix": "/airflow/connections/${SD_ENV}", "variables_prefix":"/airflow/variables/${SD_ENV}", "profile_name": "airflowssm"}'
 
         command: scheduler
 
@@ -139,4 +143,6 @@ services:
             - AIRFLOW_CONN_S3LOG="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@poseidon-logs-${SD_ENV}"
             - AIRFLOW__EMAIL__EMAIL_BACKEND=trident.util.notifications.afsys_send_email
             - AIRFLOW__CORE__FERNET_KEY=${FERNET_KEY}
+            - 'AIRFLOW__SECRETS__BACKEND_KWARGS={"connections_prefix": "/airflow/connections/${SD_ENV}", "variables_prefix":"/airflow/variables/${SD_ENV}", "profile_name": "airflowssm"}'
+
         command: worker
