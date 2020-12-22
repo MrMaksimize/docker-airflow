@@ -28,7 +28,7 @@ temp_path = conf['temp_data_dir']
 def get_delays():
     """ Extract delays data from Fleet Focus """
 
-    credentials = BaseHook.get_connection(conn_id="oracle_fleet")
+    credentials = BaseHook.get_connection(conn_id="FLEET_FOCUS")
     conn_config = {
             'user': credentials.login,
             'password': credentials.password
@@ -63,7 +63,7 @@ def get_delays():
 def get_jobs():
     """ Extract work order data from Fleet Focus """
 
-    credentials = BaseHook.get_connection(conn_id="oracle_fleet")
+    credentials = BaseHook.get_connection(conn_id="FLEET_FOCUS")
     conn_config = {
             'user': credentials.login,
             'password': credentials.password
@@ -98,7 +98,7 @@ def get_jobs():
 def get_vehicles():
     """ Extract vehicles data from Fleet Focus """
 
-    credentials = BaseHook.get_connection(conn_id="oracle_fleet")
+    credentials = BaseHook.get_connection(conn_id="FLEET_FOCUS")
     conn_config = {
             'user': credentials.login,
             'password': credentials.password
