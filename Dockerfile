@@ -108,6 +108,7 @@ RUN pip install -U pip setuptools wheel \
     "PyGithub==1.51" \
     "redis==3.5.3" \
     "requests>=2.20" \
+    rtree \
     "shapely==1.7.0" \
     "snowflake-connector-python==2.2.8"
 
