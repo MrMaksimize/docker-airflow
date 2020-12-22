@@ -357,7 +357,7 @@ def build_accela(**context):
     general.pos_write_csv(
     deduped[prod_cols],
     f"{conf['temp_data_dir']}/dsd_permits_all_accela.csv",
-    date_format=conf['date_format_ymd'])
+    date_format="%Y-%m-%d")
 
     return 'Created new Accela files'
 
@@ -532,12 +532,12 @@ def create_subsets(mode='set1',**context):
     general.pos_write_csv(
         closed,
         f"{conf['prod_data_dir']}/permits_{mode}_closed_datasd.csv",
-        date_format=conf['date_format_ymd'])
+        date_format="%Y-%m-%d")
 
     general.pos_write_csv(
         active,
         f"{conf['prod_data_dir']}/permits_{mode}_active_datasd.csv",
-        date_format=conf['date_format_ymd'])
+        date_format="%Y-%m-%d")
 
     return f"Successfully created {mode} subsets"
 
