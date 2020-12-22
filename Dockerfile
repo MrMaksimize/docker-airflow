@@ -92,7 +92,6 @@ RUN curl -sL https://deb.nodesource.com/setup_10.x | bash - \
     && npm install -g mapshaper \
     && npm install -g geobuf
 
-
 RUN pip install -U pip setuptools wheel \
     && pip install apache-airflow[crypto,celery,postgres,s3,jdbc,mysql,mssql,oracle,ssh,password,rabbitmq,samba]==${AIRFLOW_VERSION} \
     "arcgis==1.8.1" \
@@ -110,17 +109,8 @@ RUN pip install -U pip setuptools wheel \
     "requests>=2.20" \
     rtree \
     "shapely==1.7.0" \
-    "snowflake-connector-python==2.2.8"
-
-RUN apt-get autoremove -yqq --purge \
-    && apt-get clean \
-    && rm -rf \
-        /var/lib/apt/lists/* \
-        /tmp/* \
-        /var/tmp/* \
-        /usr/share/man \
-        /usr/share/doc \
-        /usr/share/doc-base
+    "snowflake-connector-python==2.2.8" \
+    xlrd
 
 # R Installs
 
@@ -147,6 +137,16 @@ RUN Rscript -e "install.packages(c('data.table', \
 ))"
 
 RUN chown -R airflow /usr/local/lib/R/site-library* /usr/local/lib/R/site-library/*
+
+RUN apt-get autoremove -yqq --purge \
+    && apt-get clean \
+    && rm -rf \
+        /var/lib/apt/lists/* \
+        /tmp/* \
+        /var/tmp/* \
+        /usr/share/man \
+        /usr/share/doc \
+        /usr/share/doc-base
 
 COPY script/entrypoint.sh ${AIRFLOW_HOME}/entrypoint.sh
 COPY config/airflow.cfg ${AIRFLOW_HOME}/airflow.cfg
