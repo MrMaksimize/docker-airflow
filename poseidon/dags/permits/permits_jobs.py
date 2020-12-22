@@ -228,7 +228,7 @@ def build_pts(**context):
     general.pos_write_csv(
     deduped[prod_cols],
     f"{conf['temp_data_dir']}/dsd_permits_all_pts.csv",
-    date_format=conf['date_format_ymd_hms'])
+    date_format="%Y-%m-%d %H:%M:%S")
 
     return 'Created new PTS file'
 
@@ -623,7 +623,7 @@ def create_tsw_subset():
     general.pos_write_csv(
         df,
         f"{conf['prod_data_dir']}/dsd_permits_row.csv",
-        date_format=conf['date_format_ymd_hms']
+        date_format="%Y-%m-%d %H:%M:%S"
         )
 
     return 'Successfully created TSW subset'
