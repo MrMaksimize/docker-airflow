@@ -527,7 +527,6 @@ def geobuf2gzip(layername):
 def shp2zip(layername):
     """Transfer shapefile component files to .zip archive."""
     home_dir = os.environ.get("AIRFLOW_HOME", "")
-    logging.info(home_dir)
     os.chdir(conf['prod_data_dir'])
     list_files = [
         '{layername}.shp'.format(layername=layername),

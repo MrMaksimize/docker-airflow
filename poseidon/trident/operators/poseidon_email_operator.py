@@ -52,7 +52,6 @@ class PoseidonEmailOperator(BaseOperator):
     :type bcc: string
     """
     ui_color = '#ffefeb'
-    template_fields = ('file_url')
 
     @apply_defaults
     def __init__(
@@ -137,6 +136,8 @@ class PoseidonEmailFileUpdatedOperator(PoseidonEmailOperator):
     """
     Send last updated file
     """
+
+    template_fields = ('file_url')
 
     @apply_defaults
     def __init__(self, file_url, message = 'Hey there! Poseidon has updated your dataset!', *args, **kwargs):

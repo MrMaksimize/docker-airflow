@@ -97,10 +97,8 @@ def build_tags(**context):
     'PROJ_ID':'str',
     'PROJ_TAG_ID':'str'}
 
-    #filename = context['task_instance'].xcom_pull(dag_id="dsd_proj_tags",
-        #task_ids='get_tags_files')
-
-    filename = "20200726"
+    filename = context['task_instance'].xcom_pull(dag_id="dsd_proj_tags",
+        task_ids='get_tags_files')
 
     logging.info("Reading in project tag file")
     df = pd.read_csv(f"{conf['temp_data_dir']}/P2K_261-Panda_Extract_DSD_Projects_Tags_{filename}.txt",
@@ -130,5 +128,3 @@ def build_tags(**context):
         'dsd_proj_tags')
 
     return 'Created new project tags file'
-
-
