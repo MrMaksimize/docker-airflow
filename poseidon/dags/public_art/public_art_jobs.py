@@ -143,7 +143,7 @@ def update_geospatial():
 
     conn = BaseHook.get_connection(conn_id="ARC_ONLINE")
 
-    arc_gis = GIS(conn.host,conn.login,conn.password)
+    arc_gis = GIS(f"https://{conn.host}",conn.login,conn.password)
     lyr_id = '62be6801a23c4170851772d6a8184020'
     feature_layer = arc_gis.content.get(lyr_id)
     flayer_collection = FeatureLayerCollection.fromitem(feature_layer)

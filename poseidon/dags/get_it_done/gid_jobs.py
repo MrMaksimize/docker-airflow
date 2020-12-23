@@ -261,6 +261,8 @@ def update_close_dates():
         logging.info(f'Processing {file}')
         path = f'https://datasd-reference.s3.amazonaws.com/{file}'
         df_date = pd.read_excel(path, engine='openpyxl')
+
+        logging.info(df_date.head())
         
         df_date.columns = [x.lower().replace(' ','_').replace('/','_').replace('"','') 
         for x in df_date.columns]

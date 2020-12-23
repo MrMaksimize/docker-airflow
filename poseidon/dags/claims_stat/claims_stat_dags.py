@@ -31,7 +31,6 @@ dag = DAG(dag_id='claims_stat',
 get_claims_data = PythonOperator(
     task_id='get_claims_data',
     python_callable=get_claims_data,
-    
     dag=dag)
 
 
@@ -39,7 +38,6 @@ get_claims_data = PythonOperator(
 clean_geocode = PythonOperator(
     task_id='clean_geocode_claims',
     python_callable=clean_geocode_claims,
-    
     dag=dag)
 
 
@@ -51,7 +49,6 @@ upload_claimstat_clean = S3FileTransferOperator(
     dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
     dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
     dest_s3_key='risk/claims_clean_datasd_v1.csv',
-    
     replace=True,
     dag=dag)
 
@@ -62,7 +59,6 @@ upload_addresses_to_S3 = S3FileTransferOperator(
     dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
     dest_s3_bucket="{{ var.value.S3_REF_BUCKET }}",
     dest_s3_key='claims_address_book.csv',
-    
     replace=True,
     dag=dag)
 
@@ -71,7 +67,6 @@ upload_addresses_to_S3 = S3FileTransferOperator(
 deploy_dashboard = BashOperator(
     task_id='deploy_dashboard',
     bash_command=deploy_dashboard(),
-    
     dag=dag)
 
 
@@ -83,7 +78,6 @@ send_last_file_updated_email = PoseidonEmailFileUpdatedOperator(
     file_url=f"https://sandiego-panda.shinyapps.io/claims_{conf['env'].lower()}/",
     message='<p>The ClaimStat tool has been updated.</p>' \
             + '<p>Please follow the link below to view the tool.</p>',
-    
     dag=dag)
 
 get_claims_data >> clean_geocode >> [upload_claimstat_clean,upload_addresses_to_S3]

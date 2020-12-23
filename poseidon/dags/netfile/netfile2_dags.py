@@ -117,7 +117,6 @@ send_committee_report = PoseidonEmailWithPythonOperator(
     template_id='tem_7xCrDCTyvjMGS9VpBM8rRmwD',
     dispatch_type='sonar_dispatch',
     python_callable=send_comm_report,
-    
     dag=dag)
 
 #: Execution rules

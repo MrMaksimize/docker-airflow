@@ -566,7 +566,7 @@ def send_arcgis(mode=['completed'], **context):
 
         conn = BaseHook.get_connection(conn_id="ARC_ONLINE")
 
-        arc_gis = GIS(conn.host,conn.login,conn.password)
+        arc_gis = GIS(f"https://{conn.host}",conn.login,conn.password)
         # This depends on mode
         lyr_id = esri_layer[mode].get('feature_lyr')
         shape_file = arc_gis.content.get(lyr_id)
