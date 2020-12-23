@@ -103,6 +103,7 @@ RUN pip install -U pip setuptools wheel \
     "geopandas==0.8.0" \
     "google-api-python-client==1.9.3" \
     "oauth2client==4.1.3" \
+    openpyxl \
     "pandas==1.0.5" \
     "PyGithub==1.51" \
     "redis==3.5.3" \

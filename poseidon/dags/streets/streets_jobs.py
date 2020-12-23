@@ -564,7 +564,7 @@ def send_arcgis(mode=['completed'], **context):
 
         shp2zip(layer_name)
 
-        conn = BaseHook.get_connection(conn_id="ARC_ONLINE"),
+        conn = BaseHook.get_connection(conn_id="ARC_ONLINE")
 
         arc_gis = GIS(conn.host,conn.login,conn.password)
         # This depends on mode
