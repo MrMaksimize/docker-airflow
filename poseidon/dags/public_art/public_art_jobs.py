@@ -7,6 +7,7 @@ from trident.util import general
 import requests
 from arcgis import GIS
 from arcgis.features import FeatureLayerCollection
+from airflow.hooks.base_hook import BaseHook
 
 conf = general.config
 prod_dir = conf['prod_data_dir']
