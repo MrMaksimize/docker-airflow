@@ -104,23 +104,27 @@ class S3FileTransferOperator(BaseOperator):
     def execute_migration(self):
         
         dest_s3 = S3Hook(aws_conn_id='S3DATA')
+        logging.info(dest_s3)
+
+        if conf['env'] == 'PROD':
+            dest_bucket = 'datasd.prod'
+            url = "http://{}.s3.amazonaws.com/{}".format('datasd.prod',
+                                                         self.dest_s3_key)
+        else:
+            dest_bucket = 'datasd.dev'
+            url = "http://{}.s3.amazonaws.com/{}".format('datasd.dev',
+                                                         self.dest_s3_key)
+
         local_fpath = "%s/%s" % (self.source_base_path, self.source_key)
         logging.info("%s >>>>> %s/%s" %
-                     (local_fpath, self.dest_s3_bucket, self.dest_s3_key))
+                     (local_fpath, dest_bucket, self.dest_s3_key))
 
         dest_s3.load_file(
             filename=local_fpath,
             key=self.dest_s3_key,
-            bucket_name=self.dest_s3_bucket,
+            bucket_name=dest_bucket,
             replace=self.replace)
         logging.info("Upload completed")
-
-        if conf['env'] == 'prod':
-            url = "http://{}.s3.amazonaws.com/{}".format('datasd.dev',
-                                                         self.dest_s3_key)
-        else:
-            url = "http://{}.s3.amazonaws.com/{}".format('datasd.dev',
-                                                         self.dest_s3_key)
 
         logging.info("URL: {}".format(url))
         s3_file = boto3.client('s3')
