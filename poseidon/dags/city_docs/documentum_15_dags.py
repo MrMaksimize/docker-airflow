@@ -34,7 +34,6 @@ get_doc_tables = PythonOperator(
     op_kwargs={'mode': schedule_mode,
     'test':False,
     'conn_id':'DOCM_SQL'},
-    
     dag=dag)
 
 upload_files = SubDagOperator(

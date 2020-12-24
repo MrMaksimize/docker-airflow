@@ -75,6 +75,7 @@ send_last_file_updated_email = PoseidonEmailFileUpdatedOperator(
     task_id='send_dashboard_updated',
     to="{{ var.value.MAIL_NOTIFY_CLAIMS }}",
     subject='Dashboard Updated',
+    file_bucket=None,
     file_url=f"https://sandiego-panda.shinyapps.io/claims_{conf['env'].lower()}/",
     message='<p>The ClaimStat tool has been updated.</p>' \
             + '<p>Please follow the link below to view the tool.</p>',

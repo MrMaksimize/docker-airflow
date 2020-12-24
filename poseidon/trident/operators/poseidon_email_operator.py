@@ -137,11 +137,18 @@ class PoseidonEmailFileUpdatedOperator(PoseidonEmailOperator):
     Send last updated file
     """
 
-    template_fields = ('file_url')
+    template_fields = ('file_bucket')
 
     @apply_defaults
-    def __init__(self, file_url, message = 'Hey there! Poseidon has updated your dataset!', *args, **kwargs):
+    def __init__(self,
+        file_bucket,
+        file_url,
+        message = 'Hey there! Poseidon has updated your dataset!',
+        *args,
+        **kwargs):
+
         super(PoseidonEmailFileUpdatedOperator, self).__init__(*args, **kwargs)
+        self.file_bucket = file_bucket
         self.file_url = file_url
         self.message = message
 
@@ -152,7 +159,11 @@ class PoseidonEmailFileUpdatedOperator(PoseidonEmailOperator):
 
         self.swu['dispatch_meta'] = merge_dicts(self.swu['dispatch_meta'], contextual_meta)
         self.swu['template_data']['message'] = self.message
-        self.swu['template_data']['file_url'] = self.file_url
+        if not self.file_bucket:
+            self.swu['template_data']['file_url'] = self.file_url
+        else: 
+            self.swu['template_data']['file_url'] = 'http://'+self.file_bucket+self.file_url
+        
         self.swu['dispatch_type'] = 'file_updated'
         self.swu['template_id'] = Variable.get("MAIL_SWU_FILE_UPDATED_TPL")
 
