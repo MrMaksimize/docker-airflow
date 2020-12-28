@@ -10,7 +10,10 @@ from trident.util import general
 from trident.util.sf_client import Salesforce
 from trident.util.geospatial import spatial_join_pt
 import csv
+import json
 from airflow.hooks.base_hook import BaseHook
+from airflow.providers.amazon.aws.hooks.s3 import S3Hook
+from airflow.models import Variable
 from trident.util.geospatial import df_to_geodf_pt
 
 conf = general.config
@@ -29,7 +32,7 @@ prod_file_end = 'requests_datasd_v1.csv'
 prod_file_gid = prod_file_base + prod_file_end
 
 
-cw_gid = 'https://datasd-reference.s3.amazonaws.com/gid/gid_crosswalk.csv'
+cw_gid = 'reference/gid/gid_crosswalk.csv'
 
 def sap_case_type(row):
     if row['sap_subject_category'] != '':
@@ -562,7 +565,9 @@ def create_prod_files():
 
     logging.info('Loading in the crosswalk for one case category')
 
-    gid_crosswalk = pd.read_csv(cw_gid,low_memory=False)
+    conn = S3Hook(aws_conn_id='S3DATA')
+    gid_cw_json = conn.read_key(key=cw_gid,bucket=Variable.get('S3_REF_BUCKET'))
+    gid_crosswalk = json.loads(gid_cw_json)
 
     gid_crosswalk = gid_crosswalk.fillna('')
 
