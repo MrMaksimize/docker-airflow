@@ -6,6 +6,7 @@ import re
 from airflow.hooks.mssql_hook import MsSqlHook
 from trident.util import general
 from trident.util import geospatial
+from airflow.models import Variable
 
 conf = general.config
 
@@ -13,7 +14,7 @@ conf = general.config
 temp_file = conf['temp_data_dir'] + '/special_events.csv'
 prod_v1_file = conf['prod_data_dir'] + '/special_events_list_datasd_v1.csv'
 prod_file = conf['prod_data_dir'] + '/special_events_list_datasd.csv'
-geocoded_addresses = 'https://datasd-reference.s3.amazonaws.com/events_address_book.csv'
+geocoded_addresses = 'events_address_book.csv'
 
 def spell_number(s):
     """ Function to convert number to word """ 
@@ -106,7 +107,10 @@ def process_special_events():
         })
 
     logging.info("Reading in address book")
-    add_book = pd.read_csv(geocoded_addresses,low_memory=False)
+    bucket_name=Variable.get('S3_REF_BUCKET')
+    s3_url = f"s3://{bucket_name}/{geocoded_addresses}"
+    add_book = pd.read_csv(s3_url,low_memory=False)
+
     add_book_join = pd.merge(temp_df,
         add_book,
         how='left',

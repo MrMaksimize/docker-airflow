@@ -149,7 +149,7 @@ def upload_set1_files_subdag():
     source_key='dsd_permits_all_pts_polygons.csv',
     dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
     dest_s3_bucket="{{ var.value.S3_REF_BUCKET }}",
-    dest_s3_key='dsd_permits_all_pts_polygons.csv',
+    dest_s3_key='reference/dsd_permits_all_pts_polygons.csv',
     replace=True,
     dag=dag_subdag)
 
@@ -201,7 +201,7 @@ def upload_set2_files_subdag():
     source_key='dsd_permits_all_accela_polygons.csv',
     dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
     dest_s3_bucket="{{ var.value.S3_REF_BUCKET }}",
-    dest_s3_key='dsd_permits_all_accela_polygons.csv',
+    dest_s3_key='reference/dsd_permits_all_accela_polygons.csv',
     replace=True,
     dag=dag_subdag)
 

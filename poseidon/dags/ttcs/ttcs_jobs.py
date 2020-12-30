@@ -9,6 +9,7 @@ import cx_Oracle
 import string
 import datetime as dt
 import numpy as np
+from airflow.models import Variable
 
 from trident.util import general
 from trident.util import geospatial
@@ -19,7 +20,7 @@ temp_all = conf['temp_data_dir'] + '/ttcs_all.csv'
 clean_all = conf['temp_data_dir'] + '/ttcs_all_clean.csv'
 geocoded_active = conf['temp_data_dir'] + '/ttcs_all_geocoded.csv'
 bids_all = conf['temp_data_dir'] + '/ttcs_all_bids.csv'
-geocoded_addresses = 'https://datasd-reference.s3.amazonaws.com/ttcs_address_book.csv'
+geocoded_addresses = 'ttcs_address_book.csv'
 
 curr_yr = dt.datetime.today().year
 
@@ -124,7 +125,9 @@ def geocode_data():
                      )
 
     logging.info('Get address book')
-    add_book = pd.read_csv(geocoded_addresses,
+    bucket_name=Variable.get('S3_REF_BUCKET')
+    s3_url = f"s3://{bucket_name}/{geocoded_addresses}"
+    add_book = pd.read_csv(s3_url,
         low_memory=False,
         dtype=address_dtype
         )

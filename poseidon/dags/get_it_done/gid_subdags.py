@@ -155,16 +155,6 @@ def upload_files_subdag():
         replace=True,
         dag=dag_subdag)
 
-    upload_json = S3FileTransferOperator(
-        task_id=f'upload_json',
-        source_base_path=conf['prod_data_dir'],
-        source_key=f'get_it_done_requests_datasd.json',
-        dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
-        dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
-        dest_s3_key=f'get_it_done_311/get_it_done_requests_datasd.json',
-        replace=True,
-        dag=dag_subdag)
-
     return dag_subdag
 
 

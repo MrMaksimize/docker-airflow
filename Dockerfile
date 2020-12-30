@@ -109,6 +109,7 @@ RUN pip install -U pip setuptools wheel \
     "redis==3.5.3" \
     "requests>=2.20" \
     rtree \
+    s3fs \
     "shapely==1.7.0" \
     "snowflake-connector-python==2.2.8" \
     xlrd
