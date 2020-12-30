@@ -177,7 +177,7 @@ addresses_to_S3 = S3FileTransferOperator(
     source_key='sw_viols_address_book.csv',
     dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
     dest_s3_bucket="{{ var.value.S3_REF_BUCKET }}",
-    dest_s3_key='sw_viols_address_book.csv',
+    dest_s3_key='reference/sw_viols_address_book.csv',
     replace=True,
     dag=dag)
 

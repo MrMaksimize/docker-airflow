@@ -53,8 +53,8 @@ def get_sites():
     username = sf_conn.login
     password = sf_conn.password
     security_token = sf_conn.extra_dejson
-    report_id = sf_conn.schema
-    #report_id = "00Ot0000000QrwU"
+    #report_id = sf_conn.schema
+    report_id = "00Ot0000000QrwU"
 
     # Init salesforce client
     sf = Salesforce(username, password, security_token['token'])

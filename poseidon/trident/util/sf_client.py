@@ -6,6 +6,7 @@ import csv
 import json
 import logging
 from trident.util import general
+import traceback
 
 
 conf = general.config
@@ -77,21 +78,26 @@ class Salesforce(object):
             'charset': 'UTF-8',
             'SOAPAction': 'login'
         }
-        response = requests.post(
-            soap_url,
-            login_soap_request_body,
-            headers=login_soap_request_headers)
 
-        if response.status_code != 200:
-            raise Exception(response.status_code)
+        try:
+            response = requests.post(
+                soap_url,
+                login_soap_request_body,
+                headers=login_soap_request_headers)
 
-        self.session_id = getUniqueElementValueFromXmlString(response.content,
-                                                             'sessionId')
-        self.headers = {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + self.session_id,
-            'X-PrettyPrint': '1'
-        }
+            logging.info(response.content)
+
+            self.session_id = getUniqueElementValueFromXmlString(response.content,
+                                                                 'sessionId')
+            self.headers = {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + self.session_id,
+                'X-PrettyPrint': '1'
+            }
+        
+        except Exception as exception:
+            traceback.print_exc()
+
 
     def get_report_df(self, report_id):
         """Get SF report and return dataframe."""
@@ -124,19 +130,24 @@ class Salesforce(object):
         url = "https://{domain}.salesforce.com/{report_id}?view=d&snip&export=1&enc=ISO-8859-1&xf=csv"
         url = url.format(report_id=report_id, domain=self.domain)
         # If this doesn't work, it should fail
-        resp = requests.get(url,
-                            headers=self.headers,
-                            cookies={'sid': self.session_id})
+        try:
+            
+            resp = requests.get(url,
+                                headers=self.headers,
+                                cookies={'sid': self.session_id})
 
 
-        resp_decode = resp.content.decode('latin-1')
-        reader = csv.reader(resp_decode.splitlines(), delimiter=",")
-        data = list(reader)
-        data = data[:-7]
+            resp_decode = resp.content.decode('latin-1')
+            reader = csv.reader(resp_decode.splitlines(), delimiter=",")
+            data = list(reader)
+            data = data[:-7]
 
-        with open(filename, 'w') as f:
-            writer = csv.writer(f, quoting=csv.QUOTE_ALL)
-            writer.writerows(data)
+            with open(filename, 'w') as f:
+                writer = csv.writer(f, quoting=csv.QUOTE_ALL)
+                writer.writerows(data)
+        
+        except Exception as exception:
+            traceback.print_exc()
 
         return "Retrieved last GID data"
 
