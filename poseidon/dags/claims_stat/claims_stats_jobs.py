@@ -14,7 +14,7 @@ from airflow.hooks.base_hook import BaseHook
 conf = general.config
 prod = conf['prod_data_dir']
 tmp = conf['temp_data_dir']
-geocoded_addresses = 'https://datasd-reference.s3.amazonaws.com/claims_address_book.csv'
+geocoded_addresses = 'reference/claims_address_book.csv'
 
 def get_claims_data():
     """Query an oracle database"""
@@ -67,7 +67,11 @@ def clean_geocode_claims():
 
     #Load and merge address book
     logging.info("Reading in address book")
-    add_book = pd.read_csv(geocoded_addresses,low_memory=False)
+    
+    bucket_name=Variable.get('S3_REF_BUCKET')
+    s3_url = f"s3://{bucket_name}/{geocoded_addresses}"
+    add_book = pd.read_csv(s3_url,low_memory=False)
+    
     add_book_join = pd.merge(temp_df,
         add_book,
         how='left',
@@ -156,7 +160,7 @@ def clean_geocode_claims():
         logging.info('Writing address book')
         # Write new address book to temp directory
         general.pos_write_csv(new_add_book,
-        f"{tmp}/claims_address_book.csv")
+        f"{prod}/claims_address_book.csv")
 
         logging.info('merging lat lngs to final data')
 

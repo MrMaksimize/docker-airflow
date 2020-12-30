@@ -33,11 +33,6 @@ services:
             - REDIS_PASSWORD=${REDIS_PASSWORD}
               # From environment specific .env
             - SD_ENV=${SD_ENV}
-            - SECRETLY_NAMESPACE=${SD_ENV}
-            - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-            - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-            - AWS_REGION=${AWS_REGION}
-            - AIRFLOW_CONN_S3DATA="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@S3"
             - AIRFLOW_CONN_S3LOG="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@poseidon-logs-${SD_ENV}"
             - AIRFLOW__EMAIL__EMAIL_BACKEND=trident.util.notifications.afsys_send_email
             - AIRFLOW__CORE__FERNET_KEY=${FERNET_KEY}
@@ -71,11 +66,6 @@ services:
             - REDIS_PASSWORD=${REDIS_PASSWORD}
               # From environment specific .env
             - SD_ENV=${SD_ENV}
-            - SECRETLY_NAMESPACE=${SD_ENV}
-            - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-            - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-            - AWS_REGION=${AWS_REGION}
-            - AIRFLOW_CONN_S3DATA="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@S3"
             - AIRFLOW_CONN_S3LOG="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@poseidon-logs-${SD_ENV}"
             - AIRFLOW__EMAIL__EMAIL_BACKEND=trident.util.notifications.afsys_send_email
             - AIRFLOW__CORE__FERNET_KEY=${FERNET_KEY}
@@ -104,11 +94,6 @@ services:
             - REDIS_PASSWORD=${REDIS_PASSWORD}
               # From environment specific .env
             - SD_ENV=${SD_ENV}
-            - SECRETLY_NAMESPACE=${SD_ENV}
-            - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-            - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-            - AWS_REGION=${AWS_REGION}
-            - AIRFLOW_CONN_S3DATA="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@S3"
             - AIRFLOW_CONN_S3LOG="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@poseidon-logs-${SD_ENV}"
             - AIRFLOW__EMAIL__EMAIL_BACKEND=trident.util.notifications.afsys_send_email
             - AIRFLOW__CORE__FERNET_KEY=${FERNET_KEY}
@@ -135,11 +120,6 @@ services:
             - REDIS_PASSWORD=${REDIS_PASSWORD}
               # From environment specific .env
             - SD_ENV=${SD_ENV}
-            - SECRETLY_NAMESPACE=${SD_ENV}
-            - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-            - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-            - AWS_REGION=${AWS_REGION}
-            - AIRFLOW_CONN_S3DATA="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@S3"
             - AIRFLOW_CONN_S3LOG="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@poseidon-logs-${SD_ENV}"
             - AIRFLOW__EMAIL__EMAIL_BACKEND=trident.util.notifications.afsys_send_email
             - AIRFLOW__CORE__FERNET_KEY=${FERNET_KEY}

@@ -29,21 +29,18 @@ dag = DAG(dag_id='ttcs',
 get_active_businesses = PythonOperator(
     task_id='get_active_businesses',
     python_callable=get_active_businesses,
-    
     dag=dag)
 
 #: Process temp data and save as .csv to prod folder
 clean_data = PythonOperator(
     task_id='clean_data',
     python_callable=clean_data,
-    
     dag=dag)
 
 #: Geocode new entries and update production file
 geocode_data = PythonOperator(
     task_id='geocode_data',
     python_callable=geocode_data,
-    
     dag=dag)
 
 addresses_to_S3 = S3FileTransferOperator(
@@ -52,7 +49,7 @@ addresses_to_S3 = S3FileTransferOperator(
     source_key='ttcs_address_book.csv',
     dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
     dest_s3_bucket="{{ var.value.S3_REF_BUCKET }}",
-    dest_s3_key='ttcs_address_book.csv',
+    dest_s3_key='reference/ttcs_address_book.csv',
     replace=True,
     dag=dag)
 

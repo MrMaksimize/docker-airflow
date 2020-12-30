@@ -10,6 +10,7 @@ from subprocess import Popen, PIPE
 from shlex import quote
 from datetime import datetime as dt
 from airflow.hooks.base_hook import BaseHook
+from airflow.models import Variable
 
 conf = general.config
 
@@ -376,7 +377,9 @@ def spatial_joins(pt_file='',**context):
     point_cols = point.columns.tolist()
     prod_cols = point_cols + ['bid_name','council_district','zip']
 
-    ref_df = pd.read_csv(f'https://datasd-reference.s3.amazonaws.com/{pt_file}_polygons.csv',
+    bucket_name=Variable.get('S3_REF_BUCKET')
+    s3_url = f"s3://{bucket_name}/{pt_file}_polygons.csv"
+    ref_df = pd.read_csv(s3_url,
         low_memory=False,
         dtype={'approval_id':str}
         )

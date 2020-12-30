@@ -54,11 +54,11 @@ upload_claimstat_clean = S3FileTransferOperator(
 
 upload_addresses_to_S3 = S3FileTransferOperator(
     task_id='upload_claims_address_book',
-    source_base_path=conf['temp_data_dir'],
+    source_base_path=conf['prod_data_dir'],
     source_key='claims_address_book.csv',
     dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
     dest_s3_bucket="{{ var.value.S3_REF_BUCKET }}",
-    dest_s3_key='claims_address_book.csv',
+    dest_s3_key='reference/claims_address_book.csv',
     replace=True,
     dag=dag)
 

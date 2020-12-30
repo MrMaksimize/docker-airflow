@@ -12,7 +12,7 @@ from trident.util.geospatial import spatial_join_pt
 import csv
 import json
 from airflow.hooks.base_hook import BaseHook
-from airflow.providers.amazon.aws.hooks.s3 import S3Hook
+from airflow.hooks.S3_hook import S3Hook
 from airflow.models import Variable
 from trident.util.geospatial import df_to_geodf_pt
 
@@ -33,6 +33,7 @@ prod_file_gid = prod_file_base + prod_file_end
 
 
 cw_gid = 'reference/gid/gid_crosswalk.csv'
+sap_gid = 'reference/gid/cases_updated_dates.csv'
 
 def sap_case_type(row):
     if row['sap_subject_category'] != '':
@@ -236,194 +237,160 @@ def update_service_name():
 
 def update_close_dates():
     """ Fix closed date for consistency with SAP """
-    df = pd.read_csv(sname_file_gid,
-                     low_memory=False,
-                     parse_dates=['date_time_opened','date_time_closed']
-                     )
+
+    # Read in output of last task 
+    df = pd.read_csv(sname_file_gid,low_memory=False)
     logging.info(f"Read {df.shape[0]} records")
+
+    # Grab the original columns
+    # Because columns get sorted by the end
+    orig_cols = df.columns.tolist()
+    
+    # Convert SAP notification number
+    # To integer, then to string
+    # To remove leading zeroes and decimal places
     df['sap_notification_number'] = pd.to_numeric(df['sap_notification_number'],errors='coerce')
+    df['sap_notification_number'] = df['sap_notification_number'].fillna(-999999.0).astype(int)
+    df['sap_notification_number'] = df['sap_notification_number'].astype(str)
+    df['sap_notification_number'] = df['sap_notification_number'].replace('-999999','')
+
+    logging.info("Reading in close date reference file")
+    bucket_name=Variable.get('S3_REF_BUCKET')
+    s3_url = f"s3://{bucket_name}/{sap_gid}"
+    gid_sap_dates = pd.read_csv(s3_url,dtype={'case_number':str,
+        'sap_notification_number':str})
     
-    orig_cols = df.columns.values.tolist()
+    # Separating notification rows from case number rows
+    # For different joining methods
+    notification_df = gid_sap_dates[~gid_sap_dates['sap_notification_number'].isna()]
+    case_df = gid_sap_dates[gid_sap_dates['sap_notification_number'].isna()]
 
-    # These will be the exports we got from SAP
-    date_files = []
-    
-    s3 = boto3.resource('s3')
-    s3_ref = s3.Bucket('datasd-reference')
-    for obj in s3_ref.objects.all():
-        if obj.key.startswith('gid/cases_'):
-            date_files.append(obj.key)
+    if not notification_df.empty:
 
-    # We loop through these files and join back to the df
-    # to add a new date column
-    # We will later merge all date columns into one
+        logging.info("Merging on SAP notification number")
 
-    logging.info("Start looping through fix files")
+        new_dates_merge = pd.merge(df,
+            notification_df[['sap_notification_number',
+            'closed_new']],
+            how='left',
+            on='sap_notification_number')
 
-    for index, file in enumerate(date_files):
-        logging.info(f'Processing {file}')
-        path = f'https://datasd-reference.s3.amazonaws.com/{file}'
-        df_date = pd.read_excel(path, engine='openpyxl')
+        if not case_df.empty:
 
-        logging.info(df_date.head())
-        
-        df_date.columns = [x.lower().replace(' ','_').replace('/','_').replace('"','') 
-        for x in df_date.columns]
-
-        # Exact column names are unpredictable
-        # We need either SAP notification number or case number
-        # Plus the field containing new dates
-
-        closed_cols = [col for col in df_date.columns if 'closed' in col]
-
-        if len(closed_cols) > 0:
-            df_date[closed_cols[0]] = pd.to_datetime(df_date[closed_cols[0]],errors='coerce')
-            new_dates = df_date[closed_cols[0]]
-            df_date.insert(0,f'new_date_{index}',new_dates)
-            logging.info("Found column referencing closed date")
-        else:
-            logging.info("Can't locate date column in spreadsheet")
-
-        notification_cols = [col for col in df_date.columns if 'notification' in col]
-        case_cols = [col for col in df_date.columns if 'case' in col]
-
-        if len(notification_cols) > 0:
-
-
-            logging.info("Joining on SAP notification number")
-            df_date[notification_cols[0]] = pd.to_numeric(df_date[notification_cols[0]],
-                errors='coerce')
-            df = pd.merge(df,
-                df_date,
-                left_on=['sap_notification_number'],
-                right_on=[notification_cols[0]],
-                how="left"
-                )
-
-        elif len(case_cols) > 0:
+            logging.info("Updating new closed date for case numbers")
             
-            if len(case_cols) == 1:
-                case_to_merge = case_cols[0]
-            else:
-                for case in case_cols:
-                    if "child" in case:
-                        case_to_merge = case
-                    else:
-                        case_to_merge = case_cols[0]
-                        
-            logging.info(f"Joining on Salesforce case number with {case_to_merge}")
-            df = pd.merge(df,
-                df_date,
-                left_on=['case_number'],
-                right_on=[case_to_merge],
-                how="left"
-                )
+            # Set indices to case number on both dataframes
+            new_dates_merge = new_dates_merge.set_index('case_number')
+            case_df = case_df.set_index('case_number')
+            
+            # Perform the update. This will not work if new closed date
+            # Is a datetime type because of nan
+            # Overwrite is set to false to favor any dates already
+            # Updated via sap notification number
+            new_dates_merge.update(case_df,overwrite=False)
+            
+            # Reset indice on both dataframes
+            new_dates_merge = new_dates_merge.reset_index(drop=False)
+            case_df = case_df.reset_index(drop=False)
 
-        else:
-            logging.info("Can't determine unique identifier to join on")
+    else:
 
-    # Convert date columns to datetime, then use the earliest date as final correct date
-    logging.info("Getting minimum date for all date columns")
-    new_date_cols = [col for col in df.columns if 'new_date' in col]
-    df.loc[:,new_date_cols] = df.loc[:,new_date_cols].apply(pd.to_datetime, errors='coerce')
-    df['min_new_date'] = df[new_date_cols].min(axis=1)
-    
-    # Discard additional cols from joins
-    logging.info("Adding new date to original column list and subsetting data")
-    orig_cols.append('min_new_date')
-    df_updated = df[orig_cols]
-    
-    # Split records into those that need to be updated
-    # And those that don't
-    bad_records = df_updated[df_updated['min_new_date'].notnull()]
-    logging.info(f"Processed {bad_records.shape[0]} records with known date error")
-    good_records = df_updated[df_updated['min_new_date'].isnull()]
-    logging.info(f"{good_records.shape[0]} records remain to be searched")
+        logging.info("There are no updates via sap notification #")
+
+        if not case_df.empty:
+
+            logging.info("Merging on case number only")
+
+            new_dates_merge = pd.merge(df,
+            case_df[['case_number',
+            'closed_new']],
+            how='left',
+            on='case_number')
+
+    logging.info("Update complete, converting date fields")
+    new_dates_merge['closed_new'] = pd.to_datetime(new_dates_merge['closed_new'],errors='coerce')
+    logging.info("Done with new closed date")
+    new_dates_merge['date_time_closed'] = pd.to_datetime(new_dates_merge['date_time_closed'],errors='coerce')
+    logging.info("Done with date time closed")
+    new_dates_merge['date_time_opened'] = pd.to_datetime(new_dates_merge['date_time_opened'],errors='coerce')
+    logging.info("Done with date time opened")
+
+    logging.info("Resetting date closed with new closed dates")
+    new_dates_merge.loc[~new_dates_merge['closed_new'].isna(),
+    'date_time_closed'] = new_dates_merge.loc[~new_dates_merge['closed_new'].isna(),
+    'closed_new']
 
     # Now check for any children that weren't flagged to be updated
     # By looking for case numbers in parent case number column
     
-    logging.info("Searching parent case number col for case numbers with known error")
-
-    child_merge = pd.merge(good_records,
-        bad_records[['case_number','min_new_date']],
-        left_on=['parent_case_number'],
-        right_on=['case_number'],
-        how="left"
-        )
-
-    good_records_new = child_merge.drop(['min_new_date_x','case_number_y'],axis=1)
-    good_records_new = good_records_new.rename(columns={'min_new_date_y':'min_new_date',
-        'case_number_x':'case_number'})
-
-    child_search_result = good_records_new[good_records_new['min_new_date'].notnull()].shape[0]
-    logging.info(f"Found {child_search_result} children cases where parent case has known error")
+    logging.info("Searching parent case numbers for case numbers with known error")
     
+    # Make a dataframe of case numbers and new closed date
+    # This is necessary because most of the records have only
+    # SAP notification number originally
+    parent_cases_updated = new_dates_merge.loc[~new_dates_merge['closed_new'].isna(),
+    ['case_number','closed_new']]
+
+    # Rename cols for easier merging
+    parent_cases_updated = parent_cases_updated.rename(columns={'case_number':'parent_case_number',
+                                                            'closed_new':'closed_new_child'
+                                                           })
+
+    child_merge = pd.merge(new_dates_merge,
+                       parent_cases_updated,
+                       how='left',
+                       on='parent_case_number')
+    
+    logging.info(f"Found {child_merge.loc[~child_merge['closed_new_child'].isna()].shape[0]} children cases where parent case has known error")
+    
+    # Now update the date closed for these cases
+    child_merge.loc[~child_merge['closed_new_child'].isna(),
+                    'date_time_closed'] = child_merge.loc[~child_merge['closed_new_child'].isna(),
+                                                              'closed_new_child']
+
     # Export missing children to update in Salesforce
     logging.info("Exporting child cases for gid team")
     general.pos_write_csv(
-        good_records_new.loc[good_records_new['min_new_date'].notnull(),
-            ['case_number',
+        child_merge.loc[~child_merge['closed_new_child'].isna(),['case_number',
             'parent_case_number',
-            'min_new_date',
+            'closed_new_child',
             'date_time_closed']],
         conf['temp_data_dir'] + '/gid_children_found.csv'
         )
 
-    logging.info("Recombining records, updating date time closed and status")
-    
-    all_records = pd.concat([bad_records,good_records_new])
-
-    all_records = all_records.reset_index(drop=True)
-
-    logging.info("Updating closed date with new date where new date is after date time opened")
-
-    all_records.loc[
-        all_records['min_new_date'].notnull() &
-        (all_records['min_new_date'] > all_records['date_time_opened'])
-        ,'date_time_closed'] = all_records.loc[
-        all_records['min_new_date'].notnull() &
-        (all_records['min_new_date'] > all_records['date_time_opened'])
-        ,'min_new_date']
-
-    logging.info("Update closed date with opened date where new date is before date time opened")
-
-    all_records.loc[
-        all_records['min_new_date'].notnull() & 
-        (all_records['min_new_date'] <= all_records['date_time_opened'])
-        ,'date_time_closed'] = all_records.loc[
-        all_records['min_new_date'].notnull() &
-        (all_records['min_new_date'] <= all_records['date_time_opened'])
-        ,'date_time_opened']
-
     logging.info("Recalculating case age days")
 
-    all_records.loc[
-        all_records['min_new_date'].notnull(),
-        'case_age_days'] = all_records.loc[
-        all_records['min_new_date'].notnull(),
+    child_merge.loc[
+        (~child_merge['closed_new'].isna())|
+        (~child_merge['closed_new_child'].isna()),
+        'case_age_days'] = child_merge.loc[
+        (~child_merge['closed_new'].isna())|
+        (~child_merge['closed_new_child'].isna()),
         ['date_time_closed',
         'date_time_opened']].apply(
             lambda x: (x['date_time_closed'] - x['date_time_opened']).days, 
             axis=1)
 
-    all_records.loc[all_records['min_new_date'].notnull(),
-                          'mobile_web_status'] = 'Closed'
+    logging.info("Setting case status to closed")
+    child_merge.loc[
+        (~child_merge['closed_new'].isna())|
+        (~child_merge['closed_new_child'].isna()),
+        'mobile_web_status'] = 'Closed'
 
-    all_records = all_records.drop(['min_new_date'],axis=1)
 
-    all_records.loc[
-        :,'date_time_closed'] = all_records.loc[
+    # Change this field to date only, removing time
+    # Since updated close dates are date only
+    child_merge.loc[
+        :,'date_time_closed'] = child_merge.loc[
         :,'date_time_closed'].apply(
             lambda x: x.date())
 
     logging.info("Export file with fixed close dates")
 
     general.pos_write_csv(
-        all_records, 
+        child_merge[orig_cols], 
         dates_file_gid, 
         date_format='%Y-%m-%dT%H:%M:%S%z')
-
 
     return "Successfully updated closed datetime from SAP errors"
 
@@ -565,10 +532,10 @@ def create_prod_files():
 
     logging.info('Loading in the crosswalk for one case category')
 
-    conn = S3Hook(aws_conn_id='S3DATA')
-    gid_cw_json = conn.read_key(key=cw_gid,bucket=Variable.get('S3_REF_BUCKET'))
-    gid_crosswalk = json.loads(gid_cw_json)
-
+    logging.info("Reading in crosswalk reference file")
+    bucket_name=Variable.get('S3_REF_BUCKET')
+    s3_url = f"s3://{bucket_name}/{cw_gid}"
+    gid_crosswalk = pd.read_csv(s3_url)
     gid_crosswalk = gid_crosswalk.fillna('')
 
     logging.info('Merging temp records with crosswalk')
