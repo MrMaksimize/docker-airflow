@@ -13,6 +13,8 @@ from trident.util.sf_client import Salesforce
 from airflow.hooks.postgres_hook import PostgresHook
 import cx_Oracle
 from airflow.hooks.base_hook import BaseHook
+from shlex import quote
+from subprocess import Popen, PIPE
 
 
 conf = general.config
@@ -33,7 +35,7 @@ dump_csv_file = "tsw_violations_vpm_temp.csv"
 # Global placeholder for ref file
 georef = None
 
-geocoded_addresses = 'https://datasd-reference.s3.amazonaws.com/sw_viols_address_book.csv'
+geocoded_addresses = 'sw_viols_address_book.csv'
 
 
 # VPM RETRIEVAL SUPPORT METHODS
@@ -113,7 +115,7 @@ def get_sf_violations():
     report_id = "00Ot0000000TPXC"
 
     # Init salesforce client
-    sf = Salesforce(username, password, security_token)
+    sf = Salesforce(username, password, security_token['token'])
 
     # Pull dataframe
     logging.info(f'Pull report {report_id} from SF')
@@ -126,7 +128,7 @@ def get_sf_violations():
 
     return f"Successfully wrote {df.shape[0]} records for tsw_sf violations file"
 
-def get_pts_violations():
+def get_pts_violations(**context):
     """ Get violations from pts, creates temp file. """
 
     exec_date = context['next_execution_date'].in_tz(tz='US/Pacific')
@@ -188,7 +190,9 @@ def combine_violations():
     vs = vs.fillna(value={'ADDRESS': '',})
     vs = vs.fillna(value={'PARCEL_APN': '',})
 
-    add_book = pd.read_csv(geocoded_addresses,low_memory=False)
+    bucket_name=Variable.get('S3_REF_BUCKET')
+    s3_url = f"s3://{bucket_name}/{geocoded_addresses}"
+    add_book = pd.read_csv(s3_url,low_memory=False)
     
     logging.info(f"Fixing {vs.loc[(vs.ADDRESS == '') | (vs.ADDRESS == 'nan')].shape[0]} missing addresses")
 
