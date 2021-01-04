@@ -108,7 +108,7 @@ def process_special_events():
 
     logging.info("Reading in address book")
     bucket_name=Variable.get('S3_REF_BUCKET')
-    s3_url = f"s3://{bucket_name}/{geocoded_addresses}"
+    s3_url = f"s3://{bucket_name}/reference/{geocoded_addresses}"
     add_book = pd.read_csv(s3_url,low_memory=False)
 
     add_book_join = pd.merge(temp_df,

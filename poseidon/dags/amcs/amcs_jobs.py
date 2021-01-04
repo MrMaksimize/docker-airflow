@@ -31,7 +31,7 @@ def write_to_shared_drive():
     server_ip = Variable.get("AMCS_IP_ADDRESS")
     
     command = "smbclient //csdsdcamcsappt/TOWER7 -W ad -mSMB3 " \
-        + f"--user={conf['svc_acct_user']}%{conf['svc_acct_pass']} --ip-address={server_ip} " \
+        + f"--user={conn.login}%{conn.password} --ip-address={server_ip} " \
         + f"--directory='/Tower7Prod/GetitDone' -c '" \
         + f" put {final_file} sites_export.csv'"
 

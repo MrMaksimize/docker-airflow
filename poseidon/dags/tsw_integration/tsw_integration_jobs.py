@@ -191,7 +191,7 @@ def combine_violations():
     vs = vs.fillna(value={'PARCEL_APN': '',})
 
     bucket_name=Variable.get('S3_REF_BUCKET')
-    s3_url = f"s3://{bucket_name}/{geocoded_addresses}"
+    s3_url = f"s3://{bucket_name}/reference/{geocoded_addresses}"
     add_book = pd.read_csv(s3_url,low_memory=False)
     
     logging.info(f"Fixing {vs.loc[(vs.ADDRESS == '') | (vs.ADDRESS == 'nan')].shape[0]} missing addresses")

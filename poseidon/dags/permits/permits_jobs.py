@@ -378,7 +378,7 @@ def spatial_joins(pt_file='',**context):
     prod_cols = point_cols + ['bid_name','council_district','zip']
 
     bucket_name=Variable.get('S3_REF_BUCKET')
-    s3_url = f"s3://{bucket_name}/{pt_file}_polygons.csv"
+    s3_url = f"s3://{bucket_name}/reference/{pt_file}_polygons.csv"
     ref_df = pd.read_csv(s3_url,
         low_memory=False,
         dtype={'approval_id':str}
