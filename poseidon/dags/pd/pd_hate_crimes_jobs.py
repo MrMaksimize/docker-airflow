@@ -17,11 +17,12 @@ def get_data():
     """Download Hate Crimes data from FTP."""
     
     ftp_conn = BaseHook.get_connection(conn_id="FTP_DATASD")
+    temp_dir = conf['temp_data_dir']
 
     wget_str = "wget -np --continue " \
-        + "--user=$ftp_user " \
-        + "--password='$ftp_pass' " \
-        + "--directory-prefix=$temp_dir " \
+        + f"--user={ftp_conn.login} " \
+        + f"--password='{ftp_conn.password}' " \
+        + f"--directory-prefix={temp_dir} " \
         + "ftp://ftp.datasd.org/uploads/sdpd/" \
         + "Hate_Crimes/Hate_Crimes_Data_Portal_SDPD*.xlsx"
 

@@ -256,7 +256,7 @@ def update_close_dates():
 
     logging.info("Reading in close date reference file")
     bucket_name=Variable.get('S3_REF_BUCKET')
-    s3_url = f"s3://{bucket_name}/{sap_gid}"
+    s3_url = f"s3://{bucket_name}/reference/{sap_gid}"
     gid_sap_dates = pd.read_csv(s3_url,dtype={'case_number':str,
         'sap_notification_number':str})
     
@@ -534,7 +534,7 @@ def create_prod_files():
 
     logging.info("Reading in crosswalk reference file")
     bucket_name=Variable.get('S3_REF_BUCKET')
-    s3_url = f"s3://{bucket_name}/{cw_gid}"
+    s3_url = f"s3://{bucket_name}/reference/{cw_gid}"
     gid_crosswalk = pd.read_csv(s3_url)
     gid_crosswalk = gid_crosswalk.fillna('')
 
