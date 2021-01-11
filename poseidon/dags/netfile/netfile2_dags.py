@@ -33,56 +33,48 @@ dag = DAG(dag_id='campaign_fin_reports',
 schedule_460A = PythonOperator(
     task_id='get_transactions_a',
     python_callable=get_transactions_a,
-    
     dag=dag)
 
 #: Get 460B1 transactions
 schedule_460B1 = PythonOperator(
     task_id='get_transactions_b',
     python_callable=get_transactions_b,
-    
     dag=dag)
 
 #: Get 460C transactions
 schedule_460C = PythonOperator(
     task_id='get_transactions_c',
     python_callable=get_transactions_c,
-    
     dag=dag)
 
 #: Get 460D transactions
 schedule_460D = PythonOperator(
     task_id='get_transactions_d',
     python_callable=get_transactions_d,
-    
     dag=dag)
 
 #: Get summary transactions
 schedule_sum = PythonOperator(
     task_id='get_transactions_summary',
     python_callable=get_transactions_summary,
-    
     dag=dag)
 
 #: Get 497 transactions
 schedule_497 = PythonOperator(
     task_id='get_transactions_497',
     python_callable=get_transactions_497,
-    
     dag=dag)
 
 #: Get 496 transactions
 schedule_496 = PythonOperator(
     task_id='get_transactions_496',
     python_callable=get_transactions_496,
-    
     dag=dag)
 
 #: Combine all transactions
 combine_schedules = PythonOperator(
     task_id='combine_all_schedules',
     python_callable=combine_all_schedules,
-    
     dag=dag)
 
 #: Upload prod transactions file to S3
@@ -93,7 +85,6 @@ upload_fin_support = S3FileTransferOperator(
     dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
     dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}", # What is this supposed to be?
     dest_s3_key='campaign_fin/financial_support_'+str(cur_yr)+'_datasd_v1.csv',
-    
     replace=True,
     dag=dag)
 
@@ -103,7 +94,6 @@ update_json_date = PythonOperator(
     python_callable=update_json_date,
     provide_context=True,
     op_kwargs={'ds_fname': 'financial_trans_election_comms'},
-    
     dag=dag)
 
 #: Update portal modified date

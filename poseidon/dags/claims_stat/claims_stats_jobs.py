@@ -14,7 +14,7 @@ from airflow.hooks.base_hook import BaseHook
 conf = general.config
 prod = conf['prod_data_dir']
 tmp = conf['temp_data_dir']
-geocoded_addresses = 'reference/claims_address_book.csv'
+geocoded_addresses = 'claims_address_book.csv'
 
 def get_claims_data():
     """Query an oracle database"""
@@ -190,16 +190,13 @@ def clean_geocode_claims():
 
 def deploy_dashboard():
     """Deploy Claims Stat dashboard"""
-    shiny_acct_name = Variable.get("SHINY_ACCT_NAME"),
-    shiny_token = Variable.get("SHINY_TOKEN"),
-    shiny_secret = Variable.get("SHINY_SECRET"),
 
     command = "Rscript /usr/local/airflow/poseidon/trident/util/shiny_deploy.R " \
     + f"--appname=claims_{conf['env'].lower()} " \
     + "--path=/usr/local/airflow/poseidon/dags/claims_stat/claims.Rmd " \
-    + f"--name={shiny_acct_name} " \
-    + f"--token={shiny_token} " \
-    + f"--secret={shiny_secret} " \
+    + f"--name={Variable.get('SHINY_ACCT_NAME')} " \
+    + f"--token={Variable.get('SHINY_TOKEN')} " \
+    + f"--secret={Variable.get('SHINY_SECRET')} " \
     + "--force=TRUE "
 
     return command

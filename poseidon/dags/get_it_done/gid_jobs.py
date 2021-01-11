@@ -32,8 +32,8 @@ prod_file_end = 'requests_datasd_v1.csv'
 prod_file_gid = prod_file_base + prod_file_end
 
 
-cw_gid = 'reference/gid/gid_crosswalk.csv'
-sap_gid = 'reference/gid/cases_updated_dates.csv'
+cw_gid = 'gid/gid_crosswalk.csv'
+sap_gid = 'gid/cases_updated_dates.csv'
 
 def sap_case_type(row):
     if row['sap_subject_category'] != '':

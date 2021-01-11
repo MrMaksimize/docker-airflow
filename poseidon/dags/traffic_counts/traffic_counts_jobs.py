@@ -50,6 +50,7 @@ def clean_traffic_counts(src_fname='traffic_counts_file',
              'date_count']
 
     worksheet = pd.read_excel(xlsx_file,
+                              engine='openpyxl',
                               sheet_name='TRAFFIC',
                               header=None,
                               skiprows=[0, 1, 2, 3],
