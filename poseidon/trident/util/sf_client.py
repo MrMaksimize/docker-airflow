@@ -85,8 +85,6 @@ class Salesforce(object):
                 login_soap_request_body,
                 headers=login_soap_request_headers)
 
-            logging.info(response.content)
-
             self.session_id = getUniqueElementValueFromXmlString(response.content,
                                                                  'sessionId')
             self.headers = {
