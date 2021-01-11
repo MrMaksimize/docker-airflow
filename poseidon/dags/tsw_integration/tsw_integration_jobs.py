@@ -131,6 +131,9 @@ def get_sf_violations():
 def get_pts_violations(**context):
     """ Get violations from pts, creates temp file. """
 
+    # Looking for a file from yesterday
+    # This will fail except on Mondays
+
     exec_date = context['next_execution_date'].in_tz(tz='US/Pacific')
     # Exec date returns a Pendulum object
     # Runs on Monday for data extracted Sunday
@@ -158,10 +161,9 @@ def get_pts_violations(**context):
     output, error = p.communicate()
     
     if p.returncode != 0:
-        logging.info(f"Error with {fpath}")
+        logging.info(f"Did not find {fpath}")
         logging.info(output)
         logging.info(error)
-        raise Exception(p.returncode)
     else:
         logging.info(f"Found {fpath}")
 
@@ -282,7 +284,7 @@ def _clean_pts_violations():
     filename = conf['temp_data_dir'] + "/*Panda_Extract_STW_*.csv"
     list_of_files = glob.glob(filename)
     latest_file = max(list_of_files, key=os.path.getmtime)
-    logging.info(f"Reading in {latest_file}")
+    logging.info(f"Using PTS violations from {latest_file}")
 
     dtypes = {'LONGITUDE':np.float64,
     'LATITUDE':np.float64
