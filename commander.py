@@ -14,9 +14,6 @@ class Commander(object):
 
     def __init__(self):
         env.read_envfile()
-        self._aws_region = env.str("AWS_REGION")
-        self._aws_access_key_id = env.str("SSM_AWS_ACCESS_KEY_ID")
-        self._aws_secret_access_key = env.str("SSM_AWS_SECRET_ACCESS_KEY")
         self._kms_id = env.str("KMS_ID")
 
 
@@ -28,37 +25,6 @@ class Commander(object):
             return {**secrets['shared'], **secrets[env]}
         else:
             raise Exception("Invalid Env")
-
-
-    def set_secrets(self, env):
-        """
-        Sets secrets on SSM for the environment
-
-        env : string
-            Variable used to set local or prod env
-        """
-
-        ssm = boto3.client('ssm',
-                region_name=self._aws_region,
-                aws_access_key_id = self._aws_access_key_id,
-                aws_secret_access_key = self._aws_secret_access_key)
-
-        secrets = self._get_secrets_from_json(env)
-
-        for i in secrets:
-            try:
-                print("Setting {} for {} env".format(i, env))
-                ssm.put_parameter(
-                    Name="/{}/{}".format(env, i),
-                    Description=i,
-                    Value=secrets[i],
-                    Type='SecureString',
-                    KeyId=self._kms_id,
-                    Overwrite=True
-                )
-
-            except ClientError as e:
-                print(e.response['Error']['Code'])
 
 
     def get_fernet(self):
