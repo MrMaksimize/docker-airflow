@@ -33,7 +33,6 @@ services:
             - REDIS_PASSWORD=${REDIS_PASSWORD}
               # From environment specific .env
             - SD_ENV=${SD_ENV}
-            - AIRFLOW_CONN_S3LOG="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@poseidon-logs-${SD_ENV}"
             - AIRFLOW__EMAIL__EMAIL_BACKEND=trident.util.notifications.afsys_send_email
             - AIRFLOW__CORE__FERNET_KEY=${FERNET_KEY}
             - 'AIRFLOW__SECRETS__BACKEND_KWARGS={"connections_prefix": "/airflow/connections/${SD_ENV}", "variables_prefix":"/airflow/variables/${SD_ENV}", "profile_name": "airflowssm"}'
@@ -66,7 +65,6 @@ services:
             - REDIS_PASSWORD=${REDIS_PASSWORD}
               # From environment specific .env
             - SD_ENV=${SD_ENV}
-            - AIRFLOW_CONN_S3LOG="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@poseidon-logs-${SD_ENV}"
             - AIRFLOW__EMAIL__EMAIL_BACKEND=trident.util.notifications.afsys_send_email
             - AIRFLOW__CORE__FERNET_KEY=${FERNET_KEY}
             - 'AIRFLOW__SECRETS__BACKEND_KWARGS={"connections_prefix": "/airflow/connections/${SD_ENV}", "variables_prefix":"/airflow/variables/${SD_ENV}", "profile_name": "airflowssm"}'
@@ -94,7 +92,6 @@ services:
             - REDIS_PASSWORD=${REDIS_PASSWORD}
               # From environment specific .env
             - SD_ENV=${SD_ENV}
-            - AIRFLOW_CONN_S3LOG="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@poseidon-logs-${SD_ENV}"
             - AIRFLOW__EMAIL__EMAIL_BACKEND=trident.util.notifications.afsys_send_email
             - AIRFLOW__CORE__FERNET_KEY=${FERNET_KEY}
             - 'AIRFLOW__SECRETS__BACKEND_KWARGS={"connections_prefix": "/airflow/connections/${SD_ENV}", "variables_prefix":"/airflow/variables/${SD_ENV}", "profile_name": "airflowssm"}'
@@ -120,7 +117,6 @@ services:
             - REDIS_PASSWORD=${REDIS_PASSWORD}
               # From environment specific .env
             - SD_ENV=${SD_ENV}
-            - AIRFLOW_CONN_S3LOG="S3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@poseidon-logs-${SD_ENV}"
             - AIRFLOW__EMAIL__EMAIL_BACKEND=trident.util.notifications.afsys_send_email
             - AIRFLOW__CORE__FERNET_KEY=${FERNET_KEY}
             - 'AIRFLOW__SECRETS__BACKEND_KWARGS={"connections_prefix": "/airflow/connections/${SD_ENV}", "variables_prefix":"/airflow/variables/${SD_ENV}", "profile_name": "airflowssm"}'
