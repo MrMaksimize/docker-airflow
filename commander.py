@@ -14,7 +14,6 @@ class Commander(object):
 
     def __init__(self):
         env.read_envfile()
-        self._aws_region = env.str("AWS_REGION")
         self._kms_id = env.str("KMS_ID")
 
 
