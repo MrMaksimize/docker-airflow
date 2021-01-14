@@ -90,6 +90,7 @@ def create_client_secrets():
     json_path = f'{temp_path}/client_secrets_v4.json'
     secrets_str = Variable.get("GA_CLIENT_SECRETS")
     secrets_json = json.loads(secrets_str)
+    logging.info(secrets_json)
     
     with open(json_path, 'w') as json_file:
         json.dump(secrets_json, json_file)

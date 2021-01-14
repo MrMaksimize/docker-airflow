@@ -9,7 +9,7 @@ from trident.util.seaboard_updates import *
 from trident.util import general
 
 #### You must update these with the paths to the corresponding files ####
-from dags.google_analytics.google_analytics_all_jobs import *
+from dags.google_analytics.google_analytics_jobs import *
 from dags.google_analytics.ga_all_subdags import *
 
 # Optional operator imports

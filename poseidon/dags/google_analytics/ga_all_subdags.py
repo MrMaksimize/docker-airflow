@@ -5,7 +5,7 @@ from airflow.models import DAG
 from trident.util import general
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
 
-from dags.google_analytics.google_analytics_all_jobs import *
+from dags.google_analytics.google_analytics_jobs import *
 
 args = general.args
 conf = general.config
@@ -13,25 +13,21 @@ schedule = general.schedule['ga_portal']
 start_date = general.start_date['ga_portal']
 
 reports_kwargs = {
-  'portal_users_sessions':{
+  'all_users_sessions':{
     'mets':['users','sessions','sessionDuration','hits'],
     'dims':['date','hour','userType']
   },
-  'portal_traffic_sources':{
+  'all_traffic_sources':{
     'mets':['sessions'],
     'dims':['date','source','referralPath','keyword']
   },
-  'portal_devices_platforms':{
+  'all_devices_platforms':{
     'mets':['sessions'],
     'dims':['date','deviceCategory','browser','browserVersion','operatingSystem']
   },
-  'portal_pages':{
+  'all_pages':{
     'mets':['entrances','exits','uniquePageviews','avgTimeOnPage','pageviews','users'],
     'dims':['date','hostname','pagePathLevel1','pagePathLevel2','pagePathLevel3']
-  },
-  'portal_events':{
-    'mets':['totalEvents','users'],
-    'dims':['date','eventCategory','eventAction','eventLabel']
   }
 }
 
