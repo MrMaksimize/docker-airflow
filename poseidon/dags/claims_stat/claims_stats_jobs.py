@@ -22,6 +22,7 @@ def get_claims_data():
     # This requires that otherwise optional credentials variable
     
     credentials = BaseHook.get_connection(conn_id="RISK")
+    
     conn_config = {
             'user': credentials.login,
             'password': credentials.password
@@ -42,7 +43,7 @@ def get_claims_data():
 
     # Create a sql file containing query for the database
     # Save this file in a sql folder at the same level as the jobs file
-    sql= general.file_to_string('./sql/claimstat_tsw.sql', __file__)
+    sql= general.file_to_string('./sql/claimstat.sql', __file__)
     df = pd.read_sql_query(sql, db)
     logging.info(f'Query returned {df.shape[0]} results')
 
@@ -170,7 +171,7 @@ def clean_geocode_claims():
                 right_on='CLAIM_NUMBER',
                 how='left',
                 )
-    
+
     
     logging.info('Sorting by incident date')
     updated_df = new_claims.sort_values(by='INCIDENT_DATE', ascending=False)
@@ -188,12 +189,19 @@ def clean_geocode_claims():
 
     return "Successfully generated claims stat prod file"
 
-def deploy_dashboard():
+def claims_by_department(**kwargs):
+    df_temp = pd.read_csv(f"{prod}/claim_stat_datasd.csv")
+    df_dept = df_temp.loc[df_temp["ORGANIZATION_DESC"].isin(claim_orgs),:]
+    general.pos_write_csv(df_dept,f'claims_clean_datasd_{org_name}.csv')
+
+    return f"Successfully write {org_name} csv!"
+
+def deploy_dashboard(org_name):
     """Deploy Claims Stat dashboard"""
 
     command = "Rscript /usr/local/airflow/poseidon/trident/util/shiny_deploy.R " \
-    + f"--appname=claims_{conf['env'].lower()} " \
-    + "--path=/usr/local/airflow/poseidon/dags/claims_stat/claims.Rmd " \
+    + f"--appname=claims_{org_name}_{conf['env'].lower()} " \
+    + f"--path=/usr/local/airflow/poseidon/dags/claims_stat/claims_{org_name}.Rmd " \
     + f"--name={Variable.get('SHINY_ACCT_NAME')} " \
     + f"--token={Variable.get('SHINY_TOKEN')} " \
     + f"--secret={Variable.get('SHINY_SECRET')} " \
