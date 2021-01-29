@@ -26,7 +26,7 @@ reports_kwargs = {
     'dims':['date','deviceCategory','browser','browserVersion','operatingSystem']
   },
   'all_pages':{
-    'mets':['entrances','exits','uniquePageviews','avgTimeOnPage','pageviews','users'],
+    'mets':['entrances','exits','uniquePageviews','avgTimeOnPage','pageviews','users','bounceRate'],
     'dims':['date','hostname','pagePathLevel1','pagePathLevel2','pagePathLevel3']
   }
 }
