@@ -38,6 +38,6 @@ def get_sidewalk_data(**kwargs):
     logging.info('Writing ' + str(df.shape[0]))
     
     general.pos_write_csv(
-       df, cond_file, date_format=conf['date_format_ymd'])
+       df, cond_file, date_format="%Y-%m-%d")
     
     return "Successfully wrote prod file"

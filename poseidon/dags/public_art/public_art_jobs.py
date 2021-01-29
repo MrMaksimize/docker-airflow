@@ -7,6 +7,7 @@ from trident.util import general
 import requests
 from arcgis import GIS
 from arcgis.features import FeatureLayerCollection
+from airflow.hooks.base_hook import BaseHook
 
 conf = general.config
 prod_dir = conf['prod_data_dir']
@@ -141,7 +142,9 @@ def update_geospatial():
 
     df = pd.read_csv(prod_file)
 
-    arc_gis = GIS("https://SanDiego.maps.arcgis.com",conf["arc_online_user"],conf["arc_online_pass"])
+    conn = BaseHook.get_connection(conn_id="ARC_ONLINE")
+
+    arc_gis = GIS(f"https://{conn.host}",conn.login,conn.password)
     lyr_id = '62be6801a23c4170851772d6a8184020'
     feature_layer = arc_gis.content.get(lyr_id)
     flayer_collection = FeatureLayerCollection.fromitem(feature_layer)

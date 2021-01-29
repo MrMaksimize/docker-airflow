@@ -15,7 +15,7 @@ def get_fd_data(**kwargs):
 	
 	logging.info("Get fire department data from Data Base")
 	fd_query = general.file_to_string('./sql/fd_pn.sql', __file__)
-	fd_conn = MsSqlHook(mssql_conn_id='fire_department')
+	fd_conn = MsSqlHook(mssql_conn_id='FIRE_DEPARTMENT')
 	
 	logging.info("Read data to panda DataFrame")
 	df = fd_conn.get_pandas_df(fd_query)

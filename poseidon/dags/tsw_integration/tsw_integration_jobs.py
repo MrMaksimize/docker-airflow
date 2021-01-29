@@ -12,10 +12,12 @@ from trident.util import geospatial
 from trident.util.sf_client import Salesforce
 from airflow.hooks.postgres_hook import PostgresHook
 import cx_Oracle
+from airflow.hooks.base_hook import BaseHook
+from shlex import quote
+from subprocess import Popen, PIPE
 
 
 conf = general.config
-credentials = general.source['dsd_permits']
 
 temp_file_sf = conf['temp_data_dir'] + '/tsw_violations_sf_temp.csv'
 temp_file_pts = conf['temp_data_dir'] + '/tsw_violations_pts_temp.csv'
@@ -33,13 +35,15 @@ dump_csv_file = "tsw_violations_vpm_temp.csv"
 # Global placeholder for ref file
 georef = None
 
-geocoded_addresses = 'https://datasd-reference.s3.amazonaws.com/sw_viols_address_book.csv'
+geocoded_addresses = 'sw_viols_address_book.csv'
 
 
 # VPM RETRIEVAL SUPPORT METHODS
 
 def get_vpm_violations_wget():
     """Temporary placeholder method for generating a wget to retrieve violations"""
+
+    ftp_conn = BaseHook.get_connection(conn_id="FTP_DATASD")
 
     command = """
     rm -rf {} && wget -np --continue \
@@ -48,8 +52,8 @@ def get_vpm_violations_wget():
     ftp://ftp.datasd.org/uploads/virtual_pm/{}
     """.format(
             temp_file_vpm,
-            conf['ftp_datasd_user'],
-            conf['ftp_datasd_pass'],
+            ftp_conn.login,
+            ftp_conn.password,
             conf['temp_data_dir'],
             dump_csv_file)
 
@@ -103,14 +107,15 @@ def get_vpm_violations_wget():
 
 def get_sf_violations():
     """Get violations from sf, creates temp file."""
-    username = conf['dpint_sf_user']
-    password = conf['dpint_sf_pass']
-    security_token = conf['dpint_sf_token']
+    sf_conn = BaseHook.get_connection(conn_id="DPINT_SF")
+    username = sf_conn.login
+    password = sf_conn.password
+    security_token = sf_conn.extra_dejson
 
     report_id = "00Ot0000000TPXC"
 
     # Init salesforce client
-    sf = Salesforce(username, password, security_token)
+    sf = Salesforce(username, password, security_token['token'])
 
     # Pull dataframe
     logging.info(f'Pull report {report_id} from SF')
@@ -123,21 +128,46 @@ def get_sf_violations():
 
     return f"Successfully wrote {df.shape[0]} records for tsw_sf violations file"
 
-def get_pts_violations():
+def get_pts_violations(**context):
     """ Get violations from pts, creates temp file. """
 
-    wget_str = "wget -np --continue " \
-     + "--user=$ftp_user " \
-     + "--password='$ftp_pass' " \
-     + "--directory-prefix=$temp_dir " \
-     + "ftp://ftp.datasd.org/uploads/dsd/stormwater/*Panda_Extract_STW_*.csv"
-    tmpl = string.Template(wget_str)
-    command = tmpl.substitute(
-    ftp_user=conf['ftp_datasd_user'],
-    ftp_pass=conf['ftp_datasd_pass'],
-    temp_dir=conf['temp_data_dir'])
+    # Looking for a file from yesterday
+    # This will fail except on Mondays
 
-    return command
+    exec_date = context['next_execution_date'].in_tz(tz='US/Pacific')
+    # Exec date returns a Pendulum object
+    # Runs on Monday for data extracted Sunday
+    file_date = exec_date.subtract(days=1)
+
+    # Need zero-padded month and date
+    filename = f"{file_date.year}" \
+    f"{file_date.strftime('%m')}" \
+    f"{file_date.strftime('%d')}"
+
+    conn = BaseHook.get_connection(conn_id="SVC_ACCT")
+
+    fpath = f"P2K_261-Panda_Extract_STW_{filename}.csv"
+
+    command = "smbclient //ad.sannet.gov/dfs " \
+    + f"--user={conn.login}%{conn.password} -W ad -c " \
+    + "'prompt OFF;"\
+    + " cd \"DSD-Shared/All_DSD/Panda/\";" \
+    + " lcd \"/data/temp/\";" \
+    + f" get {fpath};'"
+
+    command = command.format(quote(command))
+
+    p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
+    output, error = p.communicate()
+    
+    if p.returncode != 0:
+        logging.info(f"Did not find {fpath}")
+        logging.info(output)
+        logging.info(error)
+    else:
+        logging.info(f"Found {fpath}")
+
+    return "Successfully downloaded latest STW violations"
 
 def combine_violations():
     """Combine violations from 3 different sources."""
@@ -162,7 +192,9 @@ def combine_violations():
     vs = vs.fillna(value={'ADDRESS': '',})
     vs = vs.fillna(value={'PARCEL_APN': '',})
 
-    add_book = pd.read_csv(geocoded_addresses,low_memory=False)
+    bucket_name=Variable.get('S3_REF_BUCKET')
+    s3_url = f"s3://{bucket_name}/reference/{geocoded_addresses}"
+    add_book = pd.read_csv(s3_url,low_memory=False)
     
     logging.info(f"Fixing {vs.loc[(vs.ADDRESS == '') | (vs.ADDRESS == 'nan')].shape[0]} missing addresses")
 
@@ -252,7 +284,7 @@ def _clean_pts_violations():
     filename = conf['temp_data_dir'] + "/*Panda_Extract_STW_*.csv"
     list_of_files = glob.glob(filename)
     latest_file = max(list_of_files, key=os.path.getmtime)
-    logging.info(f"Reading in {latest_file}")
+    logging.info(f"Using PTS violations from {latest_file}")
 
     dtypes = {'LONGITUDE':np.float64,
     'LATITUDE':np.float64

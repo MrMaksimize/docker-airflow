@@ -14,6 +14,7 @@ import csv
 import json
 
 from airflow.models import Variable
+from airflow.hooks.base_hook import BaseHook
 
 def get_last_run(dag):
     last_dag_run = dag.get_last_dagrun()
@@ -97,69 +98,6 @@ def buildConfig(env):
         'default_s3_conn_id': 's3data',
         'prod_data_dir': "/data/prod",
         'temp_data_dir': "/data/temp",
-        'home_dir': os.environ.get("AIRFLOW_HOME", ""),
-        'date_format_ymd': "%Y-%m-%d",
-        'date_format_ymd_hms': "%Y-%m-%d %H:%M:%S",
-        'date_format_keen': "%Y-%m-%dT%H:%M:%S",
-        'dags_dir': "{}/poseidon/dags".format(os.environ.get("AIRFLOW_HOME", "")),
-        'dest_s3_bucket': os.environ.get('S3_DATA_BUCKET', 'datasd-dev'),
-        'ref_s3_bucket': os.environ.get('S3_REF_BUCKET', 'datasd-reference'),
-        'oracle_wpl': os.environ.get('CONN_ORACLEWPL'),
-        'ftp_sannet_user': os.environ.get("FTP_SANNET_USER", "anonymous"),
-        'ftp_sannet_pass': os.environ.get("FTP_SANNET_PASS", "anonymous"),
-        'ftp_datasd_user': os.environ.get("FTP_DATASD_USER"),
-        'ftp_datasd_pass': os.environ.get("FTP_DATASD_PASS"),
-        'ftp_read_user': os.environ.get("FTP_READ_USER"),
-        'ftp_read_pass': os.environ.get("FTP_READ_PASS"),
-        'mrm_sannet_user': os.environ.get("MRM_SANNET_USER"),
-        'mrm_sannet_pass': os.environ.get("MRM_SANNET_PASS"),
-        'svc_acct_user': os.environ.get("SVC_ACCT_USER"),
-        'svc_acct_pass': os.environ.get("SVC_ACCT_PASS"),
-        'alb_sannet_user': os.environ.get("ALB_SANNET_USER"),
-        'alb_sannet_pass': os.environ.get("ALB_SANNET_PASS"),
-        'arc_online_user': os.environ.get("ARC_ONLINE_USER"),
-        'arc_online_pass': os.environ.get("ARC_ONLINE_PASS"),
-        'mrm_sf_user': os.environ.get("MRM_SF_USER"),
-        'mrm_sf_pass': os.environ.get("MRM_SF_PASS"),
-        'mrm_sf_token': os.environ.get("MRM_SF_TOKEN"),
-        'dpint_sf_user':os.environ.get("DPINT_SF_USER"),
-        'dpint_sf_pass':os.environ.get("DPINT_SF_PASS"),
-        'dpint_sf_token':os.environ.get("DPINT_SF_TOKEN"),
-        'gh_tokens': os.environ.get("GH_TOKENS").split(','),
-        'mail_notify': int(os.environ.get("MAIL_NOTIFY")),
-        'mail_from_name': os.environ.get("MAIL_FROM_NAME"),
-        'mail_from_addr': os.environ.get("MAIL_FROM_ADDR"),
-        'mail_from_reply_to': os.environ.get("MAIL_FROM_REPLY_TO"),
-        'mail_default_receivers': os.environ.get("MAIL_DEFAULT_RECEIVERS"),
-        'mail_swu_key': os.environ.get("MAIL_SWU_KEY"),
-        'mail_swu_sys_tpl': os.environ.get("MAIL_SWU_SYS_TPL"),
-        'mail_swu_file_updated_tpl':
-        os.environ.get("MAIL_SWU_FILE_UPDATED_TPL"),
-        'mail_notify_claims': os.environ.get("MAIL_NOTIFY_CLAIMS"),
-        'keen_notify': int(os.environ.get("KEEN_NOTIFY")),
-        'keen_project_id': os.environ.get('KEEN_PROJECT_ID'),
-        'keen_write_key': os.environ.get('KEEN_WRITE_KEY'),
-        'keen_read_key': os.environ.get('KEEN_READ_KEY'),
-        'keen_ti_collection': os.environ.get('KEEN_TI_COLLECTION'),
-        'mrm_buffer_access_token': os.environ.get('MRM_BUFFER_ACCESS_TOKEN'),
-        'executable_path': f"{os.environ.get('AIRFLOW_HOME')}/poseidon/bin",
-        'google_token': os.environ.get("GOOGLE_TOKEN"),
-        'sde_user': os.environ.get("SDE_USER"),
-        'sde_pw': os.environ.get("SDE_PW"),
-        'sde_server': os.environ.get("SDE_SERVER"),
-        'shiny_acct_name': os.environ.get("SHINY_ACCT_NAME"),
-        'shiny_token': os.environ.get("SHINY_TOKEN"),
-        'shiny_secret': os.environ.get("SHINY_SECRET"),
-        'amcs_ip': os.environ.get("AMCS_IP_ADDRESS"),
-        'pf_api_key': os.environ.get("PF_API_KEY"),
-        'pf_api_key_str': os.environ.get("PF_API_KEY_STR"),
-        'lucid_api_user': os.environ.get("LUCID_USER"),
-        'lucid_api_pass': os.environ.get("LUCID_PASS"),
-        'ga_client_secrets': os.environ.get("GA_CLIENT_SECRETS"),
-        'migration_aws_key': os.environ.get('MIGRATION_ACCESS_KEY'),
-        'migration_aws_secret': os.environ.get('MIGRATION_ACCESS_SECRET'),
-        'migration_aws_region': os.environ.get('MIGRATION_REGION'),
-        'migration_dest_s3_bucket': os.environ.get('MIGRATION_BUCKET', 'datasd.dev')
     }
     return config
 
@@ -258,19 +196,10 @@ start_date = {
     'fleet': datetime(2020, 8, 26)
 }
 
-
-source = {'ttcs': os.environ.get('CONN_ORACLETTCS'),
-'cef':os.environ.get('CONN_ORACLE_CEF'),
-'dsd_permits' : os.environ.get('CONN_ORACLE_PERMITS'),
-'cip': os.environ.get('CONN_ORACLECIP'),
-'risk': os.environ.get('CONN_ORACLE_RISK'),
-'fleet': os.environ.get('CONN_ORACLE_FLEET')
-}
-
 args = {
     'owner': 'airflow',
     'depends_on_past': False,
-    'email': config['mail_default_receivers'],
+    'email': "data@sandiego.gov",
     'email_on_failure': True,
     'email_on_retry': False,
     'retries': 2,
@@ -305,7 +234,7 @@ def pos_write_csv(df, fname, **kwargs):
         'index': False,
         'encoding': 'utf-8',
         'doublequote': True,
-        'date_format': config['date_format_ymd'],
+        'date_format': "%Y-%m-%d",
         'quoting': csv.QUOTE_ALL
     }
     csv_args = default.copy()

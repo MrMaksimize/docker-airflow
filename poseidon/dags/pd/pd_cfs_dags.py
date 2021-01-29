@@ -71,8 +71,8 @@ for index, file in enumerate(updated):
         task_id=f'cfs_{file_year[0]}_to_S3',
         source_base_path=conf['prod_data_dir'],
         source_key=f'pd_calls_for_service_{file_year[0]}_datasd.csv',
-        dest_s3_bucket=conf['dest_s3_bucket'],
-        dest_s3_conn_id=conf['default_s3_conn_id'],
+        dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
+        dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
         dest_s3_key=f'pd/pd_calls_for_service_{file_year[0]}_datasd.csv',
         
         dag=dag)

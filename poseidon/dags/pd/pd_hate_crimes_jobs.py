@@ -7,6 +7,7 @@ import logging
 import pandas as pd
 from datetime import datetime
 from trident.util import general
+from airflow.hooks.base_hook import BaseHook
 
 conf = general.config
 prod_file = f"{conf['prod_data_dir']}/hate_crimes_datasd.csv"
@@ -14,17 +15,21 @@ prod_file = f"{conf['prod_data_dir']}/hate_crimes_datasd.csv"
 
 def get_data():
     """Download Hate Crimes data from FTP."""
+    
+    ftp_conn = BaseHook.get_connection(conn_id="FTP_DATASD")
+    temp_dir = conf['temp_data_dir']
+
     wget_str = "wget -np --continue " \
-        + "--user=$ftp_user " \
-        + "--password='$ftp_pass' " \
-        + "--directory-prefix=$temp_dir " \
+        + f"--user={ftp_conn.login} " \
+        + f"--password='{ftp_conn.password}' " \
+        + f"--directory-prefix={temp_dir} " \
         + "ftp://ftp.datasd.org/uploads/sdpd/" \
         + "Hate_Crimes/Hate_Crimes_Data_Portal_SDPD*.xlsx"
 
     tmpl = string.Template(wget_str)
     command = tmpl.substitute(
-        ftp_user=conf['ftp_datasd_user'],
-        ftp_pass=conf['ftp_datasd_pass'],
+        ftp_user=ftp_conn.login,
+        ftp_pass=ftp_conn.password,
         temp_dir=conf['temp_data_dir']
     )
 

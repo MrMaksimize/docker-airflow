@@ -7,6 +7,7 @@ import numpy as np
 import pendulum
 from trident.util import general
 from shlex import quote
+from airflow.hooks.base_hook import BaseHook
 
 conf = general.config
 portal_fname = conf['prod_data_dir'] +'/treas_parking_meters_loc_datasd_v1.csv'
@@ -16,7 +17,6 @@ def ftp_download(**context):
 
     file_date = context['execution_date'].in_tz(tz='US/Pacific')
     # Exec date returns a Pendulum object
-    logging.info(context)
 
     # Need zero-padded month and date
     filename = f"{file_date.year}" \
@@ -27,8 +27,10 @@ def ftp_download(**context):
 
     logging.info(f"Checking FTP for {filename}")
 
+    ftp_conn = BaseHook.get_connection(conn_id="FTP_DATASD")
+
     command = f"cd {conf['temp_data_dir']} && " \
-    f"curl --user {conf['ftp_datasd_user']}:{conf['ftp_datasd_pass']} " \
+    f"curl --user {ftp_conn.login}:{ftp_conn.password} " \
     f"-o {fpath} " \
     f"ftp://ftp.datasd.org/uploads/IPS/" \
     f"{fpath} -sk"
@@ -140,7 +142,7 @@ def build_prod_file(**context):
     general.pos_write_csv(
         final_sapid,
         portal_fname,
-        date_format=conf['date_format_ymd'])
+        date_format="%Y-%m-%d")
 
     return filename
 
@@ -148,6 +150,8 @@ def clean_files(**context):
     """ Delete files that were processed """
 
     filename = context['task_instance'].xcom_pull(task_ids='build_prod_file')
+
+    ftp_conn = BaseHook.get_connection(conn_id="FTP_DATASD")
     
     logging.info("Deleting files from FTP")
 
@@ -159,7 +163,7 @@ def clean_files(**context):
     RNTO SITE SIZE SMNT STAT STOR STOU STRU SYST TYPE USER XCUP XCWD XMKD
     XPWD XRMD """
 
-    ftp_command = f'curl --user {conf["ftp_datasd_user"]}:{conf["ftp_datasd_pass"]} ' \
+    ftp_command = f'curl --user {ftp_conn.login}:{ftp_conn.password} ' \
     f'ftp://ftp.datasd.org/uploads/IPS ' \
     f'-Q "DELE {fpath}"'
 

@@ -44,8 +44,8 @@ for file in event_files:
         task_id=f'upload_{file}',
         source_base_path=conf['prod_data_dir'],
         source_key=file_name,
-        dest_s3_conn_id=conf['default_s3_conn_id'],
-        dest_s3_bucket=conf['dest_s3_bucket'],
+        dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+        dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
         dest_s3_key=f'cityiq/{file_name}',
         
         replace=True,

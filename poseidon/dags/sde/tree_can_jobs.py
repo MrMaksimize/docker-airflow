@@ -5,6 +5,7 @@ import pandas as pd
 from collections import OrderedDict
 import logging
 import pymssql
+from airflow.hooks.base_hook import BaseHook
 
 conf = general.config
 table = 'ECO_TCANOPY_2014_SANDIEGO'
@@ -24,12 +25,13 @@ def sde_to_shp():
     """SDE table to Shapefile."""
     logging.info(f'Extracting {layername} layer from SDE.')
     
+    conn = BaseHook.get_connection(conn_id="SDE")
+    sde_server = conn.host
+    sde_user = conn.login
+    sde_pw = conn.password
+    sde_schema = conn.schema
 
-    sde_server = conf['sde_server']
-    sde_user = conf['sde_user']
-    sde_pw = conf['sde_pw']
-
-    sde_conn = pymssql.connect(sde_server, sde_user, sde_pw, 'sdw')
+    sde_conn = pymssql.connect(sde_server, sde_user, sde_pw, sde_schema)
     query = 'SELECT *,'\
     + ' [Shape].STAsText() as geom, '\
     + ' [Shape].STArea() as geom_area'\

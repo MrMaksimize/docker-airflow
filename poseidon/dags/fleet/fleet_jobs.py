@@ -28,7 +28,7 @@ temp_path = conf['temp_data_dir']
 def get_delays():
     """ Extract delays data from Fleet Focus """
 
-    credentials = BaseHook.get_connection(conn_id="oracle_fleet")
+    credentials = BaseHook.get_connection(conn_id="FLEET_FOCUS")
     conn_config = {
             'user': credentials.login,
             'password': credentials.password
@@ -55,7 +55,7 @@ def get_delays():
     general.pos_write_csv(
         df,
         f"{prod_path}/fleet_delays.csv",
-        date_format=conf['date_format_ymd_hms']
+        date_format="%Y-%m-%d %H:%M:%S"
         )
 
     return "Successfully queried Fleet Focus delays main table"
@@ -63,7 +63,7 @@ def get_delays():
 def get_jobs():
     """ Extract work order data from Fleet Focus """
 
-    credentials = BaseHook.get_connection(conn_id="oracle_fleet")
+    credentials = BaseHook.get_connection(conn_id="FLEET_FOCUS")
     conn_config = {
             'user': credentials.login,
             'password': credentials.password
@@ -90,7 +90,7 @@ def get_jobs():
     general.pos_write_csv(
         df,
         f"{prod_path}/fleet_jobs.csv",
-        date_format=conf['date_format_ymd_hms']
+        date_format="%Y-%m-%d %H:%M:%S"
         )
 
     return "Successfully queried Fleet Focus jobs main table"
@@ -98,7 +98,7 @@ def get_jobs():
 def get_vehicles():
     """ Extract vehicles data from Fleet Focus """
 
-    credentials = BaseHook.get_connection(conn_id="oracle_fleet")
+    credentials = BaseHook.get_connection(conn_id="FLEET_FOCUS")
     conn_config = {
             'user': credentials.login,
             'password': credentials.password
@@ -125,7 +125,7 @@ def get_vehicles():
     general.pos_write_csv(
         df,
         f"{prod_path}/fleet_vehicles.csv",
-        date_format=conf['date_format_ymd_hms']
+        date_format="%Y-%m-%d %H:%M:%S"
         )
 
     return "Successfully queried Fleet Focus eq_main table"

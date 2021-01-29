@@ -7,20 +7,39 @@ import string as sd
 
 from trident.util import general
 from trident.util import geospatial
+from airflow.models import Variable
+from airflow.hooks.oracle_hook import OracleHook
+from airflow.hooks.base_hook import BaseHook
 
 conf = general.config
-credentials = general.source['risk']
-
-
 prod = conf['prod_data_dir']
 tmp = conf['temp_data_dir']
-geocoded_addresses = 'https://datasd-reference.s3.amazonaws.com/claims_address_book.csv'
+geocoded_addresses = 'claims_address_book.csv'
 
 def get_claims_data():
     """Query an oracle database"""
     logging.info('Retrieving data from Oracle database')
     # This requires that otherwise optional credentials variable
-    db = cx_Oracle.connect(credentials)
+    
+    credentials = BaseHook.get_connection(conn_id="RISK")
+    conn_config = {
+            'user': credentials.login,
+            'password': credentials.password
+        }
+    
+    dsn = credentials.extra_dejson.get('dsn', None)
+    sid = credentials.extra_dejson.get('sid', None)
+    port = credentials.port if credentials.port else 1521
+    conn_config['dsn'] = cx_Oracle.makedsn(dsn, port, sid)
+
+    db = cx_Oracle.connect(conn_config['user'],
+        conn_config['password'],
+        conn_config['dsn'],
+        encoding="UTF-8")
+
+    # OracleHook will not work
+    #db = OracleHook.get_connection("RISK")
+
     # Create a sql file containing query for the database
     # Save this file in a sql folder at the same level as the jobs file
     sql= general.file_to_string('./sql/claimstat_tsw.sql', __file__)
@@ -48,7 +67,11 @@ def clean_geocode_claims():
 
     #Load and merge address book
     logging.info("Reading in address book")
-    add_book = pd.read_csv(geocoded_addresses,low_memory=False)
+    
+    bucket_name=Variable.get('S3_REF_BUCKET')
+    s3_url = f"s3://{bucket_name}/reference/{geocoded_addresses}"
+    add_book = pd.read_csv(s3_url,low_memory=False)
+    
     add_book_join = pd.merge(temp_df,
         add_book,
         how='left',
@@ -137,7 +160,7 @@ def clean_geocode_claims():
         logging.info('Writing address book')
         # Write new address book to temp directory
         general.pos_write_csv(new_add_book,
-        f"{tmp}/claims_address_book.csv")
+        f"{prod}/claims_address_book.csv")
 
         logging.info('merging lat lngs to final data')
 
@@ -167,12 +190,13 @@ def clean_geocode_claims():
 
 def deploy_dashboard():
     """Deploy Claims Stat dashboard"""
+
     command = "Rscript /usr/local/airflow/poseidon/trident/util/shiny_deploy.R " \
     + f"--appname=claims_{conf['env'].lower()} " \
     + "--path=/usr/local/airflow/poseidon/dags/claims_stat/claims.Rmd " \
-    + f"--name={conf['shiny_acct_name']} " \
-    + f"--token={conf['shiny_token']} " \
-    + f"--secret={conf['shiny_secret']} " \
+    + f"--name={Variable.get('SHINY_ACCT_NAME')} " \
+    + f"--token={Variable.get('SHINY_TOKEN')} " \
+    + f"--secret={Variable.get('SHINY_SECRET')} " \
     + "--force=TRUE "
 
     return command

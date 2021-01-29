@@ -27,14 +27,12 @@ dag = DAG(
 get_hc_data = BashOperator(
     task_id='get_data',
     bash_command=get_data(),
-    
     dag=dag)
 
 #: Process collisions data and save result to prod folder
 process_hc_data = PythonOperator(
     task_id='process_data',
     python_callable=process_data,
-    
     dag=dag)
 
 #: Upload prod file to S3
@@ -42,10 +40,9 @@ hc_to_S3 = S3FileTransferOperator(
     task_id='prod_file_to_S3',
     source_base_path=conf['prod_data_dir'],
     source_key='hate_crimes_datasd.csv',
-    dest_s3_bucket=conf['dest_s3_bucket'],
-    dest_s3_conn_id=conf['default_s3_conn_id'],
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
     dest_s3_key='pd/hate_crimes_datasd.csv',
-    
     dag=dag)
 
 #: Update data inventory json
@@ -54,7 +51,6 @@ update_hc_date = PythonOperator(
     python_callable=update_json_date,
     provide_context=True,
     op_kwargs={'ds_fname': 'hate_crimes'},
-    
     dag=dag)
 
 #: Update portal modified date

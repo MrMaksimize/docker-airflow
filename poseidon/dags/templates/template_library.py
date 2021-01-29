@@ -15,7 +15,8 @@ conf = general.config
 
 from airflow.hooks.mssql_hook import MsSqlHook
 from airflow.hooks.postgres_hook import PostgresHook
-import cx_Oracle
+from airflow.hooks.base_hook import BaseHook
+from airflow.hooks.oracle_hook import OracleHook
 from trident.util.sf_client import Salesforce
 import ftplib
 import subprocess
@@ -35,8 +36,6 @@ import math
 
 from collections import OrderedDict
 import json
-from lxml import etree
-from bs4 import BeautifulSoup as bs
 
 import string
 import re #regex
@@ -67,9 +66,9 @@ def get_smb_files():
 
     # Uses smbclient, subprocess, and shlex
     logging.info('Retrieving files')
-    
+    conn = BaseHook.get_connection(conn_id="SVC_ACCT")
     command = "smbclient //ad.sannet.gov/dfs " \
-        + f"--user={conf['svc_acct_user']}%{conf['svc_acct_pass']} -W ad -c " \
+        + f"--user={conn.login}%{conn.password} -W ad -c " \
         + "'prompt OFF;"\
         + " cd \"PATH/TO/FILE/\";" \
         + " lcd \"/data/temp/\";" \
@@ -94,9 +93,9 @@ def get_smb_file():
 
     # Uses subprocess, and shlex
     logging.info('Retrieving files')
-    
+    conn = BaseHook.get_connection(conn_id="SVC_ACCT")
     command = "smbclient //ad.sannet.gov/dfs " \
-        + f"--user={conf['svc_acct_user']}%{conf['svc_acct_pass']} -W ad -c " \
+        + f"--user={conn.login}%{conn.password} -W ad -c " \
         + "'prompt OFF;"\
         + " cd \"PATH/TO/FILE/\";" \
         + " lcd \"/data/temp/\";" \
@@ -144,8 +143,7 @@ def get_oracle_data():
     # Pull environment variable into source object
     # in trident.util.general.source
 
-    credentials = general.source['dummy_name']
-    db = cx_Oracle.connect(credentials)
+    db = OracleHook(conn_id='')
 
     # This also requires a folder named 'sql'
     # With a .sql file inside
@@ -188,9 +186,11 @@ def get_ftp_file(**context):
 
     logging.info(f"Checking FTP for {filename}")
 
+    ftp_conn = BaseHook.get_connection(conn_id="FTP_DATASD")
+
     # MUST use curl for future needed SFTP support
     command = f"cd {conf['temp_data_dir']} && " \
-    f"curl --user {conf['ftp_datasd_user']}:{conf['ftp_datasd_pass']} " \
+    f"curl --user {ftp_conn.login}:{ftp_conn.password} " \
     f"-o {fpath} " \
     f"ftp://ftp.datasd.org/uploads/IPS/" \
     f"{fpath} -sk"
