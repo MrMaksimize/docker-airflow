@@ -5,7 +5,8 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.operators.subdag_operator import SubDagOperator
 from airflow.models import DAG
 
-from dags.claims_stat.claims_stats_jobs import *
+from dags.claims_stat.claims_stat_jobs import *
+from dags.claims_stat.claims_stat_subdags import *
 
 from datetime import datetime, timedelta
 from trident.util import general
@@ -27,15 +28,15 @@ dag = DAG(dag_id='claims_stat',
     catchup=False
     )
 
-get_claims_data = PythonOperator(
-            task_id='get_claims_data',
-            python_callable=get_claims_data,
-            dag=dag)
+get_claims = PythonOperator(
+    task_id='get_claims_data',
+    python_callable=get_claims_data,
+    dag=dag)
 
 clean_geocode = PythonOperator(
-            task_id='clean_geocode_claims',
-            python_callable=clean_geocode_claims,
-            dag=dag)
+    task_id='clean_geocode_claims',
+    python_callable=clean_geocode_claims,
+    dag=dag)
 
 upload_addresses_to_S3 = S3FileTransferOperator(
     task_id='upload_claims_address_book',
@@ -49,8 +50,8 @@ upload_addresses_to_S3 = S3FileTransferOperator(
 
 upload_deploy_email = SubDagOperator(
     task_id='upload_deploy_email',
-    subdag=upload_deploy_email(),
+    subdag=create_subdag(),
     dag=dag)
 
-get_claims_data >> clean_geocode >> [upload_addresses_to_S3,upload_deploy_email]
+get_claims >> clean_geocode >> [upload_addresses_to_S3,upload_deploy_email]
 

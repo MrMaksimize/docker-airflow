@@ -4,7 +4,7 @@ from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
 from airflow.operators.python_operator import PythonOperator
 from airflow.models import DAG
 
-from dags.claims_stat.claims_stats_jobs import *
+from dags.claims_stat.claims_stat_jobs import *
 
 from datetime import datetime, timedelta
 from trident.util import general
@@ -15,12 +15,14 @@ from trident.operators.poseidon_email_operator import PoseidonEmailFileUpdatedOp
 
 args = general.args
 conf = general.config
-schedule = general.schedule
+schedule = general.schedule['claims_stat']
 start_date = general.start_date['claims_stat']
 
-claims_kwargs = {'tsw':['Storm Water-211612','Street-211611'],'pd':['Police-191400']}
+claims_kwargs = {'tsw':['Storm Water-211612','Street-211611'],
+'pd':['Police-191400']}
 
-def upload_deploy_email():
+def create_subdag():
+    
     dag_subdag = DAG(
             dag_id='claims_stat.upload_deploy_email',
             default_args=args,
@@ -34,7 +36,7 @@ def upload_deploy_email():
         claim_orgs = claims_kwargs[org_name]
         email_org = org_name.upper()
 
-        claims_by_department = PythonOperator(
+        claims_filter = PythonOperator(
             task_id=f'claims_by_department_{org_name}',
             python_callable=claims_by_department,
             op_kwargs={'org_name':org_name,'claim_orgs':claim_orgs},
@@ -51,17 +53,21 @@ def upload_deploy_email():
             replace=True,
             dag=dag_subdag)
 
-        deploy_dashboard = BashOperator(
-            task_id='deploy_dashboard',
+        deploy = BashOperator(
+            task_id=f'deploy_dashboard_{org_name}',
             bash_command=deploy_dashboard(org_name),
             dag=dag_subdag)
 
         send_last_file_updated_email = PoseidonEmailFileUpdatedOperator(
-            task_id='send_dashboard_updated',
-            to=f"{{ var.value.MAIL_NOTIFY_CLAIMS_{email_org} }}",
+            task_id=f'send_dashboard_updated_{org_name}',
+            to="{{ var.value.MAIL_NOTIFY_CLAIMS_TSW }}",
             subject='Dashboard Updated',
             file_bucket=None,
-            file_url=f"https://sandiego-panda.shinyapps.io/claims_{conf['env'].lower()}/",
+            file_url=f"https://sandiego-panda.shinyapps.io/claims_{org_name}_{conf['env'].lower()}/",
             message='<p>The ClaimStat tool has been updated.</p>' \
                     + '<p>Please follow the link below to view the tool.</p>',
             dag=dag_subdag)
+
+        claims_filter >> upload_claimstat_clean >> deploy >> send_last_file_updated_email
+
+    return dag_subdag

@@ -189,10 +189,14 @@ def clean_geocode_claims():
 
     return "Successfully generated claims stat prod file"
 
-def claims_by_department(**kwargs):
+def claims_by_department(org_name='',
+    claim_orgs=[],
+    **kwargs):
+    
     df_temp = pd.read_csv(f"{prod}/claim_stat_datasd.csv")
     df_dept = df_temp.loc[df_temp["ORGANIZATION_DESC"].isin(claim_orgs),:]
-    general.pos_write_csv(df_dept,f'claims_clean_datasd_{org_name}.csv')
+    general.pos_write_csv(df_dept,
+        f'{prod}/claims_clean_datasd_{org_name}.csv')
 
     return f"Successfully write {org_name} csv!"
 
