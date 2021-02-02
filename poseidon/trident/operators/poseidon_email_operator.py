@@ -51,7 +51,7 @@ class PoseidonEmailOperator(BaseOperator):
     :param bcc:
     :type bcc: string
     """
-    template_fields = ('to')
+    template_fields = ('to',)
     ui_color = '#ffefeb'
 
     @apply_defaults
@@ -138,7 +138,7 @@ class PoseidonEmailFileUpdatedOperator(PoseidonEmailOperator):
     Send last updated file
     """
 
-    template_fields = ('file_bucket')
+    template_fields = ('file_bucket',)
 
     @apply_defaults
     def __init__(self,
