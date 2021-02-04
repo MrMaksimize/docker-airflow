@@ -5,6 +5,7 @@
 from airflow.models import DAG
 from airflow.operators.python_operator import PythonOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
+from airflow.operators.bash_operator import BashOperator
 from trident.util.seaboard_updates import *
 from trident.util import general
 
@@ -43,4 +44,10 @@ reports_subdag = SubDagOperator(
     dag=dag,
   )
 
-create_keyfile >> reports_subdag
+#: Calculate department page metrics
+calc_metric_pages = BashOperator(
+    task_id='calculate_dept_metrics',
+    bash_command='Rscript /usr/local/airflow/poseidon/dags/google_analytics/HW1.R',
+    dag=dag)
+
+create_keyfile >> reports_subdag >> calc_metric_pages
