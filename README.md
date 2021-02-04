@@ -35,7 +35,7 @@ Next, ensure that folders **/data/temp** & **/data/prod** exist within the direc
 
 For testing and development, run Airflow with **SequentialExecutor** :
 
-    python3 commander.py up Sequential
+    python3 commander.py up sequential
 
 This command will pull the referenced image from Dockerhub, and create a webserver container. 
 
@@ -49,7 +49,7 @@ If everything went as expected, you should see a running container. To view the 
 
 To connect to the  container run:
 
-    python3 commander.py connect_container poseidon-airflow_webserver_1
+    python3 commander.py connect_container poseidon_webserver_1
 
 This will bring you to an airflow prompt within the container. To view dags:
 
