@@ -48,4 +48,11 @@ get_calamp = PythonOperator(
     python_callable=download_calamp_daily,
     dag=dag)
 
+#: Basic Python operator
+process_calamp = PythonOperator(
+    task_id='process_calamp',
+    provide_context=True,
+    python_callable=process_calamp_daily,
+    dag=dag)
 
+get_calamp >> process_calamp
