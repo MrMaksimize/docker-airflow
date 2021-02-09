@@ -69,7 +69,7 @@ def download_calamp_daily(**context):
     today = context['next_execution_date'].in_tz(tz='US/Pacific')
     # Exec date returns a Pendulum object
     # Runs at 10pm the night before and has today's date
-    yesterday = exec_date.subtract(days=1)
+    yesterday = today.subtract(days=1)
     
     # Need zero-padded month and date
     today_filename = f"{today.year}" \
@@ -85,20 +85,13 @@ def download_calamp_daily(**context):
     logging.info(f"Using {today_filename} as filename")
 
     ftp_conn = BaseHook.get_connection(conn_id="CALAMP")
-
-    logging.info(ftp_conn.login)
-    logging.info(ftp_conn.password)
     
     # MUST use curl for future needed SFTP support
-    command = f"curl -o {filename}.csv " \
+    command = f"curl -o {today_filename}.csv " \
             + "sftp://sftpgoweb.calamp.com/mnt/array1/SanDiego_FTP/Databases/"\
             + f"-u {ftp_conn.login}:{ftp_conn.password} -k"
 
-    logging.info(command)
-
     command = command.format(quote(command))
-
-    logging.info(command)
 
     p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
     output, error = p.communicate()
