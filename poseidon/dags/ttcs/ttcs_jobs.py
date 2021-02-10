@@ -335,6 +335,7 @@ def make_prod_files():
                      parse_dates=['address_dt',
                                   'bus_start_dt',
                                   'cert_exp_dt',
+                                  'cert_eff_dt',
                                   'creation_dt',
                                   'dba_name_dt'
                                   ])
@@ -342,6 +343,7 @@ def make_prod_files():
     logging.info('Renaming columns')
     df = df.rename(columns={'address_dt':'address_active_dt',
             'cert_exp_dt':'date_cert_expiration',
+            'cert_eff_dt':'date_cert_effective',
             'creation_dt':'date_account_creation',
             'dba_name_dt':'dba_name_active_dt',
             'name':'bid',
@@ -373,6 +375,7 @@ def make_prod_files():
         'account_status',
         'date_account_creation',
         'date_cert_expiration',
+        'date_cert_effective',
         'business_owner_name',
         'ownership_type',
         'date_business_start',
