@@ -71,84 +71,55 @@ def download_calamp_daily(**context):
     # Exec date returns a Pendulum object
     # Runs at 10pm the night before and has today's date
     yesterday = today.subtract(days=1)
-    
-    # Need zero-padded month and date
-    today_filename = f"{today.year}" \
-    f"{today.strftime('%m')}" \
-    f"{today.strftime('%d')}"
-
-    # Need zero-padded month and date
-    yesterday_filename = f"{today.year}" \
-    f"{today.strftime('%m')}" \
-    f"{today.strftime('%d')}"
-
-    logging.info(f"Looking for file for {today}")
-    logging.info(f"Using {today_filename} as filename")
+    dates = [f"{today.year}{today.strftime('%m')}{today.strftime('%d')}",
+    f"{yesterday.year}{yesterday.strftime('%m')}{yesterday.strftime('%d')}"]
 
     ftp_conn = BaseHook.get_connection(conn_id="CALAMP")
     extras = ftp_conn.extra_dejson
     password = quote_plus(extras.get('password'))
     
-    # MUST use curl for future needed SFTP support
-    command = f"curl -o calamp_{today_filename}.csv " \
-            + f"sftp://{ftp_conn.login}:{password}@sftpgoweb.calamp.com/mnt/array1/SanDiego_FTP/Databases/ "\
-            + f"--insecure --verbose"
+    for day in dates:
 
-    command = command.format(quote(command))
-    logging.info(command)
-
-    p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
-    output, error = p.communicate()
-    
-    if p.returncode != 0:
-        logging.info(error)
-        raise Exception(p.returncode)
-    else:
-        logging.info(f"Found file for {today}")
-        logging.info(f"Looking for file for {yesterday}")
+        logging.info(f"Looking for file for {day}")
 
         # MUST use curl for future needed SFTP support
-        command = f"curl -o calamp_{yesterday_filename}.csv " \
-            + "sftp://sftpgoweb.calamp.com/mnt/array1/SanDiego_FTP/Databases/ "\
-            + f"-u {ftp_conn.login}:{password} --insecure --verbose"
+        command = f"curl -o {temp_path}/calamp_{day}.csv " \
+                + f"sftp://{ftp_conn.login}:{password}" \
+                + f"@sftpgoweb.calamp.com/mnt/array1/SanDiego_FTP/Databases/" \
+                + f"{day}.csv " \
+                + f"--insecure"
 
         command = command.format(quote(command))
+        logging.info(command)
 
         p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
         output, error = p.communicate()
-        
+    
         if p.returncode != 0:
             logging.info(error)
             raise Exception(p.returncode)
-        else:
-            logging.info(f"Found file for {yesterday}")
 
-            return f"{today}"
+    return dates
 
 #: DAG function
 def process_calamp_daily(**context):
     """ Reading in daily temp file and processing """
 
-    today = context['task_instance'].xcom_pull(dag_id="fleet_vmt",
+    dates = context['task_instance'].xcom_pull(dag_id="fleet_vmt",
         task_ids='get_calamp')
 
-    yesterday = today.subtract(days=1)
+    today = pd.read_csv(f"{temp_path}/calamp_{dates[0]}.csv",
+        low_memory=False
+        )
+    yesterday = pd.read_csv(f"{temp_path}/calamp_{dates[1]}.csv",
+        low_memory=False
+        )
 
-    # Need zero-padded month and date
-    today_filename = f"{today.year}" \
-    f"{today.strftime('%m')}" \
-    f"{today.strftime('%d')}"
-
-    # Need zero-padded month and date
-    yesterday_filename = f"{today.year}" \
-    f"{today.strftime('%m')}" \
-    f"{today.strftime('%d')}"
-
-    df_today = pd.read_csv(f"{temp_path}/{today_filename}.csv")
-    df_yesterday = pd.read_csv(f"{temp_path}/{yesterday_filename}.csv")
+    logging.info(today.shape)
+    logging.info(yesterday.shape)
 
     # Do more stuff
 
-    df_homebase = vehicle_homebase(df)
+    #df_homebase = vehicle_homebase(df)
 
     return "Process daily calamp records into data files"
