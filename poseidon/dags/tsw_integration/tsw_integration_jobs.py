@@ -15,6 +15,7 @@ import cx_Oracle
 from airflow.hooks.base_hook import BaseHook
 from shlex import quote
 from subprocess import Popen, PIPE
+from airflow.models import Variable
 
 
 conf = general.config

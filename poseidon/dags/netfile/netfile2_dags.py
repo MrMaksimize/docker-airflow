@@ -102,7 +102,7 @@ update_fin_support_md = get_seaboard_update_dag('financial-support-candidates-an
 #: Email new committees
 send_committee_report = PoseidonEmailWithPythonOperator(
     task_id='send_committee_report',
-    to='abower@sandiego.gov',
+    to="{{ var.value.MAIL_NOTIFY_NETFILE }}",
     subject='Campaign committees update',
     template_id='tem_7xCrDCTyvjMGS9VpBM8rRmwD',
     dispatch_type='sonar_dispatch',

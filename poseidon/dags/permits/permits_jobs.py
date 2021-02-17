@@ -261,6 +261,7 @@ def build_accela(**context):
         + f"{filelist['Active Accela PV permits all time'].get('name')}_{filename}." \
         + f"{filelist['Active Accela PV permits all time'].get('ext')}",
         dtype=dtypes,
+        engine='openpyxl',
         na_values=' null')
 
     logging.info(f"Reading active non PV permits for {filename}")
@@ -268,6 +269,7 @@ def build_accela(**context):
         + f"{filelist['All other active Accela permits all time'].get('name')}_{filename}." \
         + f"{filelist['All other active Accela permits all time'].get('ext')}",
         dtype=dtypes,
+        engine='openpyxl',
         na_values=' null')
         
     logging.info(f"Reading inactive PV permits for {filename}")
@@ -275,6 +277,7 @@ def build_accela(**context):
         + f"{filelist['Closed Accela PV permits all time'].get('name')}_{filename}." \
         + f"{filelist['Closed Accela PV permits all time'].get('ext')}",
         dtype=dtypes,
+        engine='openpyxl',
         na_values=' null')
     
     logging.info(f"Reading inactive non PV permits for {filename}")
@@ -282,6 +285,7 @@ def build_accela(**context):
         + f"{filelist['All other closed Accela permits all time'].get('name')}_{filename}." \
         + f"{filelist['All other closed Accela permits all time'].get('ext')}",
         dtype=dtypes,
+        engine='openpyxl',
         na_values=' null')
     
     logging.info("Files read successfully")

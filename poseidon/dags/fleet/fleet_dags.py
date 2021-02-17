@@ -5,6 +5,7 @@
 from airflow.models import DAG
 from airflow.operators.python_operator import PythonOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
+from airflow.operators.bash_operator import BashOperator
 from trident.util.seaboard_updates import *
 from trident.util import general
 
@@ -28,21 +29,38 @@ dag = DAG(dag_id='fleet_focus',
         )
 
 #: Query Fleet Focus delays table
-get_delays = PythonOperator(
+delays = PythonOperator(
     task_id='query_fleet_delays',
     python_callable=get_delays,
     dag=dag)
 
 #: Query Fleet Focus jobs table
-get_jobs = PythonOperator(
+jobs = PythonOperator(
     task_id='query_fleet_jobs',
     python_callable=get_jobs,
     dag=dag)
 
 #: Query Fleet Focus eq main table
-get_vehicles = PythonOperator(
+vehicles = PythonOperator(
     task_id='query_fleet_vehicles',
     python_callable=get_vehicles,
+    dag=dag)
+
+vehicles_process = BashOperator(
+    task_id='calculate_dept_metrics',
+    bash_command='Rscript /usr/local/airflow/poseidon/dags/fleet/valid_veh.R',
+    dag=dag)
+
+#: Query Fleet Focus eq main table
+availability = PythonOperator(
+    task_id='query_availability',
+    python_callable=get_availability,
+    dag=dag)
+
+#: Query Fleet Focus eq main table
+avail_calc = PythonOperator(
+    task_id='avail_calc',
+    python_callable=calc_availability,
     dag=dag)
 
 upload_delays = S3FileTransferOperator(
@@ -76,6 +94,8 @@ upload_vehicles = S3FileTransferOperator(
     dag=dag)
 
 #: Required execution rules
-get_delays >> upload_delays
-get_jobs >> upload_jobs
-get_vehicles >> upload_vehicles
+delays >> upload_delays
+jobs >> upload_jobs
+vehicles >> upload_vehicles
+vehicles >> vehicles_process
+availability >> avail_calc
