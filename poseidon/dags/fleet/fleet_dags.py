@@ -93,6 +93,16 @@ upload_vehicles = S3FileTransferOperator(
     replace=True,
     dag=dag)
 
+upload_valid_vehicles = S3FileTransferOperator(
+    task_id=f'upload_valid_veh',
+    source_base_path=conf['prod_data_dir'],
+    source_key=f'fleet_valid_vehicles.csv',
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
+    dest_s3_key=f'fleet/fleet_valid_vehicles.csv',
+    replace=True,
+    dag=dag)
+
 #: Required execution rules
 delays >> upload_delays
 jobs >> upload_jobs
