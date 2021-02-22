@@ -47,7 +47,7 @@ vehicles = PythonOperator(
     dag=dag)
 
 vehicles_process = BashOperator(
-    task_id='calculate_dept_metrics',
+    task_id='create_valid_veh',
     bash_command='Rscript /usr/local/airflow/poseidon/dags/fleet/valid_veh.R',
     dag=dag)
 
@@ -61,6 +61,7 @@ availability = PythonOperator(
 avail_calc = PythonOperator(
     task_id='avail_calc',
     python_callable=calc_availability,
+    provide_context=True,
     dag=dag)
 
 upload_delays = S3FileTransferOperator(
@@ -103,9 +104,19 @@ upload_valid_vehicles = S3FileTransferOperator(
     replace=True,
     dag=dag)
 
+upload_avail_vehicles = S3FileTransferOperator(
+    task_id=f'upload_avail_veh',
+    source_base_path=conf['prod_data_dir'],
+    source_key=f'fleet_avail_vehs.csv',
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
+    dest_s3_key=f'fleet/fleet_avail_vehs.csv',
+    replace=True,
+    dag=dag)
+
 #: Required execution rules
 delays >> upload_delays
 jobs >> upload_jobs
 vehicles >> upload_vehicles
-vehicles >> vehicles_process
-availability >> avail_calc
+vehicles >> vehicles_process >> upload_valid_vehicles
+availability >> avail_calc >> upload_avail_vehicles
