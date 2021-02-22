@@ -8,6 +8,7 @@ from trident.util.geospatial import spatial_join_pt
 import logging
 from subprocess import Popen, PIPE
 from shlex import quote
+from airflow.hooks.base_hook import BaseHook
 
 conf = general.config
 
@@ -36,8 +37,10 @@ def get_tags_file(**context):
 
     fpath = f"P2K_261-Panda_Extract_DSD_Projects_Tags_{filename_1}.txt"
 
+    conn = BaseHook.get_connection(conn_id="SVC_ACCT")
+
     command = "smbclient //ad.sannet.gov/dfs " \
-        + f"--user={conf['svc_acct_user']}%{conf['svc_acct_pass']} -W ad -c " \
+        + f"--user={conn.login}%{conn.password} -W ad -c " \
         + "'prompt OFF;"\
         + " cd \"DSD-Shared/All_DSD/Panda/\";" \
         + " lcd \"/data/temp/\";" \
@@ -57,7 +60,7 @@ def get_tags_file(**context):
         fpath = f"P2K_261-Panda_Extract_DSD_Projects_Tags_{filename_2}.txt"
 
         command = "smbclient //ad.sannet.gov/dfs " \
-        + f"--user={conf['svc_acct_user']}%{conf['svc_acct_pass']} -W ad -c " \
+        + f"--user={conn.login}%{conn.password} -W ad -c " \
         + "'prompt OFF;"\
         + " cd \"DSD-Shared/All_DSD/Panda/\";" \
         + " lcd \"/data/temp/\";" \
@@ -125,5 +128,3 @@ def build_tags(**context):
         'dsd_proj_tags')
 
     return 'Created new project tags file'
-
-

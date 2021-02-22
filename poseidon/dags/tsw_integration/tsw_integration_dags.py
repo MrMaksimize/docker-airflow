@@ -34,7 +34,6 @@ dag = DAG(dag_id='tsw_integration',
 get_vpm_violations = BashOperator(
     task_id='get_vpm_violations',
     bash_command=get_vpm_violations_wget(),
-    
     dag=dag)
 
 
@@ -109,7 +108,6 @@ get_vpm_violations = BashOperator(
 get_sf_violations = PythonOperator(
     task_id='get_sf_violations',
     python_callable=get_sf_violations,
-    
     dag=dag)
 
 
@@ -122,10 +120,10 @@ get_sf_violations = PythonOperator(
     #
     #dag=dag)
 
-get_pts_violations = BashOperator(
+get_pts_violations = PythonOperator(
     task_id='get_pts_violations',
-    bash_command=get_pts_violations(),
-    
+    provide_context=True,
+    python_callable=get_pts_violations,
     dag=dag)
 
 
@@ -133,7 +131,6 @@ get_pts_violations = BashOperator(
 combine_sw_violations = PythonOperator(
     task_id='combine_sw_violations',
     python_callable=combine_violations,
-    
     dag=dag)
 
 
@@ -143,10 +140,9 @@ violations_csv_to_s3 = S3FileTransferOperator(
     task_id='violations_csv_to_s3',
     source_base_path=conf['prod_data_dir'],
     source_key='stormwater_violations_merged.csv',
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_bucket=conf['dest_s3_bucket'],
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
     dest_s3_key='tsw_int/stormwater_violations_merged.csv',
-    
     replace=True,
     dag=dag)
 
@@ -156,10 +152,9 @@ violations_csv_null_geos_to_s3 = S3FileTransferOperator(
     task_id='violations_csv_w_null_geos_to_s3',
     source_base_path=conf['prod_data_dir'],
     source_key='stormwater_violations_merged_null_geos.csv',
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_bucket=conf['dest_s3_bucket'],
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
     dest_s3_key='tsw_int/stormwater_violations_merged_null_geos.csv',
-    
     replace=True,
     dag=dag)
 
@@ -169,10 +164,9 @@ violations_geojson_to_s3 = S3FileTransferOperator(
     task_id='violations_geojson_to_s3',
     source_base_path=conf['prod_data_dir'],
     source_key='stormwater_violations_merged.geojson',
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_bucket=conf['dest_s3_bucket'],
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
     dest_s3_key='tsw_int/stormwater_violations_merged.geojson',
-    
     replace=True,
     dag=dag)
 
@@ -181,10 +175,9 @@ addresses_to_S3 = S3FileTransferOperator(
     task_id='upload_address_book',
     source_base_path=conf['prod_data_dir'],
     source_key='sw_viols_address_book.csv',
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_bucket=conf['ref_s3_bucket'],
-    dest_s3_key='sw_viols_address_book.csv',
-    
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_REF_BUCKET }}",
+    dest_s3_key='reference/sw_viols_address_book.csv',
     replace=True,
     dag=dag)
 

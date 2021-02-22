@@ -18,22 +18,19 @@ dag = DAG(dag_id='read_billing',
     default_args=args,
     start_date=start_date,
     schedule_interval=schedule['read'],
-    catchup=False
-    )
+    catchup=False)
 
 #: Retrieve READ billing data from FTP
 get_billing = PythonOperator(
     task_id='get_billing',
     python_callable=get_file,
     op_kwargs={'mode':'billing'},
-    
     dag=dag)
 
 #: Process billing data
 process_billing = PythonOperator(
     task_id='process_billing',
     python_callable=process_billing,
-    
     dag=dag)
 
 #: Upload billing data to S3
@@ -41,10 +38,9 @@ billing_to_S3 = S3FileTransferOperator(
     task_id='billing_to_S3',
     source_base_path=conf['prod_data_dir'],
     source_key='city_property_billing_datasd_v1.csv',
-    dest_s3_bucket=conf['dest_s3_bucket'],
-    dest_s3_conn_id=conf['default_s3_conn_id'],
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
     dest_s3_key='read/city_property_billing_datasd_v1.csv',
-    
     dag=dag)
 
 #: Execution Rules

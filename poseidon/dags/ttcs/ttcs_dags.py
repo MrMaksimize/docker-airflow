@@ -29,30 +29,27 @@ dag = DAG(dag_id='ttcs',
 get_active_businesses = PythonOperator(
     task_id='get_active_businesses',
     python_callable=get_active_businesses,
-    
     dag=dag)
 
 #: Process temp data and save as .csv to prod folder
 clean_data = PythonOperator(
     task_id='clean_data',
     python_callable=clean_data,
-    
     dag=dag)
 
 #: Geocode new entries and update production file
 geocode_data = PythonOperator(
     task_id='geocode_data',
     python_callable=geocode_data,
-    
     dag=dag)
 
 addresses_to_S3 = S3FileTransferOperator(
     task_id='upload_address_book',
     source_base_path=conf['prod_data_dir'],
     source_key='ttcs_address_book.csv',
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_bucket=conf['ref_s3_bucket'],
-    dest_s3_key='ttcs_address_book.csv',
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_REF_BUCKET }}",
+    dest_s3_key='reference/ttcs_address_book.csv',
     replace=True,
     dag=dag)
 
@@ -91,8 +88,8 @@ for index, subset in enumerate(subset_names):
             task_id=f'upload_{task_name}',
             source_base_path=conf['prod_data_dir'],
             source_key=f'sd_businesses_{task_name}_datasd_v1.csv',
-            dest_s3_conn_id=conf['default_s3_conn_id'],
-            dest_s3_bucket=conf['dest_s3_bucket'],
+            dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+            dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
             dest_s3_key=f'ttcs/sd_businesses_{task_name}_datasd_v1.csv',
             replace=True,
             dag=dag)

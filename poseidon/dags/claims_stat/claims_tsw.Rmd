@@ -1,0 +1,364 @@
+---
+title: "ClaimStat TSW"
+runtime: shiny
+output:
+  flexdashboard::flex_dashboard:
+    orientation: rows
+
+---
+
+
+
+```{r global, include=FALSE}
+library(flexdashboard)
+library(data.table)
+library(dygraphs)
+library(DT)
+library(dplyr)
+library(plyr)
+library(leaflet)
+library(plotly)
+library(rsconnect)
+library(shiny)
+
+#setwd("~/Documents/SD_data/TSW_dashboard_050719")
+claims <- read.csv("http://seshat.datasd.org/risk/claims_clean_datasd_tsw.csv", header=T, na.strings=c(""," ","NA"))
+
+# CHANGE ME FOR PRODUCTION URL!!!!!!!
+# claims <- read.csv("http://datasd-dev.s3.amazonaws.com/risk/claims_clean_datasd_v1.csv", header=T, na.strings=c("", " ", "NA"))
+claims<-unique(claims)
+
+claims <-data.table(claims)
+claims$INCIDENT_DATE<- as.Date(claims$INCIDENT_DATE)
+claims$incident_year = format(claims$INCIDENT_DATE, "%Y")
+
+###Create year and month variables
+claims$INCIDENT_DATE<- as.Date(claims$INCIDENT_DATE)
+claims$incident_year<-format(claims$INCIDENT_DATE, "%Y")
+claims$incident_month<-format(claims$INCIDENT_DATE, "%m")
+
+
+##Create FISCAL YEAR variable
+#This variable considers that fiscal years start the first day of July (first day of month 7)
+##and run through the last day of June
+claims$Fiscal_Year<- ifelse(as.numeric(claims$incident_month)>= 7, (as.numeric(claims$incident_year)+1), claims$incident_year)
+claims<-claims[order(-Fiscal_Year),]
+claims$Fiscal_Year<- as.numeric(claims$Fiscal_Year)
+claims<- subset(claims, Fiscal_Year >=2009)
+
+
+###Create reserves variable
+claims$reserves=claims$INCURRED_TOTAL-claims$PAID_TOTAL
+
+
+```
+
+Department Loss Experience
+=======================================================================
+
+Inputs {.sidebar data-width=200}
+-----------------------------------------------------------------------
+
+```{r}
+
+
+ selectInput("year", label = "Fiscal Year of Incident",
+    choices = claims$Fiscal_Year,
+    selected=1,
+    multiple=FALSE
+   )
+
+```
+
+Outputs
+-----------------------------------------------------------------------
+### Total Payments to Date {.value-box}
+
+```{r}
+renderValueBox({
+  filtered<-subset(claims, Fiscal_Year == input$year)
+total_amount<- round(sum(filtered$PAID_TOTAL, na.rm=TRUE))
+total_amount<- paste("$", total_amount, sep="")
+
+
+
+  valueBox((prettyNum(total_amount, big.mark= ",")), icon = "fa-dollar", color="orange")
+})
+```
+
+### Total Claims Count {.value-box}
+
+```{r}
+
+
+# Emit the user count
+renderValueBox({
+  filtered<-subset(claims, Fiscal_Year == input$year)
+  total_claims<-length(unique(filtered$CLAIM_NUMBER))
+  valueBox((prettyNum(total_claims, big.mark= ",")), icon = "fa-receipt")
+})
+
+```
+
+
+
+Row {.tabset}
+-----------------------------------------------------------------------
+### Payments to Date {.tabset}
+Share of payments by Loss Code: includes all Loss Codes amounting to 1% or more of total payments. For further detail refer to Loss Code Table.
+
+
+
+```{r}
+renderPlotly({
+
+filtered<-subset(claims, Fiscal_Year == input$year)
+options(scipen = 999)
+
+test<-setDT(filtered)[, .(Losses= sum(PAID_TOTAL, na.rm = TRUE), Count=n_distinct(CLAIM_NUMBER)), by = .(CLAIMANT_REFERENCE2_Desc)]
+test$percentage<-test$Losses/sum(filtered$PAID_TOTAL, na.rm=TRUE)
+test<-test[order(-percentage)]
+#select top only
+test<- subset(test, percentage>=0.005)
+test<-droplevels(test)
+
+test <- data.frame(test, stringsAsFactors = FALSE)
+test$CLAIMANT_REFERENCE2_Desc <- factor(test$CLAIMANT_REFERENCE2_Desc, levels = unique(test$CLAIMANT_REFERENCE2_Desc)[order(test$percentage, decreasing = TRUE)])
+
+#Format ##
+test$Losses<- format(test$Losses, big.mark=",", scientific=FALSE, digits=0)
+
+
+  plot_ly(test, x = ~CLAIMANT_REFERENCE2_Desc, y = ~percentage, type = 'bar', name = 'Total Claims', text=~paste('Total Paid: $', Losses,
+                      ' </br>  Claims Count: ', Count
+                      )) %>%
+   layout(margin = list(b= 220), yaxis = list(title = 'Share of Payments by Code'), xaxis = list(title = 'Loss Code', tickangle = -60),barmode = 'group') %>%
+  layout(yaxis = list(tickformat = "%"))
+
+
+  })
+
+```
+
+
+### Reserves
+Share of outstanding reserves by Loss Code: includes all Loss Codes amounting to 1% or more of total outstanding reserves.
+*Note that only open claims have outstanding reserves, for incident years with no open claims, no graph will be displayed*
+
+```{r}
+renderPlotly({
+
+filtered<-subset(claims, Fiscal_Year == input$year & CLAIMANT_STATUS_DESC=="Open")
+options(scipen = 999)
+
+test<-setDT(filtered)[, .(Losses= sum(PAID_TOTAL, na.rm = TRUE), Reserves=sum(reserves, na.rm = TRUE), Count=n_distinct(CLAIM_NUMBER)), by = .(CLAIMANT_REFERENCE2_Desc)]
+test$percentage<-test$Reserves/sum(filtered$reserves, na.rm=TRUE)
+test<-test[order(-percentage)]
+
+##select top only
+test<- subset(test, percentage>=0.005)
+test<-droplevels(test)
+
+test <- data.frame(test, stringsAsFactors = FALSE)
+test$CLAIMANT_REFERENCE2_Desc <- factor(test$CLAIMANT_REFERENCE2_Desc, levels = unique(test$CLAIMANT_REFERENCE2_Desc)[order(test$percentage, decreasing = TRUE)])
+
+#Format ##
+test$Losses<- format(test$Losses, big.mark=",", scientific=FALSE, digits=0)
+test$Reserves<- format(test$Reserves, big.mark=",", scientific=FALSE, digits=0)
+
+
+
+  plot_ly(test, x = ~CLAIMANT_REFERENCE2_Desc, y = ~percentage, type = 'bar', name = 'Total Claims', text=~paste('Reserves: $', Reserves,
+                      ' </br> Open Claims Count: ', Count,
+                      '</br> Total Paid: $', Losses)) %>%
+   layout(margin = list(b= 220), yaxis = list(title = 'Share of Reserves by Code'), xaxis = list(title = 'Loss Code', tickangle = -60),barmode = 'group') %>%
+  layout(yaxis = list(tickformat = "%"))
+
+
+  })
+
+```
+
+### Loss Code Table
+Loss leaders are shown on top of the table: Loss codes are ranked by the share of total payments they represent for the selected FY of incident.
+```{r}
+
+renderTable({
+
+##filter data by year selected in sidebar
+filtered<-subset(claims, Fiscal_Year == input$year)
+
+##create data table
+##############
+##all claims
+##############
+options(scipen = 999)
+test<-setDT(filtered)[, .(Total_Losses= sum(PAID_TOTAL, na.rm = TRUE), Count=n_distinct(CLAIM_NUMBER)), by = .(CLAIMANT_REFERENCE2_Desc)]
+test$percentage<-(test$Total_Losses/sum(filtered$PAID_TOTAL, na.rm=TRUE))*100
+
+test<-test[order(-percentage)]
+
+
+##############
+## Reserves
+##############
+filtered3<-subset(filtered, CLAIMANT_STATUS_DESC=="Open")
+
+test2<-setDT(filtered3)[, .(Reserves=sum(reserves, na.rm = TRUE) ), by = .(CLAIMANT_REFERENCE2_Desc)]
+
+####join total with open and closed
+final<-join(test, test2, by="CLAIMANT_REFERENCE2_Desc", type="left")
+
+############################
+##Format variables
+############################
+final$percentage<- paste(round(final$percentage,digits=2),"%",sep="")
+final$Total_Losses<-prettyNum(final$Total_Losses, big.mark= ",", digits=0)
+final$Total_Losses<- paste("$", final$Total_Losses, sep="")
+
+
+final$Reserves<-prettyNum(final$Reserves, big.mark= ",", digits=0)
+final$Reserves<- paste("$", final$Reserves, sep="")
+
+##Remove na Loss codes
+final<-final[!is.na(final$CLAIMANT_REFERENCE2_Desc),]
+
+############################
+##Create data frame for table
+############################
+
+  final %>%
+    select("Loss Code" = CLAIMANT_REFERENCE2_Desc, "% of Total Payments" = percentage, "Total Payments to Date"= Total_Losses, "Claims Count"= Count,
+                                                     "Reserves"= Reserves) %>%
+    as.data.frame()
+
+
+}, digits = 0)
+```
+
+
+
+
+
+
+Map
+=======================================================================
+
+Inputs {.sidebar data-width=200}
+-----------------------------------------------------------------------
+
+```{r}
+##Remove NA loss codes
+map<- subset(claims, CLAIMANT_REFERENCE2_Desc!= "NA")
+
+#Remove lat-longs clearly outside of SDC
+#map<- subset(map, lng>=-117.27 & lng<=-117.11 & lat >=32.567 & lat <=32.88)
+#map<- subset(map, lng>=-117.27 & lng<=-117.04 & lat >=32.567 & lat <=32.88)
+map<- subset(map, lng>=-117.27 & lng<=-117.04 & lat >=32.567 & lat <=33.06)
+
+
+#Remove rows with missing lat-longs
+map<-map[!is.na(map$lng),]
+
+
+##Sort data by number of claims per loss code
+map<- map %>% group_by(CLAIMANT_REFERENCE2_Desc) %>% mutate(count = n())
+map<-map[order(-map$count),]
+
+##Remove rows with generic geocodes (lat long of SD City)
+##lat= 32.715738, lng= -117.1610838
+#(32.715738, -117.1610838)
+
+map <- map[!(map$lat == "32.715738" & map$lng=="-117.1610838" ),]
+
+
+
+ selectInput("losscode", label = "Loss Code",
+    choices = map$CLAIMANT_REFERENCE2_Desc,
+    selected=1,
+    multiple=FALSE
+   )
+
+
+
+```
+
+Outputs
+-----------------------------------------------------------------------
+### TSW claims by location {data-width=350}
+
+
+
+```{r}
+renderLeaflet({
+  filtered<-subset(map, CLAIMANT_REFERENCE2_Desc == input$losscode)
+
+
+leaflet(filtered) %>% addTiles() %>% addMarkers(
+  label= ~paste('Claim Number:', CLAIM_NUMBER, '*   Claim Status:', CLAIMANT_STATUS_DESC, '*    Total Paid: $', PAID_TOTAL),
+  labelOptions= labelOptions( style= list( "font-size"= "15px", "font-style"= "bold")),
+  clusterOptions = markerClusterOptions()
+)
+
+})
+```
+
+Time Trends
+=======================================================================
+
+```{r}
+
+
+renderPlotly({
+
+##change this if I include a sidebar filter: FILTER BY COUNT OR AMOUNT, and by open/closed
+test<-setDT(claims)[, .(PAID_TOTAL= sum(PAID_TOTAL, na.rm = TRUE), PAID_BIPD= sum(PAID_BI + PAID_PD, na.rm = TRUE), PAID_EXP=sum(PAID_EXPENSE),Count=n_distinct(CLAIM_NUMBER)), by = .(Fiscal_Year)]
+
+x <- test$Fiscal_Year
+y <- test$PAID_TOTAL
+trace_1<- test$PAID_BIPD
+trace_2<- test$PAID_EXP
+
+p <- plot_ly(x = ~x, y = ~y, mode = 'lines')%>%
+add_trace(y = ~y, name = 'Total Payments', mode = 'lines+markers')%>%
+add_trace(y = ~trace_1, name = 'Bodily Injury and Property Damage', mode = 'lines+markers')%>%
+add_trace(y = ~trace_2, name = 'Expenses', mode = 'lines+markers') %>%
+  layout(title = "Payment History by Fiscal Year of Incident",
+         xaxis = list(title = "Fiscal Year of Incident"),
+         yaxis = list (title = "Total Amount (USD)"))
+})
+
+
+
+
+```
+
+
+
+
+
+
+Claim Level Detail
+=======================================================================
+### Claims Search Tool {data-width=350}
+
+```{r}
+claims$INCIDENT_DATE<-as.Date(claims$INCIDENT_DATE)
+claims_sub<- claims[, c("INCIDENT_DATE","Fiscal_Year", "CLAIM_NUMBER","CLAIMANT_STATUS_DESC","PAID_TOTAL", "CLAIMANT_REFERENCE2_Desc", "INCIDENT_DESC", "ORGANIZATION_DESC")]
+claims_sub$Fiscal_Year<-as.factor(claims_sub$Fiscal_Year)
+claims_sub<-claims_sub[!is.na(claims_sub$CLAIMANT_REFERENCE2_Desc),]
+claims_sub<-claims_sub[order(claims_sub$CLAIMANT_STATUS_DESC),]
+
+datatable(claims_sub, rownames = FALSE, filter = 'top', colnames = c( 'Incident Date', 'Fiscal Year','Claim Number','Claim Status','Total Payment to Date', 'Loss Code', 'Incident Description', 'Organization Description'), options = list(
+  pageLength = 10, autoWidth = TRUE, columnDefs = list(list(width = '100px', targets = "_all"))
+))
+```
+
+
+About
+=======================================================================
+### ClaimStat Tool guide {data-width=350}
+
+For descriptions of each of the components of ClaimStat, as well as a Loss Code Dictionary, please visit the ClaimStat Tool Guide by going to the link below
+
+https://docs.google.com/spreadsheets/d/18WmU6Hifz4OaaupHqwKLhBJFZTGuwH3tEt6CaWiP1cs/edit?usp=sharing

@@ -3,29 +3,45 @@
 import os
 import logging
 import pandas as pd
+from airflow.hooks.oracle_hook import OracleHook
+from airflow.hooks.base_hook import BaseHook
 import cx_Oracle
 import string
 import datetime as dt
 import numpy as np
+from airflow.models import Variable
 
 from trident.util import general
 from trident.util import geospatial
 
 conf = general.config
-credentials = general.source['ttcs']
 
 temp_all = conf['temp_data_dir'] + '/ttcs_all.csv'
 clean_all = conf['temp_data_dir'] + '/ttcs_all_clean.csv'
 geocoded_active = conf['temp_data_dir'] + '/ttcs_all_geocoded.csv'
 bids_all = conf['temp_data_dir'] + '/ttcs_all_bids.csv'
-geocoded_addresses = 'https://datasd-reference.s3.amazonaws.com/ttcs_address_book.csv'
+geocoded_addresses = 'ttcs_address_book.csv'
 
 curr_yr = dt.datetime.today().year
 
 def get_active_businesses():
     """Query DB for 'Active Businesses' and save data to temp."""
     logging.info('Retrieving business tax license data')
-    db = cx_Oracle.connect(credentials)
+    credentials = BaseHook.get_connection(conn_id="TTCS")
+    conn_config = {
+        'user': credentials.login,
+        'password': credentials.password
+    }
+
+    dsn = credentials.extra_dejson.get('dsn', None)
+    sid = credentials.extra_dejson.get('sid', None)
+    port = credentials.port if credentials.port else 1521
+    conn_config['dsn'] = cx_Oracle.makedsn(dsn, port, sid)
+
+    db = cx_Oracle.connect(conn_config['user'],
+        conn_config['password'],
+        conn_config['dsn'],
+        encoding="UTF-8")
     sql = general.file_to_string('./sql/ttcs_biz.sql', __file__)
     df = pd.read_sql_query(sql, db)
     df_rows = df.shape[0]
@@ -33,7 +49,7 @@ def get_active_businesses():
     general.pos_write_csv(
         df,
         temp_all,
-        date_format=conf['date_format_ymd_hms'])
+        date_format="%Y-%m-%d %H:%M:%S")
 
     return 'Successfully retrieved active businesses data.'
 
@@ -86,7 +102,7 @@ def clean_data():
     general.pos_write_csv(
         df_dedupe,
         clean_all,
-        date_format=conf['date_format_ymd'])
+        date_format="%Y-%m-%d")
     return 'Successfully cleaned TTCS data.'
 
 def geocode_data():
@@ -109,7 +125,9 @@ def geocode_data():
                      )
 
     logging.info('Get address book')
-    add_book = pd.read_csv(geocoded_addresses,
+    bucket_name=Variable.get('S3_REF_BUCKET')
+    s3_url = f"s3://{bucket_name}/reference/{geocoded_addresses}"
+    add_book = pd.read_csv(s3_url,
         low_memory=False,
         dtype=address_dtype
         )
@@ -160,7 +178,7 @@ def geocode_data():
         general.pos_write_csv(
                 add_merge,
                 geocoded_active,
-                date_format=conf['date_format_ymd'])
+                date_format="%Y-%m-%d")
 
     else:
         logging.info('Creating subset of unmatched suitable for geocoding')
@@ -186,7 +204,7 @@ def geocode_data():
             general.pos_write_csv(
                 add_merge,
                 geocoded_active,
-                date_format=conf['date_format_ymd'])
+                date_format="%Y-%m-%d")
 
         else:
 
@@ -281,7 +299,7 @@ def geocode_data():
             general.pos_write_csv(
                 geocoded_all,
                 geocoded_active,
-                date_format=conf['date_format_ymd'])
+                date_format="%Y-%m-%d")
 
     return "Successfully geocoded all businesses."
 
@@ -296,7 +314,7 @@ def join_bids():
     general.pos_write_csv(
         active_bus_bid,
         bids_all,
-        date_format=conf['date_format_ymd'])
+        date_format="%Y-%m-%d")
 
     return "Successfully joined BIDs to active businesses"
 
@@ -317,6 +335,7 @@ def make_prod_files():
                      parse_dates=['address_dt',
                                   'bus_start_dt',
                                   'cert_exp_dt',
+                                  'cert_eff_dt',
                                   'creation_dt',
                                   'dba_name_dt'
                                   ])
@@ -324,6 +343,7 @@ def make_prod_files():
     logging.info('Renaming columns')
     df = df.rename(columns={'address_dt':'address_active_dt',
             'cert_exp_dt':'date_cert_expiration',
+            'cert_eff_dt':'date_cert_effective',
             'creation_dt':'date_account_creation',
             'dba_name_dt':'dba_name_active_dt',
             'name':'bid',
@@ -355,6 +375,7 @@ def make_prod_files():
         'account_status',
         'date_account_creation',
         'date_cert_expiration',
+        'date_cert_effective',
         'business_owner_name',
         'ownership_type',
         'date_business_start',
@@ -394,14 +415,14 @@ def make_prod_files():
     general.pos_write_csv(
         active_pre07,
         conf['prod_data_dir']+'/sd_businesses_active_pre08_datasd_v1.csv',
-        date_format=conf['date_format_ymd'])
+        date_format="%Y-%m-%d")
 
     active_pos07 = prod_files_prep(df_active[df_active['create_yr'] > 2007])
 
     general.pos_write_csv(
         active_pos07,
         conf['prod_data_dir']+'/sd_businesses_active_since08_datasd_v1.csv',
-        date_format=conf['date_format_ymd'])
+        date_format="%Y-%m-%d")
 
     df_inactive = df_prod[df_prod['account_status'] == "Inactive"].reset_index(drop=True)
     inactive_rows = df_inactive.shape[0]
@@ -427,7 +448,7 @@ def make_prod_files():
         general.pos_write_csv(
             subset_prod,
             f"{conf['prod_data_dir']}/sd_businesses_{filename}_datasd_v1.csv",
-            date_format=conf['date_format_ymd'])
+            date_format="%Y-%m-%d")
 
         sub_yr_start += 10
 

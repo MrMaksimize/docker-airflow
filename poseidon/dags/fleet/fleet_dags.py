@@ -5,6 +5,7 @@
 from airflow.models import DAG
 from airflow.operators.python_operator import PythonOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
+from airflow.operators.bash_operator import BashOperator
 from trident.util.seaboard_updates import *
 from trident.util import general
 
@@ -28,29 +29,46 @@ dag = DAG(dag_id='fleet_focus',
         )
 
 #: Query Fleet Focus delays table
-get_delays = PythonOperator(
+delays = PythonOperator(
     task_id='query_fleet_delays',
     python_callable=get_delays,
     dag=dag)
 
 #: Query Fleet Focus jobs table
-get_jobs = PythonOperator(
+jobs = PythonOperator(
     task_id='query_fleet_jobs',
     python_callable=get_jobs,
     dag=dag)
 
 #: Query Fleet Focus eq main table
-get_vehicles = PythonOperator(
+vehicles = PythonOperator(
     task_id='query_fleet_vehicles',
     python_callable=get_vehicles,
+    dag=dag)
+
+vehicles_process = BashOperator(
+    task_id='calculate_dept_metrics',
+    bash_command='Rscript /usr/local/airflow/poseidon/dags/fleet/valid_veh.R',
+    dag=dag)
+
+#: Query Fleet Focus eq main table
+availability = PythonOperator(
+    task_id='query_availability',
+    python_callable=get_availability,
+    dag=dag)
+
+#: Query Fleet Focus eq main table
+avail_calc = PythonOperator(
+    task_id='avail_calc',
+    python_callable=calc_availability,
     dag=dag)
 
 upload_delays = S3FileTransferOperator(
     task_id=f'upload_fleet_delays',
     source_base_path=conf['prod_data_dir'],
     source_key=f'fleet_delays.csv',
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_bucket=conf['dest_s3_bucket'],
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
     dest_s3_key=f'fleet/fleet_delays.csv',
     replace=True,
     dag=dag)
@@ -59,8 +77,8 @@ upload_jobs = S3FileTransferOperator(
     task_id=f'upload_fleet_jobs',
     source_base_path=conf['prod_data_dir'],
     source_key=f'fleet_jobs.csv',
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_bucket=conf['dest_s3_bucket'],
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
     dest_s3_key=f'fleet/fleet_jobs.csv',
     replace=True,
     dag=dag)
@@ -69,13 +87,25 @@ upload_vehicles = S3FileTransferOperator(
     task_id=f'upload_fleet_veh',
     source_base_path=conf['prod_data_dir'],
     source_key=f'fleet_vehicles.csv',
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_bucket=conf['dest_s3_bucket'],
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
     dest_s3_key=f'fleet/fleet_vehicles.csv',
     replace=True,
     dag=dag)
 
+upload_valid_vehicles = S3FileTransferOperator(
+    task_id=f'upload_valid_veh',
+    source_base_path=conf['prod_data_dir'],
+    source_key=f'fleet_valid_vehicles.csv',
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
+    dest_s3_key=f'fleet/fleet_valid_vehicles.csv',
+    replace=True,
+    dag=dag)
+
 #: Required execution rules
-get_delays >> upload_delays
-get_jobs >> upload_jobs
-get_vehicles >> upload_vehicles
+delays >> upload_delays
+jobs >> upload_jobs
+vehicles >> upload_vehicles
+vehicles >> vehicles_process
+availability >> avail_calc

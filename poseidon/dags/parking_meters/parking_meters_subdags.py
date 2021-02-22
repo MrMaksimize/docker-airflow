@@ -98,8 +98,8 @@ def upload_curr_files(year):
 		task_id=f'upload_{file}_{year}',
 		source_base_path=conf['prod_data_dir'],
 		source_key=file_list.get(file),
-		dest_s3_bucket=conf['dest_s3_bucket'],
-		dest_s3_conn_id=conf['default_s3_conn_id'],
+		dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
+		dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
 		dest_s3_key=f'parking_meters/{file_list.get(file)}',
 		replace=True,
 		
@@ -134,8 +134,8 @@ def upload_prev_files(year):
 		task_id=f'upload_{file}_{year}',
 		source_base_path=conf['prod_data_dir'],
 		source_key=file_list.get(file),
-		dest_s3_bucket=conf['dest_s3_bucket'],
-		dest_s3_conn_id=conf['default_s3_conn_id'],
+		dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
+		dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
 		dest_s3_key=f'parking_meters/{file_list.get(file)}',
 		replace=True,
 		

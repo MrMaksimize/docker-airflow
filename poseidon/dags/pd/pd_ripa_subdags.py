@@ -71,8 +71,8 @@ def upload_prod_files():
       task_id=f'{sheet}_file_to_S3',
       source_base_path=conf['prod_data_dir'],
       source_key=f'ripa_{sheet}_datasd.csv',
-      dest_s3_bucket=conf['dest_s3_bucket'],
-      dest_s3_conn_id=conf['default_s3_conn_id'],
+      dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
+      dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
       dest_s3_key=f'pd/ripa_{sheet}_datasd.csv',
       dag=dag_subdag)
 

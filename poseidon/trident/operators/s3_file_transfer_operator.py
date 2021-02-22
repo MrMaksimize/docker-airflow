@@ -20,6 +20,7 @@ from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
 from trident.util import general
 import boto3
+from airflow.models import Variable
 
 conf = general.config
 
@@ -42,6 +43,9 @@ class S3FileTransferOperator(BaseOperator):
     """
 
     ui_color = '#f9c915'
+    template_fields = ('source_base_path',
+        'dest_s3_conn_id',
+        'dest_s3_bucket')
 
     @apply_defaults
     def __init__(self,
@@ -70,56 +74,34 @@ class S3FileTransferOperator(BaseOperator):
     def execute(self, context):
         
         ti = context['ti']
-        dest_s3 = S3Hook(aws_conn_id=self.dest_s3_conn_id)
+
+        dest_bucket = self.dest_s3_bucket
         local_fpath = "%s/%s" % (self.source_base_path, self.source_key)
+
+        logging.info("Using conn id to account")
+
+        dest_s3 = S3Hook(aws_conn_id='S3DATA')
+
+        if conf['env'] == 'PROD':
+            url = f"http://datasd.prod.s3.amazonaws.com/{self.dest_s3_key}"
+        else:
+            url = f"http://datasd.dev.s3.amazonaws.com/{self.dest_s3_key}"
+
         logging.info("%s >>>>> %s/%s" %
-                     (local_fpath, self.dest_s3_bucket, self.dest_s3_key))
+                         (local_fpath, dest_bucket, self.dest_s3_key))
 
         dest_s3.load_file(
             filename=local_fpath,
             key=self.dest_s3_key,
-            bucket_name=self.dest_s3_bucket,
+            bucket_name=dest_bucket,
             replace=self.replace)
         logging.info("Upload completed")
-
-        if conf['env'] == 'prod':
-            url = "http://seshat.datasd.org/{}".format(self.dest_s3_key)
-        else:
-            url = "http://{}.s3.amazonaws.com/{}".format(self.dest_s3_bucket,
-                                                         self.dest_s3_key)
 
         logging.info("URL: {}".format(url))
         s3_file = boto3.client('s3')
         self.verify_file_size_match(s3_file, local_fpath, url)
         
-        #Perform Migration Account Upload
-        self.execute_migration()        
-
         return url
-
-    def execute_migration(self):
-        aws_key = conf['migration_aws_key']
-        aws_secret_key = conf['migration_aws_secret']
-        aws_region = conf['migration_aws_region']
-        migration_s3_bucket = conf['migration_dest_s3_bucket']
-
-        local_filepath = f'{self.source_base_path}/{self.source_key}'
-        logging.info(f'{local_filepath} >>>>> {migration_s3_bucket}/{self.dest_s3_key}')
-
-        migration_s3_upload = boto3.session.Session(aws_access_key_id=aws_key,
-            aws_secret_access_key=aws_secret_key,
-            region_name=aws_region).client(service_name='s3', 
-                                            region_name=aws_region,
-                                            aws_access_key_id=aws_key,
-                                            aws_secret_access_key=aws_secret_key)
-
-        migration_s3_upload.upload_file(local_filepath, migration_s3_bucket, self.dest_s3_key)
-
-        logging.info("Upload completed to new account")
-
-        url = "https://{}.s3-us-west-2.amazonaws.com/{}".format(self.dest_s3_bucket,self.dest_s3_key)
-
-        self.verify_file_size_match(migration_s3_upload, local_filepath, url)
 
     def verify_file_size_match(self, boto_client, local_path, url):
 

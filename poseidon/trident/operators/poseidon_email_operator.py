@@ -27,6 +27,7 @@ from trident.util.notifications import send_email_swu
 from trident.util.general import merge_dicts
 
 from trident.util.general import config as conf
+from airflow.models import Variable
 
 
 
@@ -50,6 +51,7 @@ class PoseidonEmailOperator(BaseOperator):
     :param bcc:
     :type bcc: string
     """
+    template_fields = ('to',)
     ui_color = '#ffefeb'
 
     @apply_defaults
@@ -136,9 +138,18 @@ class PoseidonEmailFileUpdatedOperator(PoseidonEmailOperator):
     Send last updated file
     """
 
+    template_fields = ('file_bucket',)
+
     @apply_defaults
-    def __init__(self, file_url, message = 'Hey there! Poseidon has updated your dataset!', *args, **kwargs):
+    def __init__(self,
+        file_bucket,
+        file_url,
+        message = 'Hey there! Poseidon has updated your dataset!',
+        *args,
+        **kwargs):
+
         super(PoseidonEmailFileUpdatedOperator, self).__init__(*args, **kwargs)
+        self.file_bucket = file_bucket
         self.file_url = file_url
         self.message = message
 
@@ -149,9 +160,13 @@ class PoseidonEmailFileUpdatedOperator(PoseidonEmailOperator):
 
         self.swu['dispatch_meta'] = merge_dicts(self.swu['dispatch_meta'], contextual_meta)
         self.swu['template_data']['message'] = self.message
-        self.swu['template_data']['file_url'] = self.file_url
+        if not self.file_bucket:
+            self.swu['template_data']['file_url'] = self.file_url
+        else: 
+            self.swu['template_data']['file_url'] = 'http://'+self.file_bucket+self.file_url
+        
         self.swu['dispatch_type'] = 'file_updated'
-        self.swu['template_id'] = conf['mail_swu_file_updated_tpl']
+        self.swu['template_id'] = Variable.get("MAIL_SWU_FILE_UPDATED_TPL")
 
         send_email_swu(**self.swu)
         

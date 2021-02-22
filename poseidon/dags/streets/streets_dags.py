@@ -61,10 +61,10 @@ imcat_data = PythonOperator(
 #: Upload imcat streets file to S3
 upload_imcat_data = S3FileTransferOperator(
     task_id='upload_streets_data_imcat',
-    source_base_path=conf['prod_data_dir'],
+    source_base_path="{{ var.value.PROD_DATA_DIR }}",
     source_key='sd_paving_imcat_datasd_v1.csv',
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_bucket=conf['dest_s3_bucket'],
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
     dest_s3_key='tsw/sd_paving_imcat_datasd_v1.csv',
     replace=True,
     dag=dag)
@@ -72,10 +72,10 @@ upload_imcat_data = S3FileTransferOperator(
 #: Upload sdif streets file to S3
 upload_sdif_data = S3FileTransferOperator(
     task_id='upload_streets_data_sdif',
-    source_base_path=conf['prod_data_dir'],
+    source_base_path="{{ var.value.PROD_DATA_DIR }}",
     source_key='sd_paving_datasd_v1.csv',
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_bucket=conf['dest_s3_bucket'],
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
     dest_s3_key='tsw/sd_paving_datasd_v1.csv',
     replace=True,
     dag=dag)
@@ -116,7 +116,8 @@ send_last_file_updated_email = PoseidonEmailFileUpdatedOperator(
     task_id='send_last_file_updated',
     to='chudson@sandiego.gov',
     subject='IMCAT Streets File Updated',
-    file_url=f"http://{conf['dest_s3_bucket']}/{'tsw/sd_paving_imcat_datasd_v1.csv'}",
+    file_bucket='{{ var.value.S3_DATA_BUCKET }}',
+    file_url='/tsw/sd_paving_imcat_datasd_v1.csv',
     dag=dag)
 
 #: Update portal modified date

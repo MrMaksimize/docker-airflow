@@ -10,6 +10,7 @@ import subprocess
 from shlex import quote
 import logging
 from trident.util import general
+from airflow.hooks.base_hook import BaseHook
 
 conf = general.config
 
@@ -17,15 +18,15 @@ conf = general.config
 def get_data():
     """Download RIPA data from FTP."""
 
-    ftp_user = conf['ftp_datasd_user']
-    ftp_pass = conf['ftp_datasd_pass']
+    ftp_conn = BaseHook.get_connection(conn_id="FTP_DATASD")
+
     temp_dir = conf['temp_data_dir']
 
     # Sticking to wget for this 
     # because file names change drastically
     command = "wget -np --continue " \
-        + f"--user={ftp_user} " \
-        + f"--password='{ftp_pass}' " \
+        + f"--user={ftp_conn.login} " \
+        + f"--password='{ftp_conn.password}' " \
         + f"--directory-prefix={temp_dir} " \
         + "ftp://ftp.datasd.org/uploads/sdpd/" \
         + "ripa/*.xlsx"
@@ -53,7 +54,9 @@ def process_excel(**context):
     
     logging.info(f"Reading in {latest_file}")
 
-    ripa = pd.read_excel(latest_file,sheet_name=None)
+    ripa = pd.read_excel(latest_file,
+        engine='openpyxl',
+        sheet_name=None)
 
     keys = [*ripa]
 

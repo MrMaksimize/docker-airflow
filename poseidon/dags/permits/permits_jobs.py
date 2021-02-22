@@ -9,6 +9,8 @@ import logging
 from subprocess import Popen, PIPE
 from shlex import quote
 from datetime import datetime as dt
+from airflow.hooks.base_hook import BaseHook
+from airflow.models import Variable
 
 conf = general.config
 
@@ -57,6 +59,8 @@ def get_permits_files(mode='pts',**context):
 
     files = [*filelist]
 
+    conn = BaseHook.get_connection(conn_id="SVC_ACCT")
+
     for file in files:
 
         if mode in file.lower():
@@ -66,7 +70,7 @@ def get_permits_files(mode='pts',**context):
             fpath = f"{filelist[file].get('name')}_{filename_1}.{filelist[file].get('ext')}"
 
             command = "smbclient //ad.sannet.gov/dfs " \
-            + f"--user={conf['svc_acct_user']}%{conf['svc_acct_pass']} -W ad -c " \
+            + f"--user={conn.login}%{conn.password} -W ad -c " \
             + "'prompt OFF;"\
             + " cd \"DSD-Shared/All_DSD/Panda/\";" \
             + " lcd \"/data/temp/\";" \
@@ -86,7 +90,7 @@ def get_permits_files(mode='pts',**context):
                 fpath = f"{filelist[file].get('name')}_{filename_2}.{filelist[file].get('ext')}"
 
                 command = "smbclient //ad.sannet.gov/dfs " \
-                + f"--user={conf['svc_acct_user']}%{conf['svc_acct_pass']} -W ad -c " \
+                + f"--user={conn.login}%{conn.password} -W ad -c " \
                 + "'prompt OFF;"\
                 + " cd \"DSD-Shared/All_DSD/Panda/\";" \
                 + " lcd \"/data/temp/\";" \
@@ -225,7 +229,7 @@ def build_pts(**context):
     general.pos_write_csv(
     deduped[prod_cols],
     f"{conf['temp_data_dir']}/dsd_permits_all_pts.csv",
-    date_format=conf['date_format_ymd_hms'])
+    date_format="%Y-%m-%d %H:%M:%S")
 
     return 'Created new PTS file'
 
@@ -250,13 +254,14 @@ def build_accela(**context):
     filename = context['task_instance'].xcom_pull(dag_id="dsd_permits.get_create_accela",
         task_ids='get_accela_files')
 
-    #filename = "20200914"
+    #filename = "20201116"
         
     logging.info(f"Reading active PV permits for {filename}")
     pv_active = pd.read_excel(f"{conf['temp_data_dir']}/" \
         + f"{filelist['Active Accela PV permits all time'].get('name')}_{filename}." \
         + f"{filelist['Active Accela PV permits all time'].get('ext')}",
         dtype=dtypes,
+        engine='openpyxl',
         na_values=' null')
 
     logging.info(f"Reading active non PV permits for {filename}")
@@ -264,6 +269,7 @@ def build_accela(**context):
         + f"{filelist['All other active Accela permits all time'].get('name')}_{filename}." \
         + f"{filelist['All other active Accela permits all time'].get('ext')}",
         dtype=dtypes,
+        engine='openpyxl',
         na_values=' null')
         
     logging.info(f"Reading inactive PV permits for {filename}")
@@ -271,6 +277,7 @@ def build_accela(**context):
         + f"{filelist['Closed Accela PV permits all time'].get('name')}_{filename}." \
         + f"{filelist['Closed Accela PV permits all time'].get('ext')}",
         dtype=dtypes,
+        engine='openpyxl',
         na_values=' null')
     
     logging.info(f"Reading inactive non PV permits for {filename}")
@@ -278,6 +285,7 @@ def build_accela(**context):
         + f"{filelist['All other closed Accela permits all time'].get('name')}_{filename}." \
         + f"{filelist['All other closed Accela permits all time'].get('ext')}",
         dtype=dtypes,
+        engine='openpyxl',
         na_values=' null')
     
     logging.info("Files read successfully")
@@ -332,7 +340,7 @@ def build_accela(**context):
     f"{old_file_date.strftime('%m')}" \
     f"{old_file_date.strftime('%d')}"
 
-    #old_filename = "20200910"
+    #old_filename = "20201102"
 
     df_old['file_date'] = old_filename
 
@@ -354,7 +362,7 @@ def build_accela(**context):
     general.pos_write_csv(
     deduped[prod_cols],
     f"{conf['temp_data_dir']}/dsd_permits_all_accela.csv",
-    date_format=conf['date_format_ymd'])
+    date_format="%Y-%m-%d")
 
     return 'Created new Accela files'
 
@@ -373,7 +381,9 @@ def spatial_joins(pt_file='',**context):
     point_cols = point.columns.tolist()
     prod_cols = point_cols + ['bid_name','council_district','zip']
 
-    ref_df = pd.read_csv(f'https://datasd-reference.s3.amazonaws.com/{pt_file}_polygons.csv',
+    bucket_name=Variable.get('S3_REF_BUCKET')
+    s3_url = f"s3://{bucket_name}/reference/{pt_file}_polygons.csv"
+    ref_df = pd.read_csv(s3_url,
         low_memory=False,
         dtype={'approval_id':str}
         )
@@ -453,6 +463,8 @@ def spatial_joins(pt_file='',**context):
 
         final_polygons = pd.concat([ref_df,new_polygon_rows],ignore_index=True,sort=False)
 
+        final_polygons = final_polygons.drop_duplicates()
+
         general.pos_write_csv(
             final_polygons,
             f"{conf['prod_data_dir']}/{pt_file}_polygons.csv")
@@ -485,8 +497,8 @@ def create_subsets(mode='set1',**context):
     'job_bc_code':str
     }
 
+
     logging.info(f"Reading in {mode}")
-    logging.info("Writing compressed csv")
 
     if mode == 'set1':
         filepath = "dsd_permits_all_pts.csv"
@@ -527,12 +539,12 @@ def create_subsets(mode='set1',**context):
     general.pos_write_csv(
         closed,
         f"{conf['prod_data_dir']}/permits_{mode}_closed_datasd.csv",
-        date_format=conf['date_format_ymd'])
+        date_format="%Y-%m-%d")
 
     general.pos_write_csv(
         active,
         f"{conf['prod_data_dir']}/permits_{mode}_active_datasd.csv",
-        date_format=conf['date_format_ymd'])
+        date_format="%Y-%m-%d")
 
     return f"Successfully created {mode} subsets"
 
@@ -618,7 +630,7 @@ def create_tsw_subset():
     general.pos_write_csv(
         df,
         f"{conf['prod_data_dir']}/dsd_permits_row.csv",
-        date_format=conf['date_format_ymd_hms']
+        date_format="%Y-%m-%d %H:%M:%S"
         )
 
     return 'Successfully created TSW subset'

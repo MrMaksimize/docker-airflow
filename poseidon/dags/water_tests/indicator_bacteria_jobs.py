@@ -4,6 +4,8 @@ import os
 import string
 import logging
 import re
+from airflow.hooks.oracle_hook import OracleHook
+from airflow.hooks.base_hook import BaseHook
 
 from datetime import datetime, timedelta
 
@@ -20,7 +22,24 @@ def get_indicator_bacteria_tests(date_start='01-JAN-2014', date_end='15-JUN-2017
         logging.warning("RUNNING IN TEST MODE, PULLING LAST YEAR ONLY!!!!")
         date_start = (kwargs['execution_date'] - timedelta(days=365)).strftime('%d-%b-%Y')
     
-    db = cx_Oracle.connect(conf['oracle_wpl'])
+    #db = cx_Oracle.connect(conf['oracle_wpl'])
+    #db = OracleHook(conn_id='WPL')
+
+    credentials = BaseHook.get_connection(conn_id="WPL")
+    conn_config = {
+            'user': credentials.login,
+            'password': credentials.password
+        }
+    
+    dsn = credentials.extra_dejson.get('dsn', None)
+    sid = credentials.extra_dejson.get('sid', None)
+    port = credentials.port if credentials.port else 1521
+    conn_config['dsn'] = cx_Oracle.makedsn(dsn, port, sid)
+
+    db = cx_Oracle.connect(conn_config['user'],
+        conn_config['password'],
+        conn_config['dsn'],
+        encoding="UTF-8")
 
     logging.info("Starting Indicator Bac Tests: " + date_start + " to " + date_end)
 
@@ -97,7 +116,7 @@ def get_indicator_bacteria_tests(date_start='01-JAN-2014', date_end='15-JUN-2017
         index=True, 
         encoding='utf-8', 
         doublequote=True, 
-        date_format=conf['date_format_ymd'])
+        date_format="%Y-%m-%d")
    
     return "Indicator bacteria tests written to " + new_file_path
 
@@ -115,6 +134,6 @@ def get_latest_bac_tests():
         index=False, 
         encoding='utf-8', 
         doublequote=True, 
-        date_format=conf['date_format_ymd'])
+        date_format="%Y-%m-%d")
 
     return "Latest indicator bacteria tests written to " + new_file_path
