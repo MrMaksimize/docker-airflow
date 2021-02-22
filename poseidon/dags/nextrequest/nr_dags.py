@@ -22,9 +22,9 @@ dag = DAG(
     )
 
 #: Downloads nextrequest data from API
-get_nr_data_write_temp = PythonOperator(
-    task_id='get_nr_data_write_temp',
-    python_callable=get_nr_data_write_temp,
+request_pra_date = PythonOperator(
+    task_id='request_pra_date',
+    python_callable=request_pra_date,
     provide_context=True,
     dag=dag)
 
@@ -34,6 +34,8 @@ update_prod = PythonOperator(
     python_callable=update_prod,
     provide_context=True,
     dag=dag)
+
+request_pra_date >> update_prod
 
 #TODO S3 Upload
 '''
