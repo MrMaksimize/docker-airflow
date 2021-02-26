@@ -648,13 +648,12 @@ def create_pw_sap_subset():
     'Construction Change - Eng.',
     'Construction Change - Building',
     'Right Of Way Permit',
-    'Grading + Right of Way Permit',
     'ROW Permit-Traffic Control',
     'Traffic Control Plan-Permit',
     'Traffic Control Permit'
     ]
 
-    status_types = ['Issued','Completed']
+    status_types = ['Issued','Completed','Created']
 
     usecols = ['approval_type',
     'approval_status',

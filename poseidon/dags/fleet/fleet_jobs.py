@@ -62,7 +62,7 @@ def get_availability():
     return "Successfully queried Fleet Focus delays main table"
 
 #: DAG function
-def calc_availability():
+def calc_availability(**context):
     """ Calculate daily availability by priority
         Using availability base data extracted previously
         To match the status-based calculation in 
@@ -94,6 +94,33 @@ def calc_availability():
         pr_calcs,
         f"{prod_path}/fleet_avail_calcs.csv",
         date_format="%Y-%m-%d %H:%M:%S"
+        )
+
+    exec_date = context['next_execution_date'].in_tz(tz='US/Pacific')
+    file_date = exec_date.subtract(days=1)
+
+    # Need zero-padded month and date
+    data_date = f"{file_date.year}" \
+    f"{file_date.month}" \
+    f"{file_date.day}"
+
+    down_unique['Down'] = "Down"
+    
+    unique_merge = pd.merge(equip_unique,
+        down_unique,
+        on=['eqm_equip',
+        'priority_clean'])
+
+    unique_merge.loc[unique_merge['Down'].isna()] = 'Not Down'
+
+    unique_merge['Data date'] = data_date
+
+    unique_merge = unique_merge.rename(columns={'eqm_equp':'EQ_EQUIP_NO'})
+
+    general.pos_write_csv(
+        unique_merge,
+        f"{prod_path}/fleet_avail_vehs.csv",
+        date_format="%Y-%m-%d"
         )
 
     return "Successfully calculated priority availability metrics"

@@ -364,13 +364,6 @@ def make_prod_files():
             'po_box':'address_po_box',
             })
 
-    df.loc[((df['account_status'] == 'A') | 
-        (df['account_status'] == 'P') | 
-        (df['account_status'] == 'I')), 'account_status'] = "Active"
-
-    df.loc[((df['account_status'] == 'C') | 
-        (df['account_status'] == 'N')), 'account_status'] = "Inactive"
-
     df_prod = df[['account_key',
         'account_status',
         'date_account_creation',
@@ -400,9 +393,14 @@ def make_prod_files():
         'create_yr'
         ]]
 
+    df_prod['account_status'] = df_prod['account_status'].str.capitalize()
+
     logging.info('Creating active subset')
 
-    df_active = df_prod[df_prod['account_status'] == "Active"]
+    df_active = df_prod[df_prod['account_status'].isin(["Active",
+        "Pending",
+        "Waiting on missing info"
+        ])]
 
     active_rows = df_active.shape[0]
 
@@ -424,7 +422,8 @@ def make_prod_files():
         conf['prod_data_dir']+'/sd_businesses_active_since08_datasd_v1.csv',
         date_format="%Y-%m-%d")
 
-    df_inactive = df_prod[df_prod['account_status'] == "Inactive"].reset_index(drop=True)
+    df_inactive = df_prod[df_prod['account_status'].isin(["Inactive",
+        "Cancelled"])].reset_index(drop=True)
     inactive_rows = df_inactive.shape[0]
 
     logging.info(f'Found {inactive_rows} inactive businesses')
