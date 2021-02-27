@@ -90,6 +90,7 @@ def get_ref_sets():
 
     for sheet in sheets:
         file = pd.read_excel(latest_file,
+            engine='openpyxl',
             sheet_name=sheet,
             dtype={'(code)':str})
         logging.info(f"Read sheet {sheet}")
@@ -460,7 +461,7 @@ def process_df(filepath,cols):
 
     this_fy = fy_pattern.findall(filepath)
 
-    df = pd.read_excel(filepath)
+    df = pd.read_excel(filepath,engine='openpyxl')
     
     # Some files come through with blank, unnamed cols
 

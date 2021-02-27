@@ -66,9 +66,11 @@ update_json_date = PythonOperator(
 
 #: Update portal modified date
 update_pd_cls_md = get_seaboard_update_dag('police-collisions.md', dag)
+#: Update portal modified date
+update_pd_det_md = get_seaboard_update_dag('police-collisions-details.md', dag)
 
 #: Execution rules:
 
 get_collisions_data >> process_collisions_data >> [activities_to_S3,details_to_S3]
 activities_to_S3 >> [update_pd_cls_md,update_json_date]
-details_to_S3 >> [update_pd_cls_md,update_json_date]
+details_to_S3 >> [update_pd_det_md,update_json_date]
