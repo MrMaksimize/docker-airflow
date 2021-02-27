@@ -150,6 +150,6 @@ table(valid_veh$std_group)
 
 
 ##save working dataset
-write.csv (valid_veh, "valid_vehicles.csv")
+write.csv (valid_veh, "/data/prod/fleet_valid_vehicles.csv", row.names=FALSE)
 
 
