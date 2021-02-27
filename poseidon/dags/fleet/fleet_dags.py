@@ -5,8 +5,10 @@
 from airflow.models import DAG
 from airflow.operators.python_operator import PythonOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
+from airflow.contrib.operators.snowflake_operator import SnowflakeOperator
 from airflow.operators.bash_operator import BashOperator
 from trident.util.seaboard_updates import *
+from trident.util.snowflake_client import *
 from trident.util import general
 
 #### You must update these with the paths to the corresponding files ####
@@ -19,6 +21,9 @@ args = general.args
 conf = general.config
 schedule = general.schedule['fleet']
 start_date = general.start_date['fleet']
+
+snowflake_stage = format_stage_sql('avail_calc')
+snowflake_copy = format_copy_sql('avail_calc')
 
 #: Required DAG definition
 dag = DAG(dag_id='fleet_focus',
@@ -69,6 +74,24 @@ avail_calc = PythonOperator(
     python_callable=calc_availability,
     provide_context=True,
     dag=dag)
+
+stage_snowflake = SnowflakeOperator(
+  task_id=f"stage_snowflake_fleet_avail",
+  sql=snowflake_stage,
+  snowflake_conn_id="SNOWFLAKE",
+  warehouse="etl_load",
+  database="fleet",
+  schema="public",
+  dag=dag)
+
+copy_snowflake = SnowflakeOperator(
+  task_id=f"copy_snowflake_fleet_avail",
+  sql=snowflake_copy,
+  snowflake_conn_id="SNOWFLAKE",
+  warehouse="etl_load",
+  database="fleet",
+  schema="public",
+  dag=dag)
 
 upload_delays = S3FileTransferOperator(
     task_id=f'upload_fleet_delays',

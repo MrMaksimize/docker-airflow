@@ -39,8 +39,6 @@ dag = DAG(dag_id='fleet_vmt',
         catchup=False
         )
 
-# Optional tasks. Use what you need.
-
 #: Basic Python operator
 get_calamp = PythonOperator(
     task_id='get_calamp',

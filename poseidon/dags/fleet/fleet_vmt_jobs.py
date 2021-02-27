@@ -47,21 +47,6 @@ temp_path = conf['temp_data_dir']
 
 # Generic functions called in template dags
 
-#: Helper function
-def vehicle_homebase():
-
-    # Code to calculate rows to append to homebase file
-
-    # Read in existing homebase file
-
-    # Append records
-
-    # Write back out
-    general.pos_write_csv(
-    df,
-    f"{conf['temp_data_dir']}/.csv")
-
-
 #: DAG function
 def download_calamp_daily(**context):
     """ 
