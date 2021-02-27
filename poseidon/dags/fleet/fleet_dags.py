@@ -48,7 +48,7 @@ vehicles = PythonOperator(
 
 vehicles_process = BashOperator(
     task_id='create_valid_veh',
-    bash_command='Rscript /usr/local/airflow/poseidon/dags/fleet/valid_veh.R',
+    bash_command='Rscript /usr/local/airflow/poseidon/dags/fleet/valid_vehicles.R',
     dag=dag)
 
 #: Query Fleet Focus eq main table
