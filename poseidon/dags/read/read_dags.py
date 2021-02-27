@@ -32,7 +32,6 @@ get_leases = PythonOperator(
 process_leases = PythonOperator(
     task_id='process_leases',
     python_callable=process_leases,
-    
     dag=dag)
 
 #: Upload leases data to S3
@@ -40,8 +39,8 @@ leases_to_S3 = S3FileTransferOperator(
     task_id='leases_to_S3',
     source_base_path=conf['prod_data_dir'],
     source_key='city_property_leases_datasd_v1.csv',
-    dest_s3_bucket=conf['dest_s3_bucket'],
-    dest_s3_conn_id=conf['default_s3_conn_id'],
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
     dest_s3_key='read/city_property_leases_datasd_v1.csv',
     dag=dag)
 

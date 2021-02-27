@@ -67,8 +67,8 @@ upload_shp_file = S3FileTransferOperator(
     task_id='tree_canopy_shp_to_S3',
     source_base_path=conf['prod_data_dir'],
     source_key='tree_canopy_datasd.zip',
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_bucket=conf['dest_s3_bucket'],
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
     dest_s3_key='sde/tree_canopy_datasd.zip',
     
     replace=True,
@@ -79,8 +79,8 @@ upload_geojson_file = S3FileTransferOperator(
     task_id='tree_canopy_geojson_to_S3',
     source_base_path=conf['prod_data_dir'],
     source_key='tree_canopy_datasd.geojson',
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_bucket=conf['dest_s3_bucket'],
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
     dest_s3_key='sde/tree_canopy_datasd.geojson',
     
     replace=True,
@@ -91,8 +91,8 @@ upload_pbf_file = S3FileTransferOperator(
     task_id='tree_canopy_pbf_to_S3',
     source_base_path=conf['prod_data_dir'],
     source_key='tree_canopy_datasd.pbf',
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_bucket=conf['dest_s3_bucket'],
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
     dest_s3_key='sde/tree_canopy_datasd.pbf',
     
     replace=True,

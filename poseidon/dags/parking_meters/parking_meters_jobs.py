@@ -10,6 +10,7 @@ from subprocess import Popen, PIPE, check_output
 import subprocess
 from shlex import quote
 from airflow import AirflowException
+from airflow.hooks.base_hook import BaseHook
 
 conf = general.config
 portal_fname = f"{conf['prod_data_dir']}/treas_parking_payments_"
@@ -30,8 +31,10 @@ def download_latest(**context):
 
     logging.info(f"Checking FTP for {filename}")
 
+    ftp_conn = BaseHook.get_connection(conn_id="FTP_DATASD")
+
     command = f"cd {conf['temp_data_dir']} && " \
-    f"curl --user {conf['ftp_datasd_user']}:{conf['ftp_datasd_pass']} " \
+    f"curl --user {ftp_conn.login}:{ftp_conn.password} " \
     f"-o {fpath} " \
     f"ftp://ftp.datasd.org/uploads/IPS/" \
     f"{fpath} -sk"
@@ -137,7 +140,7 @@ def build_prod_file(year=2020,**context):
             general.pos_write_csv(
                 portal_up,
                 last_prod,
-                date_format=conf['date_format_ymd_hms'])
+                date_format="%Y-%m-%d %H:%M:%S")
 
     else:
     
@@ -166,7 +169,7 @@ def build_prod_file(year=2020,**context):
         general.pos_write_csv(
             portal_up,
             curr_prod,
-            date_format=conf['date_format_ymd_hms'])
+            date_format="%Y-%m-%d %H:%M:%S")
 
         if not last_set.empty:
 
@@ -186,7 +189,7 @@ def build_prod_file(year=2020,**context):
             general.pos_write_csv(
                 portal_up,
                 last_prod,
-                date_format=conf['date_format_ymd_hms'])
+                date_format="%Y-%m-%d %H:%M:%S")
 
         else:
 
@@ -257,6 +260,6 @@ def build_aggregation(agg_type="pole_by_month", agg_year=2020, **context):
     general.pos_write_csv(
         aggregation,
         new_file_path,
-        date_format=conf['date_format_ymd_hms'])
+        date_format="%Y-%m-%d %H:%M:%S")
 
     return f"Updated aggregations for {agg_year}"

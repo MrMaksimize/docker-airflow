@@ -34,14 +34,12 @@ get_indicator_bac_tests = PythonOperator(
         'date_end': (datetime.now() + timedelta(days=5)).strftime('%d-%b-%Y')
     },
     provide_context=True,
-    
     dag=dag)
 
 # Get last bacteria tests for any given point.
 get_latest_bac_tests = PythonOperator(
     task_id='get_latest_bac_tests',
     python_callable=get_latest_bac_tests,
-    
     dag=dag)
 
 # Uploads the indicator bacteria tests full result.
@@ -49,11 +47,10 @@ upload_indicator_bac_tests = S3FileTransferOperator(
     task_id='upload_indicator_bac_tests',
     source_base_path=conf['prod_data_dir'],
     source_key='indicator_bacteria_tests_datasd_v1.csv',
-    dest_s3_bucket=conf['dest_s3_bucket'],
-    dest_s3_conn_id=conf['default_s3_conn_id'],
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
     dest_s3_key='water_testing/indicator_bacteria_tests_datasd_v1.csv',
     replace=True,
-    
     dag=dag)
 
 # Uploads the latest indicator bacteria tests.
@@ -61,10 +58,9 @@ upload_latest_indicator_bac_tests = S3FileTransferOperator(
     task_id='upload_latest_indicator_bac_tests',
     source_base_path=conf['prod_data_dir'],
     source_key='latest_indicator_bac_tests_datasd_v1.csv',
-    dest_s3_bucket=conf['dest_s3_bucket'],
-    dest_s3_conn_id=conf['default_s3_conn_id'],
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
     dest_s3_key='water_testing/latest_indicator_bac_tests_datasd_v1.csv',
-    
     replace=True,
     dag=dag)
 
@@ -73,7 +69,6 @@ update_json_date = PythonOperator(
     python_callable=update_json_date,
     provide_context=True,
     op_kwargs={'ds_fname': 'indicator_bacteria_monitoring'},
-    
     dag=dag)
 
 #: Update portal modified date

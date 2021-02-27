@@ -19,7 +19,7 @@ schedule = general.schedule['onbase_test']
 start_date = general.start_date['onbase_test']
 
 #: Dag spec
-dag = DAG(dag_id='obdocs_test',
+dag = DAG(dag_id='obdocs_uat',
     default_args=args,
     start_date=start_date,
     schedule_interval=schedule,
@@ -29,7 +29,7 @@ dag = DAG(dag_id='obdocs_test',
 #: Get onbase tables
 get_doc_tables = PythonOperator(
     task_id='get_onbase_tables',
-    python_callable=get_onbase_test,
+    python_callable=get_onbase_uat,
     dag=dag)
 
 files = [f for f in os.listdir(conf['prod_data_dir'])]

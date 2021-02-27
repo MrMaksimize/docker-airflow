@@ -35,8 +35,6 @@ import math
 
 from collections import OrderedDict
 import json
-from lxml import etree
-from bs4 import BeautifulSoup as bs
 
 import string
 import re #regex

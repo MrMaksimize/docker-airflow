@@ -8,19 +8,18 @@ from subprocess import Popen, PIPE, check_output
 import subprocess
 from trident.util import general
 from shlex import quote
+from airflow.hooks.base_hook import BaseHook
 
 conf = general.config
 prod_path = conf['prod_data_dir']
-adname = conf['alb_sannet_user']
-adpass = conf['alb_sannet_pass']
 fy_pattern = re.compile(r'([0-9][0-9])')
 
 def get_accounts_chart():
     """Get chart of accounts from shared drive."""
     logging.info('Retrieving chart of accounts file.')
-
+    conn = BaseHook.get_connection(conn_id="SVC_ACCT")
     command = "smbclient //ad.sannet.gov/dfs " \
-        + f"--user={adname}%{adpass} -W ad -c " \
+        + f"--user={conn.login}%{conn.password} -W ad -c " \
         + "'prompt OFF;"\
         + " cd \"FMGT-Shared/Shared/BUDGET/" \
         + "Open Data/Open Data Portal/" \
@@ -42,9 +41,9 @@ def get_accounts_chart():
 def get_budget_files(mode='', path=''):
     """Get latest actuals from shared drive."""
     logging.info(f'Retrieving {mode} for {path}')
-    
+    conn = BaseHook.get_connection(conn_id="SVC_ACCT")
     command = "smbclient //ad.sannet.gov/dfs " \
-        + f"--user={adname}%{adpass} -W ad -c " \
+        + f"--user={conn.login}%{conn.password} -W ad -c " \
         + "'prompt OFF;"\
         + " cd \"FMGT-Shared/Shared/BUDGET/" \
         + "Open Data/Open Data Portal/" \
@@ -91,6 +90,7 @@ def get_ref_sets():
 
     for sheet in sheets:
         file = pd.read_excel(latest_file,
+            engine='openpyxl',
             sheet_name=sheet,
             dtype={'(code)':str})
         logging.info(f"Read sheet {sheet}")
@@ -461,7 +461,7 @@ def process_df(filepath,cols):
 
     this_fy = fy_pattern.findall(filepath)
 
-    df = pd.read_excel(filepath)
+    df = pd.read_excel(filepath,engine='openpyxl')
     
     # Some files come through with blank, unnamed cols
 

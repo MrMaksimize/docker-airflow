@@ -30,7 +30,6 @@ get_cip_data = PythonOperator(
     task_id='get_cip_data',
     python_callable=get_cip_data,
     provide_context=True,
-    
     dag=dag)
 
 #: Upload prod cip_datasd.csv file to S3
@@ -38,10 +37,9 @@ upload_cip_data = S3FileTransferOperator(
     task_id='upload_cip_data',
     source_base_path=conf['prod_data_dir'],
     source_key=f'cip_{fiscal_yr}_datasd_v1.csv',
-    dest_s3_conn_id=conf['default_s3_conn_id'],
-    dest_s3_bucket=conf['dest_s3_bucket'],
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
     dest_s3_key=f'cip/cip_{fiscal_yr}_datasd_v1.csv',
-    
     replace=True,
     dag=dag)
 

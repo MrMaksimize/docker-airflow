@@ -1,12 +1,12 @@
 # poseidon-airflow
 
-This repository contains **Dockerfile** of [apache-airflow](https://github.com/apache/incubator-airflow) for Docker, originally forked from [Puckel's docker-airflow](https://github.com/puckel/docker-airflow).
+This repository contains City of San Diego implementation of [apache-airflow](https://github.com/apache/incubator-airflow) that runs in Docker, originally forked from [Puckel's docker-airflow](https://github.com/puckel/docker-airflow).
 
 ## Requirements
 
 
 * Install [Docker](https://www.docker.com/)
-* Install [Docker Compose](https://docs.docker.com/compose/install/)
+* Install [Docker Compose](https://docs.docker.com/compose/install/) if using Windows
 
 ## Installation
 
@@ -25,20 +25,15 @@ Navigate to the folder where the repository was cloned, and run the following co
     git pull
 
     
-These will first ensure that your local repository is up to date and references the most recently [Docker image](https://hub.docker.com/r/andrell81/docker-airflow) (referenced by the docker-compose files).
+These will first ensure that your local repository is up to date and references the most recent [Docker image](https://hub.docker.com/orgs/cityofsandiego) (referenced by the docker-compose files).
 
-Additionally, the following python pacakges must be installed: boto3, crypography, fire & envparse. The most common way to add these dependencies would be:
+Additionally, the following python packages must be installed: [boto3](https://pypi.org/project/boto3/), [cryptography](https://pypi.org/project/cryptography/), [fire](https://pypi.org/project/fire/) & [envparse](https://pypi.org/project/envparse/).
 
-    python3 -m pip install boto3 crypogaphy fire envparse
-
-Next, ensure that folders **/data/temp** & **/data/prod** exist within the directory. 
-
-
-
+Next, ensure that folders **/data/temp** & **/data/prod** exist within the directory.
 
 For testing and development, run Airflow with **SequentialExecutor** :
 
-    python3 commander.py up Sequential
+    python3 commander.py up sequential
 
 This command will pull the referenced image from Dockerhub, and create a webserver container. 
 
@@ -52,7 +47,7 @@ If everything went as expected, you should see a running container. To view the 
 
 To connect to the  container run:
 
-    python3 commander.py connect_container poseidon-airflow_webserver_1
+    python3 commander.py connect_container poseidon_webserver_1
 
 This will bring you to an airflow prompt within the container. To view dags:
 

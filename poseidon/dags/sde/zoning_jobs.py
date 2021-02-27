@@ -30,7 +30,7 @@ def sde_to_shp():
 
     df = df.fillna('')
     df['imp_date'] = pd.to_datetime(df['imp_date'], errors='coerce')
-    df['imp_date'] = df['imp_date'].dt.strftime(conf['date_format_ymd'])
+    df['imp_date'] = df['imp_date'].dt.strftime("%Y-%m-%d")
 
     logging.info(f'Converting {layername} df to shapefile.')
     geospatial.df2shp(df=df,

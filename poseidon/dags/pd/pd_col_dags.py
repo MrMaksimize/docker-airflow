@@ -41,8 +41,8 @@ activities_to_S3 = S3FileTransferOperator(
     task_id='activities_to_S3',
     source_base_path=conf['prod_data_dir'],
     source_key='pd_collisions_datasd_v1.csv',
-    dest_s3_bucket=conf['dest_s3_bucket'],
-    dest_s3_conn_id=conf['default_s3_conn_id'],
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
     dest_s3_key='pd/pd_collisions_datasd_v1.csv',
     dag=dag)
 
@@ -51,8 +51,8 @@ details_to_S3 = S3FileTransferOperator(
     task_id='details_to_S3',
     source_base_path=conf['prod_data_dir'],
     source_key='pd_collisions_details_datasd.csv',
-    dest_s3_bucket=conf['dest_s3_bucket'],
-    dest_s3_conn_id=conf['default_s3_conn_id'],
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
     dest_s3_key='pd/pd_collisions_details_datasd.csv',
     dag=dag)
 
@@ -66,9 +66,11 @@ update_json_date = PythonOperator(
 
 #: Update portal modified date
 update_pd_cls_md = get_seaboard_update_dag('police-collisions.md', dag)
+#: Update portal modified date
+update_pd_det_md = get_seaboard_update_dag('police-collisions-details.md', dag)
 
 #: Execution rules:
+
 get_collisions_data >> process_collisions_data >> [activities_to_S3,details_to_S3]
 activities_to_S3 >> [update_pd_cls_md,update_json_date]
-details_to_S3 >> [update_pd_cls_md,update_json_date]
-
+details_to_S3 >> [update_pd_det_md,update_json_date]

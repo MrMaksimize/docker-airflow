@@ -29,7 +29,6 @@ dag = DAG(dag_id='sire_docs',
 get_doc_tables = PythonOperator(
     task_id='get_sire_tables',
     python_callable=get_sire,
-    
     dag=dag)
 
 files = [f for f in os.listdir(conf['prod_data_dir'])]
@@ -40,10 +39,9 @@ for f in files:
             task_id=f'upload_{f}',
             source_base_path=conf['prod_data_dir'],
             source_key=f,
-            dest_s3_conn_id=conf['default_s3_conn_id'],
-            dest_s3_bucket=conf['dest_s3_bucket'],
+            dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+            dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
             dest_s3_key=f'city_docs/{f}',
-            
             replace=True,
             dag=dag)
 
