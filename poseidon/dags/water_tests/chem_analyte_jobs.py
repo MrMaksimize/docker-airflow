@@ -3,6 +3,7 @@ import pandas as pd
 import string
 import logging
 from datetime import datetime as dt
+from airflow.hooks.base_hook import BaseHook
 
 from trident.util import general
 
@@ -18,8 +19,23 @@ def get_oracle_data(mode='drinking',**context):
     this_mo = today.strftime("%m")
     this_day = today.strftime("%d")
 
-    credentials = conf['oracle_wpl']
-    db = cx_Oracle.connect(credentials)
+    credentials = BaseHook.get_connection(conn_id="WPL")
+    
+    conn_config = {
+            'user': credentials.login,
+            'password': credentials.password
+        }
+    
+    dsn = credentials.extra_dejson.get('dsn', None)
+    sid = credentials.extra_dejson.get('sid', None)
+    port = credentials.port if credentials.port else 1521
+    conn_config['dsn'] = cx_Oracle.makedsn(dsn, port, sid)
+
+    db = cx_Oracle.connect(conn_config['user'],
+        conn_config['password'],
+        conn_config['dsn'],
+        encoding="UTF-8")
+
     sql = general.file_to_string(f'./sql/analytes_{mode}.sql', __file__)
     
     sql += f"AND (TRUNC(SAMPLE.SAMPLE_DATE) >= DATE '{this_yr}-01-01') " \
@@ -35,7 +51,7 @@ def get_oracle_data(mode='drinking',**context):
     general.pos_write_csv(
     df,
     f"{conf['temp_data_dir']}/analytes_{mode}_{fname_yr}.csv",
-    date_format=conf['date_format_ymd'])
+    date_format="%Y-%m-%d")
 
     return fname_yr
 
@@ -209,7 +225,7 @@ def process_data(mode='drinking',**context):
     general.pos_write_csv(
     final,
     f"{conf['prod_data_dir']}/{file_name}.csv",
-    date_format=conf['date_format_ymd'])
+    date_format="%Y-%m-%d")
 
     return f"Successfully processed prod file for {mode}"
 
