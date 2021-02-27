@@ -1,3 +1,10 @@
+#================================================================   
+## Project name: ROC Fleet metrics
+## Author: Zaira Razu, Data and Analytics, PandA
+##Last edit: Dec 15th, 2020
+
+##TASK: clean vehicles inventory and add category and department classifications
+#================================================================   
 #Clear workspace
 rm(list = ls())
 
@@ -10,11 +17,25 @@ library(plotly)
 library(tidyr)
 library(zoo)
 library(stringr)
+# library(lubridate) The following objects are masked from ‘package:data.table’:
+# hour, isoweek, mday, minute, month, quarter, second, wday, week, yday, year
 
-#====================Load data=============================== 
+
+
+#================================================================   
+## Define directories
+#================================================================   
+
+
+
+
+#====================Load datasets=============================== 
 
 vehicles<-read.csv("/data/prod/fleet_vehicles.csv")
-dept_look<-read.csv("/data/prod/fleet-dept-lookup.csv")
+dept_look<-read.csv("/data/prod/fleet_dept_lookup.csv")
+
+
+
 
 #=========== ID's for vehicles and for work orders
 
@@ -23,6 +44,17 @@ vehicles<- vehicles %>% mutate_all(na_if,"") #turn blanks into NA
 length(unique(vehicles$equip_id))
 #[1] 14262 #no duplicate id's
 
+
+##########################################################
+#---------PREPARE DATA FOR METRIC CALCULATION---------------
+##########################################################
+
+##########################################################
+#---------Vehicles Prep---------------
+##########################################################
+
+
+##-----------Clean VEHICLE data previous to merge with work order data----
 #filter vehicles by asset type 
 vehicles_original<-vehicles #save backup original version before transformations
 vehicles<-subset(vehicles, asset_type=="ASSET") 
@@ -53,6 +85,14 @@ valid_veh$priority_recode<-ifelse(valid_veh$priority_code=="1"|
                                     valid_veh$priority_code== "1F",
                                   1, as.character(valid_veh$priority_code))
 
+
+
+
+
+######################################################
+##-----------Department classification-  ##-----------
+######################################################
+
 valid_veh$valid_veh<-1 #create indicator variable to quickly evaluate merge with department lookup
 valid_veh<- left_join(valid_veh, dept_look) ###join to department lookup table (automatically uses dept_code to join)
 table(valid_veh$valid_veh) #all rows merged succesfully
@@ -65,7 +105,10 @@ valid_veh$dept_group<-ifelse(grepl("PUBLIC",valid_veh$dept_name, ignore.case = T
 valid_veh$dept_group<-ifelse(grepl("PUD/",valid_veh$dept_name, ignore.case = TRUE)==TRUE,"PUD", valid_veh$dept_group) 
 valid_veh$dept_group<-ifelse(grepl("PARK",valid_veh$dept_name, ignore.case = TRUE)==TRUE,"Parks", valid_veh$dept_group) 
 valid_veh$dept_group<-ifelse(grepl("FIRE",valid_veh$dept_name, ignore.case = TRUE)==TRUE,"Fire", valid_veh$dept_group) 
-valid_veh$dept_group<-ifelse(grepl("POLICE",valid_veh$dept_name, ignore.case = TRUE)==TRUE,"Police", valid_veh$dept_group)
+valid_veh$dept_group<-ifelse(grepl("POLICE",valid_veh$dept_name, ignore.case = TRUE)==TRUE,"Police", valid_veh$dept_group) 
+
+
+
 
 ######################################################################
 ##----------------Vehicle classification and tables by department ----
@@ -103,8 +146,10 @@ valid_veh$veh_group<-ifelse(grepl("CART",valid_veh$description, ignore.case = TR
 ##Create alternative grouping using stds_class first 2 digits
 valid_veh$std_group<- substr(valid_veh$stds_class, start = 1, stop = 2)
 table(valid_veh$std_group)
-std_group_t<- data.frame(table(valid_veh$std_group)) 
+# std_group_t<- data.frame(table(valid_veh$std_group)) 
 
 
 ##save working dataset
-write.csv(valid_veh, "/data/prod/fleet_valid_vehicles.csv", row.names=FALSE)
+write.csv (valid_veh, "/data/prod/fleet_valid_vehicles.csv", row.names=FALSE)
+
+

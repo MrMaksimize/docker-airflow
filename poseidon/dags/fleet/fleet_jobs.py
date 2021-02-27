@@ -5,6 +5,7 @@
 from trident.util import general
 import logging
 from airflow.hooks.base_hook import BaseHook
+import pendulum
 
 # Required variables
 
@@ -69,6 +70,13 @@ def calc_availability(**context):
         Fleet's Crystal report
     """
 
+    file_date = context['next_execution_date'].in_tz(tz='US/Pacific')
+
+    # Need zero-padded month and date
+    data_date = f"{file_date.month}/" \
+    f"{file_date.day}/" \
+    f"{file_date.year}" \
+
     df = pd.read_csv(f"{temp_path}/fleet_avail.csv",low_memory=False)
 
     df['priority_clean'] = df['pri_shop_priority'].apply(lambda x: "1" if "1" in x else ("2" if "2" in x else np.nan))
@@ -84,25 +92,36 @@ def calc_availability(**context):
     equip_unique = df_filtered.loc[:,['eqm_equip','priority_clean']].drop_duplicates()
     down_unique = down.loc[:,['eqm_equip','priority_clean']].drop_duplicates()
 
-    pr_totals = equip_unique.groupby(['priority_clean']).size().reset_index(name='counts')
-    pr_down_totals = down_unique.groupby(['priority_clean']).size().reset_index(name='counts')
+    pr_totals = equip_unique.groupby(['priority_clean']).size().reset_index(name='total_counts')
+    pr_down_totals = down_unique.groupby(['priority_clean']).size().reset_index(name='down_counts')
 
-    pr_calcs = pd.concat([pr_totals,pr_down_totals],
-        ignore_index=True)
+    pr_calcs = pd.merge(pr_totals,
+        pr_down_totals,
+        how='outer',
+        on='priority_clean')
 
-    general.pos_write_csv(
-        pr_calcs,
-        f"{prod_path}/fleet_avail_calcs.csv",
-        date_format="%Y-%m-%d %H:%M:%S"
-        )
+    pr_calcs['PERC_AVAIL'] = pr_calcs.apply(lambda x: round((x['total_counts']-x['down_counts'])/x['total_counts'],4),
+        axis=1)
 
-    exec_date = context['next_execution_date'].in_tz(tz='US/Pacific')
-    file_date = exec_date.subtract(days=1)
+    daily_avail_p1_row = pr_calcs.loc[pr_calcs['priority_clean'] == "1",['priority_clean','PERC_AVAIL']]
+    daily_avail_p2_row = pr_calcs.loc[pr_calcs['priority_clean'] == "2",['priority_clean','PERC_AVAIL']]
 
-    # Need zero-padded month and date
-    data_date = f"{file_date.year}" \
-    f"{file_date.month}" \
-    f"{file_date.day}"
+    calcs_final = pd.concat([daily_avail_p1_row,
+        daily_avail_p2_row],
+        ignore_index=False)
+
+    calcs_final.loc[calcs_final['priority_clean'] == "1",
+    'priority_clean'] = "p1"
+    calcs_final.loc[calcs_final['priority_clean'] == "2",
+    'priority_clean'] = "p2"
+
+    calcs_final['DATE_AVAIL'] = file_date
+
+    calcs_final = calcs_final.rename(columns={'priority_clean':'PRIORITY'})
+
+    logging.info(f"Writing compressed csv")
+    general.sf_write_csv(calcs_final[['DATE_AVAIL','PERC_AVAIL','PRIORITY']],
+        'avail_status')
 
     down_unique['Down'] = "Down"
     
@@ -233,5 +252,36 @@ def get_vehicles():
 
     return "Successfully queried Fleet Focus eq_main table"
 
-def process_vehicles():
-    """ Processing raw vehicles extract for valid vehicles """
+#: DAG function
+def get_depts():
+    """ Extract vehicles data from Fleet Focus """
+
+    credentials = BaseHook.get_connection(conn_id="FLEET_FOCUS")
+    conn_config = {
+            'user': credentials.login,
+            'password': credentials.password
+        }
+    
+    dsn = credentials.extra_dejson.get('dsn', None)
+    sid = credentials.extra_dejson.get('sid', None)
+    port = credentials.port if credentials.port else 1521
+    conn_config['dsn'] = cx_Oracle.makedsn(dsn, port, sid)
+
+    db = cx_Oracle.connect(conn_config['user'],
+        conn_config['password'],
+        conn_config['dsn'],
+        encoding="UTF-8")
+
+    sql= general.file_to_string('./sql/depts-query.sql', __file__)
+    
+    # This pulls in query results as df
+    df = pd.read_sql_query(sql, db)
+    df.columns = [x.lower() for x in df.columns]
+
+    logging.info(f'Query returned {df.shape[0]} results')
+
+    general.pos_write_csv(
+        df,
+        f"{prod_path}/fleet_dept_lookup.csv")
+
+    return "Successfully queried Fleet Focus dpt_main table"

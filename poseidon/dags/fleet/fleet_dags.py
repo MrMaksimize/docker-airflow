@@ -5,8 +5,10 @@
 from airflow.models import DAG
 from airflow.operators.python_operator import PythonOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
+from airflow.contrib.operators.snowflake_operator import SnowflakeOperator
 from airflow.operators.bash_operator import BashOperator
 from trident.util.seaboard_updates import *
+from trident.util.snowflake_client import *
 from trident.util import general
 
 #### You must update these with the paths to the corresponding files ####
@@ -19,6 +21,9 @@ args = general.args
 conf = general.config
 schedule = general.schedule['fleet']
 start_date = general.start_date['fleet']
+
+snowflake_stage = format_stage_sql('avail_calc')
+snowflake_copy = format_copy_sql('avail_calc')
 
 #: Required DAG definition
 dag = DAG(dag_id='fleet_focus',
@@ -46,9 +51,15 @@ vehicles = PythonOperator(
     python_callable=get_vehicles,
     dag=dag)
 
+#: Query Fleet Focus eq main table
+depts = PythonOperator(
+    task_id='query_fleet_depts',
+    python_callable=get_depts,
+    dag=dag)
+
 vehicles_process = BashOperator(
     task_id='create_valid_veh',
-    bash_command='Rscript /usr/local/airflow/poseidon/dags/fleet/valid_veh.R',
+    bash_command='Rscript /usr/local/airflow/poseidon/dags/fleet/valid_vehicles.R',
     dag=dag)
 
 #: Query Fleet Focus eq main table
@@ -63,6 +74,24 @@ avail_calc = PythonOperator(
     python_callable=calc_availability,
     provide_context=True,
     dag=dag)
+
+stage_snowflake = SnowflakeOperator(
+  task_id=f"stage_snowflake_fleet_avail",
+  sql=snowflake_stage,
+  snowflake_conn_id="SNOWFLAKE",
+  warehouse="etl_load",
+  database="fleet",
+  schema="public",
+  dag=dag)
+
+copy_snowflake = SnowflakeOperator(
+  task_id=f"copy_snowflake_fleet_avail",
+  sql=snowflake_copy,
+  snowflake_conn_id="SNOWFLAKE",
+  warehouse="etl_load",
+  database="fleet",
+  schema="public",
+  dag=dag)
 
 upload_delays = S3FileTransferOperator(
     task_id=f'upload_fleet_delays',
@@ -94,6 +123,16 @@ upload_vehicles = S3FileTransferOperator(
     replace=True,
     dag=dag)
 
+upload_depts = S3FileTransferOperator(
+    task_id=f'upload_fleet_dpt',
+    source_base_path=conf['prod_data_dir'],
+    source_key=f'fleet_dept_lookup.csv',
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
+    dest_s3_key=f'fleet/fleet_dept_lookup.csv',
+    replace=True,
+    dag=dag)
+
 upload_valid_vehicles = S3FileTransferOperator(
     task_id=f'upload_valid_veh',
     source_base_path=conf['prod_data_dir'],
@@ -118,5 +157,6 @@ upload_avail_vehicles = S3FileTransferOperator(
 delays >> upload_delays
 jobs >> upload_jobs
 vehicles >> upload_vehicles
-vehicles >> vehicles_process >> upload_valid_vehicles
+depts >> upload_depts
+[vehicles, depts] >> vehicles_process >> upload_valid_vehicles
 availability >> avail_calc >> upload_avail_vehicles
