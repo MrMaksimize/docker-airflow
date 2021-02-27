@@ -46,6 +46,12 @@ vehicles = PythonOperator(
     python_callable=get_vehicles,
     dag=dag)
 
+#: Query Fleet Focus eq main table
+depts = PythonOperator(
+    task_id='query_fleet_depts',
+    python_callable=get_depts,
+    dag=dag)
+
 vehicles_process = BashOperator(
     task_id='create_valid_veh',
     bash_command='Rscript /usr/local/airflow/poseidon/dags/fleet/valid_vehicles.R',
@@ -94,6 +100,16 @@ upload_vehicles = S3FileTransferOperator(
     replace=True,
     dag=dag)
 
+upload_depts = S3FileTransferOperator(
+    task_id=f'upload_fleet_dpt',
+    source_base_path=conf['prod_data_dir'],
+    source_key=f'fleet_dept_lookup.csv',
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
+    dest_s3_key=f'fleet/fleet_dept_lookup.csv',
+    replace=True,
+    dag=dag)
+
 upload_valid_vehicles = S3FileTransferOperator(
     task_id=f'upload_valid_veh',
     source_base_path=conf['prod_data_dir'],
@@ -118,5 +134,6 @@ upload_avail_vehicles = S3FileTransferOperator(
 delays >> upload_delays
 jobs >> upload_jobs
 vehicles >> upload_vehicles
-vehicles >> vehicles_process >> upload_valid_vehicles
+depts >> upload_depts
+[vehicles, depts] >> vehicles_process >> upload_valid_vehicles
 availability >> avail_calc >> upload_avail_vehicles

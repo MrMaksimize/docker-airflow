@@ -233,5 +233,39 @@ def get_vehicles():
 
     return "Successfully queried Fleet Focus eq_main table"
 
+#: DAG function
+def get_depts():
+    """ Extract vehicles data from Fleet Focus """
+
+    credentials = BaseHook.get_connection(conn_id="FLEET_FOCUS")
+    conn_config = {
+            'user': credentials.login,
+            'password': credentials.password
+        }
+    
+    dsn = credentials.extra_dejson.get('dsn', None)
+    sid = credentials.extra_dejson.get('sid', None)
+    port = credentials.port if credentials.port else 1521
+    conn_config['dsn'] = cx_Oracle.makedsn(dsn, port, sid)
+
+    db = cx_Oracle.connect(conn_config['user'],
+        conn_config['password'],
+        conn_config['dsn'],
+        encoding="UTF-8")
+
+    sql= general.file_to_string('./sql/depts-query.sql', __file__)
+    
+    # This pulls in query results as df
+    df = pd.read_sql_query(sql, db)
+    df.columns = [x.lower() for x in df.columns]
+
+    logging.info(f'Query returned {df.shape[0]} results')
+
+    general.pos_write_csv(
+        df,
+        f"{prod_path}/fleet_dept_lookup.csv")
+
+    return "Successfully queried Fleet Focus dpt_main table"
+
 def process_vehicles():
     """ Processing raw vehicles extract for valid vehicles """
