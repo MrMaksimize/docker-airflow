@@ -54,7 +54,9 @@ def process_excel(**context):
     
     logging.info(f"Reading in {latest_file}")
 
-    ripa = pd.read_excel(latest_file,sheet_name=None)
+    ripa = pd.read_excel(latest_file,
+        engine='openpyxl',
+        sheet_name=None)
 
     keys = [*ripa]
 

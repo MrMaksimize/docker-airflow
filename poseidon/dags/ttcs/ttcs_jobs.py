@@ -335,6 +335,7 @@ def make_prod_files():
                      parse_dates=['address_dt',
                                   'bus_start_dt',
                                   'cert_exp_dt',
+                                  'cert_eff_dt',
                                   'creation_dt',
                                   'dba_name_dt'
                                   ])
@@ -342,6 +343,7 @@ def make_prod_files():
     logging.info('Renaming columns')
     df = df.rename(columns={'address_dt':'address_active_dt',
             'cert_exp_dt':'date_cert_expiration',
+            'cert_eff_dt':'date_cert_effective',
             'creation_dt':'date_account_creation',
             'dba_name_dt':'dba_name_active_dt',
             'name':'bid',
@@ -362,17 +364,11 @@ def make_prod_files():
             'po_box':'address_po_box',
             })
 
-    df.loc[((df['account_status'] == 'A') | 
-        (df['account_status'] == 'P') | 
-        (df['account_status'] == 'I')), 'account_status'] = "Active"
-
-    df.loc[((df['account_status'] == 'C') | 
-        (df['account_status'] == 'N')), 'account_status'] = "Inactive"
-
     df_prod = df[['account_key',
         'account_status',
         'date_account_creation',
         'date_cert_expiration',
+        'date_cert_effective',
         'business_owner_name',
         'ownership_type',
         'date_business_start',
@@ -397,9 +393,14 @@ def make_prod_files():
         'create_yr'
         ]]
 
+    df_prod['account_status'] = df_prod['account_status'].str.capitalize()
+
     logging.info('Creating active subset')
 
-    df_active = df_prod[df_prod['account_status'] == "Active"]
+    df_active = df_prod[df_prod['account_status'].isin(["Active",
+        "Pending",
+        "Waiting on missing info"
+        ])]
 
     active_rows = df_active.shape[0]
 
@@ -421,7 +422,8 @@ def make_prod_files():
         conf['prod_data_dir']+'/sd_businesses_active_since08_datasd_v1.csv',
         date_format="%Y-%m-%d")
 
-    df_inactive = df_prod[df_prod['account_status'] == "Inactive"].reset_index(drop=True)
+    df_inactive = df_prod[df_prod['account_status'].isin(["Inactive",
+        "Cancelled"])].reset_index(drop=True)
     inactive_rows = df_inactive.shape[0]
 
     logging.info(f'Found {inactive_rows} inactive businesses')
