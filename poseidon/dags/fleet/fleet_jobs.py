@@ -70,13 +70,12 @@ def calc_availability(**context):
         Fleet's Crystal report
     """
 
-    exec_date = context['next_execution_date'].in_tz(tz='US/Pacific')
-    file_date = exec_date.subtract(days=1)
+    file_date = context['next_execution_date'].in_tz(tz='US/Pacific')
 
     # Need zero-padded month and date
-    data_date = f"{file_date.year}" \
-    f"{file_date.month}" \
-    f"{file_date.day}"
+    data_date = f"{file_date.month}/" \
+    f"{file_date.day}/" \
+    f"{file_date.year}" \
 
     df = pd.read_csv(f"{temp_path}/fleet_avail.csv",low_memory=False)
 
