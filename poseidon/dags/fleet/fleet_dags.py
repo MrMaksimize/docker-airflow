@@ -22,8 +22,8 @@ conf = general.config
 schedule = general.schedule['fleet']
 start_date = general.start_date['fleet']
 
-snowflake_stage = format_stage_sql('avail_calc')
-snowflake_copy = format_copy_sql('avail_calc')
+snowflake_stage = format_stage_sql('avail_status')
+snowflake_copy = format_copy_sql('avail_status')
 
 #: Required DAG definition
 dag = DAG(dag_id='fleet_focus',
