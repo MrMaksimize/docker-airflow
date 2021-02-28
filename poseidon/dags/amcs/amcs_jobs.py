@@ -69,7 +69,7 @@ def get_sites():
     return "Pulled Salesforce report"
 
 
-def get_updates_only():
+def get_updates_only(**context):
 
     last_run = 0
     try:
@@ -78,13 +78,19 @@ def get_updates_only():
         last_run = 0
 
     if last_run != 0:
+        # If there was a previous run, just get the diff
         # write a backup of the previous run
-        shutil.copyfile(previous_run_temp_file1, previous_run_temp_file1 + '.' + datetime.date.today().isoformat())
+        backup_filepath = previous_run_temp_file1 \
+        + '.' \
+        + context['next_execution_date'].strftime("%Y-%m-%d")
+
+        shutil.copyfile(previous_run_temp_file1, backup_filepath)
         # delete old backup file
-        ten_days_ago = (datetime.date.today() - datetime.timedelta(days=10)).isoformat()
+        ten_days_ago_test = context['next_execution_date'].subtract(days=10).strftime("%Y-%m-%d")
         try:
             os.remove(previous_run_temp_file1 + '.' + ten_days_ago)
         except:
+            logging.info(f"Did not find file for {ten_days_ago}, will not delete")
             pass
 
 
@@ -104,13 +110,32 @@ def get_updates_only():
                 date_format='%Y-%m-%dT%H:%M:%S%z')
 
     else:
-        # no previous run, send the whole thing
+        # no previous run, send all of the Salesforce output
+        # temp_file1 is the raw output from Salesforce
+        # in this command, temp_file1 becomes temp_file2
         shutil.copyfile(temp_file1, temp_file2)
 
-
+    # No matter what, temp_file1 (Salesforce output from previous task)
+    # Becomes previous_run_temp_file1
+    # so that tomorrow, it can be used to get diff
     shutil.copyfile(temp_file1, previous_run_temp_file1)
 
     return "Removed records that have not changed"
+
+def check_diff():
+
+    df = pd.read_csv(temp_file2,
+                     encoding='ISO-8859-1',
+                     low_memory=False,
+                     error_bad_lines=False,
+                     )
+
+    if df.empty:
+        logging.info("No changes, skip remaining tasks")
+        return False
+    else:
+        logging.info("Changes exist, proceed with job")
+        return True
 
 
 def group_site_containers():
@@ -121,7 +146,7 @@ def group_site_containers():
                      error_bad_lines=False,
                      )
 
-
+    logging.info(df.head())
     col_split = df['Container Type Name'].apply(lambda x: '' if isinstance(x, float) else x.split(' ')[0])
 
     container_type_df = df.assign(ContainerType=col_split)
@@ -132,6 +157,7 @@ def group_site_containers():
     unique_sites = df.drop_duplicates(subset=['Site ID'])
 
     grouped = refuse_bins.groupby(['Site ID','ContainerType']).size().reset_index()
+
     unique_sites = pd.merge(unique_sites, grouped, left_on='Site ID', right_on='Site ID', how='left')
 
     unique_sites = unique_sites.rename(index=str, columns={0: 'RefuseQty'})
@@ -142,7 +168,6 @@ def group_site_containers():
     unique_sites = unique_sites.drop(['Container Type Name', 'ContainerType_y', 'ContainerType_x'], axis='columns')
     unique_sites = unique_sites.fillna(value={'Recycle Day Of Week': 0})
 
-    print(unique_sites.dtypes)
 
     general.pos_write_csv(
         unique_sites,
@@ -292,6 +317,8 @@ def get_diff(previous_file, current_file, output_file):
     command = command.format(quote(command))
     return_code = subprocess.call(command, shell=True)
 
+    logging.info(f"Return code for putting the header is the output file is {return_code}")
+
     if return_code != 0:
         raise Exception('Could not add headers to output file')
 
@@ -301,6 +328,8 @@ def get_diff(previous_file, current_file, output_file):
     command = f"tail -n +2 {previous_file} | sort > {previous_file_sorted}"
     command = command.format(quote(command))
     return_code = subprocess.call(command, shell=True)
+
+    logging.info(f"Return code for skipping the header and sorting the previous file is {return_code}")
     
     if return_code != 0:
         raise Exception(f'Could not sort {previous_file}')
@@ -311,6 +340,8 @@ def get_diff(previous_file, current_file, output_file):
     command = f"tail -n +2 {current_file} | sort > {current_file_sorted}"
     command = command.format(quote(command))
     return_code = subprocess.call(command, shell=True)
+
+    logging.info(f"Return code for skipping the header and sorting the current file is {return_code}")
     
     if return_code != 0:
         raise Exception(f'Could sort {current_file}')
@@ -321,6 +352,8 @@ def get_diff(previous_file, current_file, output_file):
     +f" >> {output_file}"
     command = command.format(quote(command))
     return_code = subprocess.call(command, shell=True)
+
+    logging.info(f"Return code for diff'ing the files and saving the changes and adds to output file is {return_code}")
     
     if return_code != 0:
         raise Exception('Count not write changes to output file')
