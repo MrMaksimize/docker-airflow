@@ -82,11 +82,11 @@ def get_updates_only(**context):
         # write a backup of the previous run
         backup_filepath = previous_run_temp_file1 \
         + '.' \
-        + context['next_execution_date'].strftime("%Y-%m-%d")
+        + context['execution_date'].subtract(days=1).strftime("%Y-%m-%d")
 
         shutil.copyfile(previous_run_temp_file1, backup_filepath)
         # delete old backup file
-        ten_days_ago_test = context['next_execution_date'].subtract(days=10).strftime("%Y-%m-%d")
+        ten_days_ago = context['execution_date'].subtract(days=10).strftime("%Y-%m-%d")
         try:
             os.remove(previous_run_temp_file1 + '.' + ten_days_ago)
         except:
