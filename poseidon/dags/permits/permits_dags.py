@@ -32,9 +32,14 @@ all_pts = SubDagOperator(
   subdag=get_create_pts_subdag(),
   dag=dag)
 
-exec_snowflake = SubDagOperator(
-  task_id="snowflake",
-  subdag=snowflake_subdag(),
+exec_snowflake_pts = SubDagOperator(
+  task_id="snowflake_pts",
+  subdag=snowflake_pts_subdag(),
+  dag=dag)
+
+exec_snowflake_accela = SubDagOperator(
+  task_id="snowflake_accela",
+  subdag=snowflake_accela_subdag(),
   dag=dag)
 
 #: Upload 4 files using subdag
@@ -104,8 +109,8 @@ upload_pw_sap = S3FileTransferOperator(
     )
 
 #: Execution rules
-all_accela>>exec_snowflake
-all_pts>>exec_snowflake
+all_accela>>exec_snowflake_accela
+all_pts>>exec_snowflake_pts
 all_accela>>upload_set2_files
 all_pts>>upload_set1_files
 upload_set1_files>>[update_set1_md,update_set1_json_date]

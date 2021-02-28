@@ -14,8 +14,6 @@ args = general.args
 schedule = general.schedule['dsd_approvals']
 start_date = general.start_date['dsd_approvals']
 
-snowflake_files = ['dsd_approvals_pts','dsd_approvals_accela']
-
 def get_create_accela_subdag():
   """
   Generate a DAG to be used as a subdag
@@ -207,53 +205,100 @@ def upload_set2_files_subdag():
 
   return dag_subdag
 
-def snowflake_subdag():
+def snowflake_pts_subdag():
   """
   Generate a DAG to be used as a subdag
   that updates tables into Snowflake
   """
 
   dag_subdag = DAG(
-    dag_id='dsd_permits.snowflake',
+    dag_id='dsd_permits.snowflake_pts',
     default_args=args,
     start_date=start_date,
     schedule_interval=schedule,
     catchup=False
   )
 
-  for file in snowflake_files:
+  snowflake_stage = format_stage_sql('dsd_approvals_pts')
+  snowflake_del = format_delete_sql('dsd_approvals_pts')
+  snowflake_copy = format_copy_sql('dsd_approvals_pts')
 
-    snowflake_stage = format_stage_sql(file)
-    snowflake_del = format_delete_sql(file)
-    snowflake_copy = format_copy_sql(file)
-
-    stage_snowflake = SnowflakeOperator(
-      task_id=f"stage_snowflake_{file}",
-      sql=snowflake_stage,
-      snowflake_conn_id="SNOWFLAKE",
-      warehouse="etl_load",
-      database="open_data",
-      schema="public",
-      dag=dag_subdag)
-    
-    delete_snowflake = SnowflakeOperator(
-      task_id=f"del_snowflake_{file}",
-      sql=snowflake_del,
-      snowflake_conn_id="SNOWFLAKE",
-      warehouse="etl_load",
-      database="open_data",
-      schema="public",
-      dag=dag_subdag)
+  stage_snowflake = SnowflakeOperator(
+    task_id=f"stage_snowflake_dsd_approvals_pts",
+    sql=snowflake_stage,
+    snowflake_conn_id="SNOWFLAKE",
+    warehouse="etl_load",
+    database="open_data",
+    schema="public",
+    dag=dag_subdag)
   
-    copy_snowflake = SnowflakeOperator(
-      task_id=f"copy_snowflake_{file}",
-      sql=snowflake_copy,
-      snowflake_conn_id="SNOWFLAKE",
-      warehouse="etl_load",
-      database="open_data",
-      schema="public",
-      dag=dag_subdag)
+  delete_snowflake = SnowflakeOperator(
+    task_id=f"del_snowflake_dsd_approvals_pts",
+    sql=snowflake_del,
+    snowflake_conn_id="SNOWFLAKE",
+    warehouse="etl_load",
+    database="open_data",
+    schema="public",
+    dag=dag_subdag)
 
-    stage_snowflake>>delete_snowflake>>copy_snowflake
+  copy_snowflake = SnowflakeOperator(
+    task_id=f"copy_snowflake_dsd_approvals_pts",
+    sql=snowflake_copy,
+    snowflake_conn_id="SNOWFLAKE",
+    warehouse="etl_load",
+    database="open_data",
+    schema="public",
+    dag=dag_subdag)
+
+  stage_snowflake>>delete_snowflake>>copy_snowflake
+
+  return dag_subdag
+
+def snowflake_accela_subdag():
+  """
+  Generate a DAG to be used as a subdag
+  that updates tables into Snowflake
+  """
+
+  dag_subdag = DAG(
+    dag_id='dsd_permits.snowflake_accela',
+    default_args=args,
+    start_date=start_date,
+    schedule_interval=schedule,
+    catchup=False
+  )
+
+  snowflake_stage = format_stage_sql('dsd_approvals_accela')
+  snowflake_del = format_delete_sql('dsd_approvals_accela')
+  snowflake_copy = format_copy_sql('dsd_approvals_accela')
+
+  stage_snowflake = SnowflakeOperator(
+    task_id=f"stage_snowflake_dsd_approvals_accela",
+    sql=snowflake_stage,
+    snowflake_conn_id="SNOWFLAKE",
+    warehouse="etl_load",
+    database="open_data",
+    schema="public",
+    dag=dag_subdag)
+  
+  delete_snowflake = SnowflakeOperator(
+    task_id=f"del_snowflake_dsd_approvals_accela",
+    sql=snowflake_del,
+    snowflake_conn_id="SNOWFLAKE",
+    warehouse="etl_load",
+    database="open_data",
+    schema="public",
+    dag=dag_subdag)
+
+  copy_snowflake = SnowflakeOperator(
+    task_id=f"copy_snowflake_dsd_approvals_accela",
+    sql=snowflake_copy,
+    snowflake_conn_id="SNOWFLAKE",
+    warehouse="etl_load",
+    database="open_data",
+    schema="public",
+    dag=dag_subdag)
+
+  stage_snowflake>>delete_snowflake>>copy_snowflake
 
   return dag_subdag
