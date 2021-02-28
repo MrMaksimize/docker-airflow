@@ -160,3 +160,4 @@ vehicles >> upload_vehicles
 depts >> upload_depts
 [vehicles, depts] >> vehicles_process >> upload_valid_vehicles
 availability >> avail_calc >> upload_avail_vehicles
+avail_calc >> stage_snowflake >> copy_snowflake
