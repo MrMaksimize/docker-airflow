@@ -24,7 +24,8 @@ SELECT
          pvm.functionalclassification as seg_func_class,
          pvm.district as seg_council_district,
          pvm.length as seg_length_ft,
-         pvm.pavementwidth as seg_width_ft
+         pvm.pavementwidth as seg_width_ft,
+         pve.comments2 as comments
 FROM     [dbo].wdwomaingeneral wo
 LEFT OUTER JOIN [dbo].pvevents pve ON wo.id = pve.workorder
 INNER JOIN [dbo].pvmaingeneral pvm ON pve.pvmaingeneraloid = pvm.pvmaingeneraloid

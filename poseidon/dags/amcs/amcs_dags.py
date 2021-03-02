@@ -1,5 +1,6 @@
 """AMCS _dags file."""
 from airflow.operators.python_operator import PythonOperator
+from airflow.operators.python_operator import ShortCircuitOperator
 from airflow.models import DAG
 from dags.amcs.amcs_jobs import *
 from trident.util import general
@@ -28,6 +29,22 @@ get_sites = PythonOperator(
     dag=dag
 )
 
+#: Compares the file to last file and stores only the updates
+get_updates_only = PythonOperator(
+    task_id='get_updates_only',
+    python_callable=get_updates_only,
+    provide_context=True,
+    #email=['data@sandiego.gov'],
+    #email_on_failure=True,
+    dag=dag
+)
+
+#: Checks contents of diff file
+check_diff_exists = ShortCircuitOperator(
+    task_id='check_diff_empty',
+    python_callable=check_diff,
+    dag=dag)
+
 #: Counts the containers
 group_site_containers = PythonOperator(
     task_id='group_site_containers',
@@ -37,7 +54,6 @@ group_site_containers = PythonOperator(
     dag=dag
 )
 
-
 #: Adds all the columns for the export
 add_all_columns = PythonOperator(
     task_id='add_all_columns',
@@ -46,16 +62,6 @@ add_all_columns = PythonOperator(
     #email_on_failure=True,
     dag=dag
 )
-
-#: Compares the file to last file and stores only the updates
-get_updates_only = PythonOperator(
-    task_id='get_updates_only',
-    python_callable=get_updates_only,
-    #email=['data@sandiego.gov'],
-    #email_on_failure=True,
-    dag=dag
-)
-
 
 #: Writes the file to the shared drive
 write_to_shared_drive = PythonOperator(
@@ -67,4 +73,5 @@ write_to_shared_drive = PythonOperator(
 )
 
 #: Execution Rules
-get_sites >> get_updates_only >> group_site_containers >> add_all_columns >> write_to_shared_drive
+get_sites >> get_updates_only >> check_diff_exists
+check_diff_exists >> group_site_containers >> add_all_columns >> write_to_shared_drive

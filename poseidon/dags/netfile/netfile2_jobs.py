@@ -746,9 +746,9 @@ def combine_all_schedules():
 
 def find_new_committees():
   """ Find new committees """
-  recipients = pd.read_csv('http://seshat.datasd.org/' + \
-    'campaign_fin/' + \
-    'financial_support_recipients_datasd.csv')
+  bucket_name=Variable.get('S3_REF_BUCKET')
+  s3_url = f"s3://{bucket_name}/campaign_fin/financial_support_recipients_datasd.csv"
+  recipients = pd.read_csv(s3_url)
   outputDF = pd.read_csv(prod_file)
 
   recipients_committees = recipients[recipients["committee_id"].notnull()]

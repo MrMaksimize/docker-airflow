@@ -116,8 +116,8 @@ send_last_file_updated_email = PoseidonEmailFileUpdatedOperator(
     task_id='send_last_file_updated',
     to='chudson@sandiego.gov',
     subject='IMCAT Streets File Updated',
-    file_bucket='{{ var.value.S3_DATA_BUCKET }}',
-    file_url='/tsw/sd_paving_imcat_datasd_v1.csv',
+    file_bucket=None,
+    file_url='https://seshat.datasd.org/tsw/sd_paving_imcat_datasd_v1.csv',
     dag=dag)
 
 #: Update portal modified date

@@ -44,7 +44,9 @@ def process_data():
     latest_file = max(list_of_files, key=os.path.getmtime)
     logging.info(f"Reading in {latest_file}")
 
-    df = pd.read_excel(latest_file,sheet_name='hate_crimes_datasd')
+    df = pd.read_excel(latest_file,
+        engine='openpyxl',
+        sheet_name='hate_crimes_datasd')
 
     df['date'] = pd.to_datetime(df['date'],errors='coerce')
     df['date'] = df['date'].dt.date
