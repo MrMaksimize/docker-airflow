@@ -55,4 +55,10 @@ process_calamp = PythonOperator(
     python_callable=process_calamp_daily,
     dag=dag)
 
+cleanup_calamp = PythonOperator(
+    task_id='cleanup_calamp',
+    provide_context=True,
+    python_callable=cleanup_calamp_temp_files_daily,
+    dag=dag)
+
 get_calamp >> process_calamp
