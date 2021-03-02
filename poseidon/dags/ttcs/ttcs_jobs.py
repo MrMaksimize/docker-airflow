@@ -16,17 +16,16 @@ from trident.util import geospatial
 
 conf = general.config
 
-temp_all = conf['temp_data_dir'] + '/ttcs_all.csv'
 clean_all = conf['temp_data_dir'] + '/ttcs_all_clean.csv'
 geocoded_active = conf['temp_data_dir'] + '/ttcs_all_geocoded.csv'
 bids_all = conf['temp_data_dir'] + '/ttcs_all_bids.csv'
 geocoded_addresses = 'ttcs_address_book.csv'
 
-curr_yr = dt.datetime.today().year
 
-def get_active_businesses():
+#: DAG function
+def query_ttcs(mode='main',**context):
     """Query DB for 'Active Businesses' and save data to temp."""
-    logging.info('Retrieving business tax license data')
+    logging.info('Retrieving main business tax license data')
     credentials = BaseHook.get_connection(conn_id="TTCS")
     conn_config = {
         'user': credentials.login,
@@ -42,17 +41,18 @@ def get_active_businesses():
         conn_config['password'],
         conn_config['dsn'],
         encoding="UTF-8")
-    sql = general.file_to_string('./sql/ttcs_biz.sql', __file__)
+    sql = general.file_to_string(f'./sql/ttcs-{mode}.sql', __file__)
     df = pd.read_sql_query(sql, db)
-    df_rows = df.shape[0]
-    logging.info(f'Query returned {df_rows} results')
+    logging.info(f'Query for {mode} returned {df.shape[0]} results')
+    output_file = f"{conf['temp_data_dir']}/ttcs-{mode}.csv"
     general.pos_write_csv(
         df,
-        temp_all,
+        output_file,
         date_format="%Y-%m-%d %H:%M:%S")
 
-    return 'Successfully retrieved active businesses data.'
+    return f'Successfully retrieved {mode} from TTCS'
 
+#: DAG function
 def clean_data():
     """Clean business license data coming from TTCS."""
     logging.info('Reading query output')
@@ -105,6 +105,7 @@ def clean_data():
         date_format="%Y-%m-%d")
     return 'Successfully cleaned TTCS data.'
 
+#: DAG function
 def geocode_data():
     """Geocode new entries from clean files."""
     logging.info('Geocoding new entries from clean files.')
@@ -303,21 +304,7 @@ def geocode_data():
 
     return "Successfully geocoded all businesses."
 
-def join_bids():
-    """Spatially joins BIDs data to active businesses data."""
-    bids_geojson = conf['prod_data_dir'] + '/bids_datasd.geojson'
-    active_bus_bid = geospatial.spatial_join_pt(geocoded_active,
-                                                bids_geojson,
-                                                lat='latitude',
-                                                lon='longitude')
-
-    general.pos_write_csv(
-        active_bus_bid,
-        bids_all,
-        date_format="%Y-%m-%d")
-
-    return "Successfully joined BIDs to active businesses"
-
+#: Helper function
 def prod_files_prep(subset):
 
     df = subset.drop(['create_yr'],axis=1)
@@ -327,9 +314,12 @@ def prod_files_prep(subset):
         False])
     return df
 
-
-def make_prod_files():
+#: DAG function
+def make_prod_files(**context):
     """Create subsets of active businesses based on create year."""
+
+    curr_year = context['execution_date'].in_tz(tz='US/Pacific').year
+    
     df = pd.read_csv(bids_all,
                      low_memory=False,
                      parse_dates=['address_dt',
@@ -366,6 +356,7 @@ def make_prod_files():
 
     df_prod = df[['account_key',
         'account_status',
+        'account_status_code',
         'date_account_creation',
         'date_cert_expiration',
         'date_cert_effective',
@@ -408,18 +399,18 @@ def make_prod_files():
 
     logging.info('Writing active businesses set 1')
 
-    active_pre07 = prod_files_prep(df_active[df_active['create_yr'] <= 2007])
+    active_pre10 = prod_files_prep(df_active[df_active['create_yr'] < 2010])
 
     general.pos_write_csv(
-        active_pre07,
-        conf['prod_data_dir']+'/sd_businesses_active_pre08_datasd_v1.csv',
+        active_pre10,
+        conf['prod_data_dir']+'/sd_businesses_active_pre10_datasd_v1.csv',
         date_format="%Y-%m-%d")
 
-    active_pos07 = prod_files_prep(df_active[df_active['create_yr'] > 2007])
+    active_pos10 = prod_files_prep(df_active[df_active['create_yr'] >= 2010])
 
     general.pos_write_csv(
-        active_pos07,
-        conf['prod_data_dir']+'/sd_businesses_active_since08_datasd_v1.csv',
+        active_pos10,
+        conf['prod_data_dir']+'/sd_businesses_active_since10_datasd_v1.csv',
         date_format="%Y-%m-%d")
 
     df_inactive = df_prod[df_prod['account_status'].isin(["Inactive",
@@ -430,18 +421,23 @@ def make_prod_files():
 
     subset_no = np.ceil((curr_yr - 1990)/10.0)
 
-    logging.info('Creating '+str(subset_no)+' subsets of inactive')
+    logging.info('Creating '+str(subset_no)+' subsets of inactive through 2010')
 
-    sub_yr_start = 1990
+    decade_splits = [1990,2000,2010]
+    fiveyr_splits = [2015,2020]
 
-    for i in range(subset_no.astype(int)):
+    split_counter = 0
+
+    for decade in decade_splits:
         subset = df_inactive[
-        (df_inactive['create_yr'] >= sub_yr_start) & 
-        (df_inactive['create_yr'] <= sub_yr_start+9)]
+        (df_inactive['create_yr'] >= decade) & 
+        (df_inactive['create_yr'] < decade+10)]
 
-        filename = str(sub_yr_start)+"to"+str(sub_yr_start+9)
+        filename = f"{decade}to{decade+9}"
 
         subset_prod = prod_files_prep(subset)
+
+        split_counter += subset_prod.shape[0]
 
         logging.info('Writing file '+filename)
         general.pos_write_csv(
@@ -449,6 +445,23 @@ def make_prod_files():
             f"{conf['prod_data_dir']}/sd_businesses_{filename}_datasd_v1.csv",
             date_format="%Y-%m-%d")
 
-        sub_yr_start += 10
+    for fiveyr in fiveyr_splits:
+        subset = df_inactive[
+        (df_inactive['create_yr'] >= fiveyr) & 
+        (df_inactive['create_yr'] < fiveyr+5)]
+
+        filename = f"{decade}to{decade+4}"
+
+        subset_prod = prod_files_prep(subset)
+
+        split_counter += subset_prod.shape[0]
+
+        logging.info('Writing file '+filename)
+        general.pos_write_csv(
+            subset_prod,
+            f"{conf['prod_data_dir']}/sd_businesses_{filename}_datasd_v1.csv",
+            date_format="%Y-%m-%d")
+
+    logging.info(f"All subsets contain {split_counter} rows")
 
     return "Successfully generated production files."

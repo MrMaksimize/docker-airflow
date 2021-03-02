@@ -1,6 +1,7 @@
 """This module contains dags and tasks for extracting data out of TTCS."""
 from airflow.operators.python_operator import PythonOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
+from airflow.operators.subdag_operator import SubDagOperator
 from airflow.models import DAG
 from datetime import datetime, timedelta
 from trident.util import general
@@ -8,6 +9,8 @@ from trident.util.notifications import afsys_send_email
 
 from dags.ttcs.ttcs_jobs import *
 from trident.util.seaboard_updates import *
+from dags.ttcs.ttcs_subdags import *
+
 import os
 import glob
 
@@ -25,11 +28,12 @@ dag = DAG(dag_id='ttcs',
     catchup=False
     )
 
-#: Get active businesses and save as .csv to temp folder
-get_active_businesses = PythonOperator(
-    task_id='get_active_businesses',
-    python_callable=get_active_businesses,
-    dag=dag)
+# Execute queries
+query_subdag = SubDagOperator(
+    task_id='query_ttcs',
+    subdag=create_subdag_operators(),
+    dag=dag,
+  )
 
 #: Process temp data and save as .csv to prod folder
 clean_data = PythonOperator(
@@ -53,12 +57,6 @@ addresses_to_S3 = S3FileTransferOperator(
     replace=True,
     dag=dag)
 
-#: Spatially join BIDs data
-join_bids = PythonOperator(
-    task_id='join_bids',
-    python_callable=join_bids,
-    dag=dag)
-
 #: Create subsets
 create_subsets = PythonOperator(
     task_id='create_subsets',
@@ -69,8 +67,7 @@ create_subsets = PythonOperator(
 update_ttcs_md = get_seaboard_update_dag('business-listings.md', dag)
 
 #: Execution Rules
-get_active_businesses >> clean_data >> geocode_data >> [addresses_to_S3,join_bids]
-join_bids >> create_subsets
+query_subdag >> clean_data >> geocode_data >> addresses_to_S3 >> create_subsets
 
 subset_names = [os.path.basename(x) for x in glob.glob(conf['prod_data_dir']+'/sd_businesses_*_datasd_v1.csv')]
 
