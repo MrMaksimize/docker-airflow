@@ -14,8 +14,8 @@ from dags.gid_case_history.case_history_jobs import *
 # All times in Airflow UTC.  Set Start Time in PST?
 args = general.args
 conf = general.config
-schedule = general.schedule['gid_case_history']
-start_date = general.start_date['gid_case_history']
+schedule = general.schedule['get_it_done']
+start_date = general.start_date['get_it_done']
 
 #: Dag spec
 dag = DAG(dag_id='gid_case_history',
@@ -28,7 +28,7 @@ dag = DAG(dag_id='gid_case_history',
 #: Get GID CaseHistory from Salesforce
 get_streets_requests = PythonOperator(
     task_id='get_case_history',
-    python_callable=get_gid_streets,
+    python_callable=get_case_history,
     dag=dag)
           
 #: Execution rules

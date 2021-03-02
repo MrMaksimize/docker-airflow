@@ -58,8 +58,7 @@ class BulkBatchFailed(BulkApiError):
 
 class SalesforceBulkipy(object):
     def __init__(self, username=None, password=None, security_token=None, exception_class=BulkApiError, API_version="47.0"):
-        if username and password:
-            sf = SalesforceBulkipy.login_to_salesforce_using_username_password(username, password, security_token)
+        sf = SalesforceBulkipy.login_to_salesforce_using_username_password(username, password, security_token)
 
         url = "https://{domain}.salesforce.com"
         url = url.format(domain=sf.domain)
