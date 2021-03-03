@@ -232,7 +232,7 @@ def geocode_data():
             fresh_geocodes = geocode_dedupe.assign(latitude=coords[0],longitude=coords[1])
 
             logging.info('Merging geocodes to geocode df')
-            geocoded = pd.merge(to_geocode,
+            geocoded = pd.merge(geocode_dedupe,
                 fresh_geocodes[['address_full',
                 'city',
                 'state',
