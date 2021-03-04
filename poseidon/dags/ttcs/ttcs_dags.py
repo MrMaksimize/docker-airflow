@@ -63,37 +63,23 @@ create_subsets = PythonOperator(
     python_callable=make_prod_files,
     dag=dag)
 
+#: Get active businesses and save as .csv to temp folder
+execute_query = PythonOperator(
+    task_id=f'query_pins',
+    python_callable=query_ttcs,
+    provide_context=True,
+    op_kwargs={'mode': 'pins'},
+    dag=dag)
+
+# Execute queries
+upload_subdag = SubDagOperator(
+    task_id='upload_ttcs',
+    subdag=create_upload_operators(),
+    dag=dag)
+
 #: Update portal modified date
 update_ttcs_md = get_seaboard_update_dag('business-listings.md', dag)
 
 #: Execution Rules
-query_subdag >> clean_data >> geocode_data >> addresses_to_S3 >> create_subsets
-
-subset_names = [os.path.basename(x) for x in glob.glob(conf['prod_data_dir']+'/sd_businesses_*_datasd_v1.csv')]
-
-for index, subset in enumerate(subset_names):
-
-    file_name = subset.split('.')[0]
-    name_parts = file_name.split('_')
-    if 'v1' in name_parts:
-        name_parts.remove('datasd')
-        name_parts.remove('v1')
-        task_name = '_'.join(name_parts[2:])
-
-        #: Upload prod active file to S3
-        active_to_S3 = S3FileTransferOperator(
-            task_id=f'upload_{task_name}',
-            source_base_path=conf['prod_data_dir'],
-            source_key=f'sd_businesses_{task_name}_datasd_v1.csv',
-            dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
-            dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
-            dest_s3_key=f'ttcs/sd_businesses_{task_name}_datasd_v1.csv',
-            replace=True,
-            dag=dag)
-
-        #: make_operating must run after the get task
-        create_subsets >> active_to_S3
-
-        if index == len(subset_names)-1:
-
-            active_to_S3 << update_ttcs_md
+query_subdag >> clean_data >> geocode_data >> addresses_to_S3
+addresses_to_S3 >> create_subsets >> upload_subdag >> update_ttcs_md

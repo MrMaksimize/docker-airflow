@@ -10,6 +10,7 @@ import string
 import datetime as dt
 import numpy as np
 from airflow.models import Variable
+from functools import reduce
 
 from trident.util import general
 from trident.util import geospatial
@@ -18,7 +19,6 @@ conf = general.config
 
 clean_all = conf['temp_data_dir'] + '/ttcs_all_clean.csv'
 geocoded_active = conf['temp_data_dir'] + '/ttcs_all_geocoded.csv'
-bids_all = conf['temp_data_dir'] + '/ttcs_all_bids.csv'
 geocoded_addresses = 'ttcs_address_book.csv'
 
 
@@ -55,10 +55,20 @@ def query_ttcs(mode='main',**context):
 #: DAG function
 def clean_data():
     """Clean business license data coming from TTCS."""
-    logging.info('Reading query output')
-    df = pd.read_csv(temp_all, 
-        low_memory=False,
-        )    
+    logging.info('Reading various query output')
+    
+    tables = ['main','location','dba','phone','email']
+    dfs = []
+
+    for table in tables:
+        temp_df = pd.read_csv(f"{conf['temp_data_dir']}/ttcs-{table}.csv",
+                   low_memory=False,
+                   dtype={'ACCOUNT_KEY':str})
+        dfs.append(temp_df)
+
+    df = reduce(lambda  left,right: pd.merge(left,right,on=['ACCOUNT_KEY'],
+                                            how='left'), dfs)
+   
     df.columns = [x.lower() for x in df.columns]
 
     logging.info('Creating NAICS sector')
@@ -76,23 +86,7 @@ def clean_data():
 
     logging.info(f'Processed {df_rows} businesses')
 
-    logging.info('Sorting by dba name active date')
-
-    df_sort = df.sort_values(['account_key',
-        'dba_name_dt',
-        'address_dt'],
-        ascending=[True,False,False]
-        )
-
-    logging.info('Deduping on account key, keeping latest dba and address')
-
-    df_dedupe = df_sort.drop_duplicates(['account_key'])
-
-    total_rows = df_dedupe.shape[0]
-
-    logging.info(f'Deduped for {total_rows} total records')
-
-    df_dedupe = df_dedupe.sort_values(by=['account_key',
+    df = df.sort_values(by=['account_key',
         'creation_dt'],
         ascending=[True,
         False])
@@ -100,7 +94,7 @@ def clean_data():
     logging.info('Writing final data to csv')
 
     general.pos_write_csv(
-        df_dedupe,
+        df,
         clean_all,
         date_format="%Y-%m-%d")
     return 'Successfully cleaned TTCS data.'
@@ -124,6 +118,8 @@ def geocode_data():
                      low_memory=False,
                      dtype=address_dtype
                      )
+
+    logging.info(f"Starting with {df.shape} records")
 
     logging.info('Get address book')
     bucket_name=Variable.get('S3_REF_BUCKET')
@@ -194,6 +190,9 @@ def geocode_data():
             (add_unmatched['street_no'] != '')
             ]
 
+        # to_geocode is a subset of addresses that aren't missing information
+        # and aren't PO boxes
+
         if to_geocode.empty:
 
             logging.info('Nothing to geocode')
@@ -201,6 +200,8 @@ def geocode_data():
             logging.info('Write final file')
 
             add_merge = add_merge.drop(['_merge'],axis=1)
+
+            logging.info(f"Ending with {add_merge.shape} records")
 
             general.pos_write_csv(
                 add_merge,
@@ -212,26 +213,47 @@ def geocode_data():
             geocode_address = to_geocode[['street_no',
             'street_pre_direction',
             'street_name',
-            'street_suffix']].apply(lambda x: ' '.join(x), axis=1)
+            'street_suffix']].apply(lambda x: ' '.join(x), axis=1)            
             
             zip_split = to_geocode['zip'].str.split('-',expand=True)
             
             to_geocode = to_geocode.assign(address_full=geocode_address,zip_short=zip_split[0])
             
+            # merge geocode address back to add_unmatched for later merging
+            # This is because address full contains addresses that are similar
+            # enough to have the same UID with diff address information
+            # Which caused duplicate records later on
+
+            au_w_add_full = pd.merge(add_unmatched,
+                to_geocode[['address_full']],
+                right_index=True,
+                left_index=True,
+                how='left'
+                )
+
+            general.pos_write_csv(
+                au_w_add_full,
+                f"{conf['prod_data_dir']}/merge_test.csv")
+
+            logging.info(f"add_umatched had {add_unmatched.shape} records")
+            logging.info(f"add_umatched with added address full has {au_w_add_full.shape} records")
+
             geocode_dedupe = to_geocode.drop_duplicates(subset=['address_full',
                 'city',
                 'state',
                 'zip_short'])
                         
             logging.info(f'Need to geocode {geocode_dedupe.shape[0]}')
-        
+
             geocoder_results = geocode_dedupe.apply(lambda x: geospatial.census_address_geocoder(address_line=x['address_full'],locality=x['city'],state=x['state'],zip=x['zip_short']), axis=1)
 
             logging.info('Adding new coords to the df')
             coords = geocoder_results.apply(pd.Series)
+
+            # New coordinates get added to the deduplicated geocode set
             fresh_geocodes = geocode_dedupe.assign(latitude=coords[0],longitude=coords[1])
 
-            logging.info('Merging geocodes to geocode df')
+            logging.info('Merging geocodes to deduped geocode df')
             geocoded = pd.merge(geocode_dedupe,
                 fresh_geocodes[['address_full',
                 'city',
@@ -249,18 +271,22 @@ def geocode_data():
                 'state',
                 'zip_short'])
 
-            logging.info("Merging geocoded df back to unmatched addresses")
+            # with this merge, the deduplicated geocoded df
+            # is matched with 
 
-            geocoded_unmatched = pd.merge(add_unmatched,
+            logging.info("Merging geocoded df back to unmatched addresses")
+            # This can cause extra records if a previously geoc
+
+            geocoded_unmatched = pd.merge(au_w_add_full,
                 geocoded[['uid','latitude','longitude','address_full','zip_short']],
                 how='left',
-                left_on='uid',
-                right_on='uid'
-                )
+                on=['uid','address_full'])
 
             logging.info("Concat addresses matched with address book and addresses geocoded")
             geocoded_all = pd.concat([add_matched,geocoded_unmatched],ignore_index=True,sort=True)
             geocoded_all = geocoded_all.drop(['_merge'],axis=1)
+
+            logging.info(geocoded_unmatched.columns)
             
             adds_for_book = geocoded_unmatched.loc[
             geocoded_unmatched['latitude'].notnull(),
@@ -288,6 +314,10 @@ def geocode_data():
             add_book_new = pd.concat([add_book,
                 adds_book_dedupe],
                 ignore_index=True)
+
+            # Deduplicating just in case
+            # Weird things happen sometimes
+            add_book_new = add_book_new.drop_duplicates(subset=['uid'])
 
             logging.info('Writing new address book')
 
@@ -317,18 +347,12 @@ def prod_files_prep(subset):
 #: DAG function
 def make_prod_files(**context):
     """Create subsets of active businesses based on create year."""
-
-    curr_year = context['execution_date'].in_tz(tz='US/Pacific').year
     
-    df = pd.read_csv(bids_all,
-                     low_memory=False,
-                     parse_dates=['address_dt',
-                                  'bus_start_dt',
-                                  'cert_exp_dt',
-                                  'cert_eff_dt',
-                                  'creation_dt',
-                                  'dba_name_dt'
-                                  ])
+    df = pd.read_csv(geocoded_active,
+                     low_memory=False)
+    logging.info(f"Starting with {df.shape[0]} rows")
+
+    df['account_status'] = df['account_status'].apply(lambda x: x.capitalize())
 
     logging.info('Renaming columns')
     df = df.rename(columns={'address_dt':'address_active_dt',
@@ -336,132 +360,142 @@ def make_prod_files(**context):
             'cert_eff_dt':'date_cert_effective',
             'creation_dt':'date_account_creation',
             'dba_name_dt':'dba_name_active_dt',
-            'name':'bid',
-            'apt_suite':'suite',
             'bus_start_dt': 'date_business_start',
             'latitude':'lat',
             'longitude':'lng',
-            'street_no':'address_number',
+            'apt_suite':'address_suite',
+            'street_no':'address_no',
             'street_pre_direction':'address_pd',
             'street_name':'address_road',
             'street_suffix':'address_sfx',
-            'street_fraction':'address_number_fraction',
+            'street_fraction':'address_no_fraction',
             'city':'address_city',
             'state':'address_state',
             'zip':'address_zip',
-            'suite':'address_suite',
             'pmb_box':'address_pmb_box',
             'po_box':'address_po_box',
+            'primary_naics':'naics_code'
             })
 
-    df_prod = df[['account_key',
-        'account_status',
-        'account_status_code',
-        'date_account_creation',
-        'date_cert_expiration',
-        'date_cert_effective',
-        'business_owner_name',
-        'ownership_type',
-        'date_business_start',
-        'dba_name',
-        'naics_sector',
-        'naics_code',
-        'naics_description',
-        'lat',
-        'lng',
-        'address_number',
-        'address_pd',
-        'address_road',
-        'address_sfx',
-        'address_number_fraction',
-        'address_city',
-        'address_state',
-        'address_zip',
-        'suite',
-        'address_pmb_box',
-        'address_po_box',
-        'bid',
-        'create_yr'
-        ]]
+    public_cols = ['account_key',
+               'account_status',
+               'account_status_code',
+               'date_account_creation',
+               'date_cert_expiration',
+               'date_cert_effective',
+               'business_owner_name',
+               'ownership_type',
+               'date_business_start',
+               'dba_name',
+               'naics_sector',
+               'naics_code',
+               'naics_description',
+               'address_no',
+               'address_pd',
+               'address_road',
+               'address_sfx',
+               'address_no_fraction',
+               'address_city',
+               'address_state',
+               'address_zip',
+               'address_suite',
+               'address_pmb_box',
+               'address_po_box',
+               'bid',
+               'council_district',
+               'lat',
+               'lng']
 
-    df_prod['account_status'] = df_prod['account_status'].str.capitalize()
+    internal_cols = ['num_employees',
+                 'home_based_ind',
+                 'do_not_publish_ind',
+                 'origin',
+                 'fee_status',
+                 'loc_override',
+                 'phone_no',
+                 'phone_area_cd',
+                 'phone_extension',
+                 'email',
+                 'online_billing_email'
+                 ]
 
-    logging.info('Creating active subset')
+    all_cols = public_cols+internal_cols
 
-    df_active = df_prod[df_prod['account_status'].isin(["Active",
-        "Pending",
-        "Waiting on missing info"
-        ])]
+    df_public = df[df['do_not_publish_ind'] == 'N']
+    logging.info(f"Public set has {df_public.shape[0]} rows")
+    
+    df_public_active = df_public[df_public['account_status_code'].isin(["A","P","I"])]
+    logging.info(f"Public active set has {df_public_active.shape[0]} rows")
+    
+    df_public_inactive = df_public[df_public['account_status_code'].isin(["C","N"])]
+    logging.info(f"Public inactive set has {df_public_inactive.shape[0]} rows")
 
-    active_rows = df_active.shape[0]
-
-    logging.info(f'Found {active_rows} active businesses')
-
-    logging.info('Writing active businesses set 1')
-
-    active_pre10 = prod_files_prep(df_active[df_active['create_yr'] < 2010])
-
+    # Write Shop Local output
     general.pos_write_csv(
-        active_pre10,
-        conf['prod_data_dir']+'/sd_businesses_active_pre10_datasd_v1.csv',
-        date_format="%Y-%m-%d")
-
-    active_pos10 = prod_files_prep(df_active[df_active['create_yr'] >= 2010])
-
-    general.pos_write_csv(
-        active_pos10,
-        conf['prod_data_dir']+'/sd_businesses_active_since10_datasd_v1.csv',
-        date_format="%Y-%m-%d")
-
-    df_inactive = df_prod[df_prod['account_status'].isin(["Inactive",
-        "Cancelled"])].reset_index(drop=True)
-    inactive_rows = df_inactive.shape[0]
-
-    logging.info(f'Found {inactive_rows} inactive businesses')
-
-    subset_no = np.ceil((curr_yr - 1990)/10.0)
-
-    logging.info('Creating '+str(subset_no)+' subsets of inactive through 2010')
-
-    decade_splits = [1990,2000,2010]
-    fiveyr_splits = [2015,2020]
-
-    split_counter = 0
-
-    for decade in decade_splits:
-        subset = df_inactive[
-        (df_inactive['create_yr'] >= decade) & 
-        (df_inactive['create_yr'] < decade+10)]
-
-        filename = f"{decade}to{decade+9}"
-
-        subset_prod = prod_files_prep(subset)
-
-        split_counter += subset_prod.shape[0]
-
-        logging.info('Writing file '+filename)
-        general.pos_write_csv(
-            subset_prod,
-            f"{conf['prod_data_dir']}/sd_businesses_{filename}_datasd_v1.csv",
+            df_public_active[all_cols],
+            f"{conf['prod_data_dir']}/shop_local_businesses.csv",
             date_format="%Y-%m-%d")
 
-    for fiveyr in fiveyr_splits:
-        subset = df_inactive[
-        (df_inactive['create_yr'] >= fiveyr) & 
-        (df_inactive['create_yr'] < fiveyr+5)]
-
-        filename = f"{decade}to{decade+4}"
-
-        subset_prod = prod_files_prep(subset)
-
-        split_counter += subset_prod.shape[0]
-
-        logging.info('Writing file '+filename)
-        general.pos_write_csv(
-            subset_prod,
-            f"{conf['prod_data_dir']}/sd_businesses_{filename}_datasd_v1.csv",
+    # Write Snowflake output
+    general.sf_write_csv(df[all_cols],'business_tax_certificates')
+    
+    # Start outputting Open Data sets
+    general.pos_write_csv(
+            df_public_active[public_cols],
+            f"{conf['prod_data_dir']}/sd_businesses_active_datasd.csv",
             date_format="%Y-%m-%d")
 
-    logging.info(f"All subsets contain {split_counter} rows")
+    df_public_inactive['create_yr'] = pd.to_datetime(df_public_inactive['date_account_creation'], 
+        errors='coerce').dt.year
+
+    row_counts = 0
+
+    od_inactive_hist = df_public_inactive.loc[
+        (df_public_inactive['create_yr'] < 1990)]
+
+    row_counts += od_inactive_hist.shape[0]
+    
+    general.pos_write_csv(
+            od_inactive_hist,
+            f"{conf['prod_data_dir']}/sd_businesses_pre1990_datasd.csv",
+            date_format="%Y-%m-%d") 
+
+    i = 1990
+    while i < 2010:
+        inactive_split = df_public_inactive.loc[
+        (df_public_inactive['create_yr'] >= i) & 
+        (df_public_inactive['create_yr'] < i+10)]
+
+        row_counts += inactive_split.shape[0]
+
+        general.pos_write_csv(
+            inactive_split,
+            f"{conf['prod_data_dir']}/sd_businesses_{i}to{i+10}_datasd.csv",
+            date_format="%Y-%m-%d")        
+
+        i += 10
+    
+    od_inactive_2010 = df_public_inactive.loc[
+        (df_public_inactive['create_yr'] >= 2010) &
+        (df_public_inactive['create_yr'] < 2015)]
+
+    row_counts += od_inactive_2010.shape[0]
+
+    general.pos_write_csv(
+            od_inactive_2010,
+            f"{conf['prod_data_dir']}/sd_businesses_2010to2015_datasd.csv",
+            date_format="%Y-%m-%d")
+
+    od_inactive_2015 = df_public_inactive.loc[
+        (df_public_inactive['create_yr'] >= 2015)]
+
+    row_counts += od_inactive_2015.shape[0]
+
+    logging.info(f"All splits add up to {row_counts} rows")
+
+    general.pos_write_csv(
+            od_inactive_2015,
+            f"{conf['prod_data_dir']}/sd_businesses_inactive_2015tocurr_datasd.csv",
+            date_format="%Y-%m-%d")
 
     return "Successfully generated production files."
