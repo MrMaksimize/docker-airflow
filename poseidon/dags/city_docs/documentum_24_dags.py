@@ -46,18 +46,18 @@ get_doc_tables = PythonOperator(
     'conn_id':'DOCM_SQL'},
     dag=dag)
 
-#div_doc_table = PythonOperator(
-    #task_id='divide_doc_other',
-    #python_callable=split_reso_ords,
-    #op_kwargs={'filename': 'documentum_scs_council_reso_ordinance_v'},
-    #dag=dag)
+div_doc_table = PythonOperator(
+    task_id='divide_doc_other',
+    python_callable=split_reso_ords,
+    op_kwargs={'filename': 'documentum_scs_council_reso_ordinance_v'},
+    dag=dag)
 
-#upload_div_files = SubDagOperator(
-  #task_id='upload_div_files',
-  #subdag=upload_div_files_subdag(div_file_list,
-    #'documentum_daily',
-    #False),
-  #dag=dag)
+upload_div_files = SubDagOperator(
+  task_id='upload_div_files',
+  subdag=upload_div_files_subdag(div_file_list,
+    'documentum_daily',
+    False),
+  dag=dag)
 
 upload_files = SubDagOperator(
   task_id='upload_files',
@@ -68,5 +68,5 @@ upload_files = SubDagOperator(
   )
 
 #: Execution rules
-#get_doc_tables >> div_doc_table >> upload_div_files
+get_doc_tables >> div_doc_table >> upload_div_files
 get_doc_tables >> upload_files
