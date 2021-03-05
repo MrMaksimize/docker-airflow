@@ -437,7 +437,7 @@ def make_prod_files(**context):
             date_format="%Y-%m-%d")
 
     # Write Snowflake output
-    general.sf_write_csv(df[all_cols],'business_tax_certificates')
+    general.sf_write_csv(df[all_cols],'tax_certs')
     
     # Start outputting Open Data sets
     general.pos_write_csv(
