@@ -44,7 +44,12 @@ def query_ttcs(mode='main',**context):
     sql = general.file_to_string(f'./sql/ttcs-{mode}.sql', __file__)
     df = pd.read_sql_query(sql, db)
     logging.info(f'Query for {mode} returned {df.shape[0]} results')
-    output_file = f"{conf['temp_data_dir']}/ttcs-{mode}.csv"
+
+    if mode == "pins":
+        output_file = f"{conf['prod_data_dir']}/ttcs-{mode}.csv"
+    else:
+        output_file = f"{conf['temp_data_dir']}/ttcs-{mode}.csv"
+    
     general.pos_write_csv(
         df,
         output_file,
@@ -56,18 +61,18 @@ def query_ttcs(mode='main',**context):
 def clean_data():
     """Clean business license data coming from TTCS."""
     logging.info('Reading various query output')
+
+    df = pd.read_csv(f"{conf['temp_data_dir']}/ttcs-main.csv",
+                   low_memory=False,
+                   dtype={'ACCOUNT_KEY':str})
     
-    tables = ['main','location','dba','phone','email']
-    dfs = []
+    tables = ['location','dba','phone','email']
 
     for table in tables:
         temp_df = pd.read_csv(f"{conf['temp_data_dir']}/ttcs-{table}.csv",
                    low_memory=False,
                    dtype={'ACCOUNT_KEY':str})
-        dfs.append(temp_df)
-
-    df = reduce(lambda  left,right: pd.merge(left,right,on=['ACCOUNT_KEY'],
-                                            how='left'), dfs)
+        df.merge(temp_df,how='left',on='ACCOUNT_KEY')
    
     df.columns = [x.lower() for x in df.columns]
 
@@ -450,6 +455,7 @@ def make_prod_files(**context):
 
     row_counts = 0
 
+    # Really old certs, pre 1990
     od_inactive_hist = df_public_inactive.loc[
         (df_public_inactive['create_yr'] < 1990)]
 
@@ -460,6 +466,7 @@ def make_prod_files(**context):
             f"{conf['prod_data_dir']}/sd_businesses_pre1990_datasd.csv",
             date_format="%Y-%m-%d") 
 
+    # Certs in 3 10-yr sets
     i = 1990
     while i < 2010:
         inactive_split = df_public_inactive.loc[
@@ -474,6 +481,8 @@ def make_prod_files(**context):
             date_format="%Y-%m-%d")        
 
         i += 10
+
+    # More recent inactive certs in a 5-year set
     
     od_inactive_2010 = df_public_inactive.loc[
         (df_public_inactive['create_yr'] >= 2010) &
@@ -485,6 +494,8 @@ def make_prod_files(**context):
             od_inactive_2010,
             f"{conf['prod_data_dir']}/sd_businesses_2010to2015_datasd.csv",
             date_format="%Y-%m-%d")
+
+    # Most recent inactive certs
 
     od_inactive_2015 = df_public_inactive.loc[
         (df_public_inactive['create_yr'] >= 2015)]

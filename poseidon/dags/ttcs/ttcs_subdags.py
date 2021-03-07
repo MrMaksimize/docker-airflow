@@ -126,10 +126,10 @@ def create_upload_operators():
   inactive_current = S3FileTransferOperator(
     task_id='upload_inactive_current',
     source_base_path=conf['prod_data_dir'],
-    source_key='sd_businesses_2015tocurr_datasd.csv',
+    source_key='sd_businesses_inactive_2015tocurr_datasd.csv',
     dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
     dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
-    dest_s3_key='ttcs/sd_businesses_2015tocurr_datasd.csv',
+    dest_s3_key='ttcs/sd_businesses_inactive_2015tocurr_datasd.csv',
     replace=True,
     dag=dag_subdag)
 
