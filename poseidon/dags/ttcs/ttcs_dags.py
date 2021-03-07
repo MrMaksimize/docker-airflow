@@ -69,11 +69,21 @@ create_subsets = PythonOperator(
     dag=dag)
 
 #: Get active businesses and save as .csv to temp folder
-execute_query = PythonOperator(
+query_pins = PythonOperator(
     task_id=f'query_pins',
     python_callable=query_ttcs,
     provide_context=True,
     op_kwargs={'mode': 'pins'},
+    dag=dag)
+
+upload_pins = S3FileTransferOperator(
+    task_id='upload_pins',
+    source_base_path=conf['prod_data_dir'],
+    source_key='ttcs-pins.csv',
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_INTERNAL_BUCKET }}",
+    dest_s3_key='gis/ttcs-pins.csv',
+    replace=True,
     dag=dag)
 
 # Execute queries
@@ -116,3 +126,4 @@ update_ttcs_md = get_seaboard_update_dag('business-listings.md', dag)
 query_subdag >> clean_data >> geocode_data >> addresses_to_S3
 addresses_to_S3 >> create_subsets >> upload_subdag >> update_ttcs_md
 create_subsets >> stage_snowflake >> delete_snowflake >> copy_snowflake
+query_pins >> upload_pins

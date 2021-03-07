@@ -44,7 +44,12 @@ def query_ttcs(mode='main',**context):
     sql = general.file_to_string(f'./sql/ttcs-{mode}.sql', __file__)
     df = pd.read_sql_query(sql, db)
     logging.info(f'Query for {mode} returned {df.shape[0]} results')
-    output_file = f"{conf['temp_data_dir']}/ttcs-{mode}.csv"
+
+    if mode == "pins":
+        output_file = f"{conf['prod_data_dir']}/ttcs-{mode}.csv"
+    else:
+        output_file = f"{conf['temp_data_dir']}/ttcs-{mode}.csv"
+    
     general.pos_write_csv(
         df,
         output_file,
