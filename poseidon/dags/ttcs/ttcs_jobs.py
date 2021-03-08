@@ -21,6 +21,25 @@ clean_all = conf['temp_data_dir'] + '/ttcs_all_clean.csv'
 geocoded_active = conf['temp_data_dir'] + '/ttcs_all_geocoded.csv'
 geocoded_addresses = 'ttcs_address_book.csv'
 
+#: Helper function
+def prod_files_prep(subset):
+
+    df = subset.drop(['create_yr'],axis=1)
+    df = df.sort_values(by=['account_key',
+        'date_account_creation'],
+        ascending=[True,
+        False])
+    return df
+
+#: Helper function
+def combine_phone(row):
+    
+    phone_no = ("-").join([row['PHONE_AREA_CD'],row['PHONE_NO']])
+    
+    if not pd.isna(row['PHONE_EXTENSION']):
+        return f"{phone_no}x{row['PHONE_EXTENSION']}"
+    else:
+        return phone_no
 
 #: DAG function
 def query_ttcs(mode='main',**context):
@@ -72,7 +91,18 @@ def clean_data():
         temp_df = pd.read_csv(f"{conf['temp_data_dir']}/ttcs-{table}.csv",
                    low_memory=False,
                    dtype={'ACCOUNT_KEY':str})
-        df.merge(temp_df,how='left',on='ACCOUNT_KEY')
+        
+        if table == 'phone':
+            # Do not have a date effective for phone number
+            # To minimize duplicates
+            temp_df = temp_df.drop_duplicates()
+            temp_df['phone_full'] = temp_df.apply(combine_phone,axis=1)
+            merge_df = temp_df.groupby(['ACCOUNT_KEY']).agg({'phone_full': ','.join})
+        else:
+            merge_df = temp_df.copy()
+
+        df = df.merge(merge_df,how='left',on='ACCOUNT_KEY')
+        logging.info(f"Merge with {table} resulted in {df.shape}")
    
     df.columns = [x.lower() for x in df.columns]
 
@@ -80,16 +110,7 @@ def clean_data():
 
     df['naics_sector'] = df['naics_code'].apply(lambda x: str(x)[:2])
 
-    logging.info('Extracting years for filter')
-
-    df['bus_start_yr'] = pd.to_datetime(
-        df['bus_start_dt'], errors='coerce').dt.year
-    df['create_yr'] = pd.to_datetime(
-        df['creation_dt'], errors='coerce').dt.year
-
-    df_rows = df.shape[0]
-
-    logging.info(f'Processed {df_rows} businesses')
+    logging.info(f'Processed {df.shape[0]} businesses')
 
     df = df.sort_values(by=['account_key',
         'creation_dt'],
@@ -339,15 +360,7 @@ def geocode_data():
 
     return "Successfully geocoded all businesses."
 
-#: Helper function
-def prod_files_prep(subset):
 
-    df = subset.drop(['create_yr'],axis=1)
-    df = df.sort_values(by=['account_key',
-        'date_account_creation'],
-        ascending=[True,
-        False])
-    return df
 
 #: DAG function
 def make_prod_files(**context):
