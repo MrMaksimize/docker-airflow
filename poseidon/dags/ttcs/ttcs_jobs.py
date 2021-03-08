@@ -93,6 +93,9 @@ def clean_data():
                    dtype={'ACCOUNT_KEY':str})
         
         if table == 'phone':
+            # Do not have a date effective for phone number
+            # To minimize duplicates
+            temp_df = temp_df.drop_duplicates()
             temp_df['phone_full'] = temp_df.apply(combine_phone,axis=1)
             merge_df = temp_df.groupby(['ACCOUNT_KEY']).agg({'phone_full': ','.join})
         else:
