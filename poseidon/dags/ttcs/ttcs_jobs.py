@@ -392,7 +392,8 @@ def make_prod_files(**context):
             'zip':'address_zip',
             'pmb_box':'address_pmb_box',
             'po_box':'address_po_box',
-            'primary_naics':'naics_code'
+            'primary_naics':'naics_code',
+            'phone_full':'phone'
             })
 
     public_cols = ['account_key',
@@ -430,9 +431,7 @@ def make_prod_files(**context):
                  'origin',
                  'fee_status',
                  'loc_override',
-                 'phone_no',
-                 'phone_area_cd',
-                 'phone_extension',
+                 'phone',
                  'email',
                  'online_billing_email'
                  ]
