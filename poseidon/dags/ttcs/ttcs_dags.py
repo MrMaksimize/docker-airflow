@@ -2,6 +2,7 @@
 from airflow.operators.python_operator import PythonOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
 from airflow.operators.subdag_operator import SubDagOperator
+from airflow.contrib.operators.snowflake_operator import SnowflakeOperator
 from airflow.models import DAG
 from datetime import datetime, timedelta
 from trident.util import general
@@ -10,6 +11,7 @@ from trident.util.notifications import afsys_send_email
 from dags.ttcs.ttcs_jobs import *
 from trident.util.seaboard_updates import *
 from dags.ttcs.ttcs_subdags import *
+from trident.util.snowflake_client import *
 
 import os
 import glob
@@ -18,6 +20,9 @@ args = general.args
 conf = general.config
 schedule = general.schedule
 start_date = general.start_date['ttcs']
+snowflake_stage = format_stage_sql('tax_certs')
+snowflake_del = format_delete_sql('tax_certs')
+snowflake_copy = format_copy_sql('tax_certs')
 
 
 #: Dag definition
@@ -64,11 +69,21 @@ create_subsets = PythonOperator(
     dag=dag)
 
 #: Get active businesses and save as .csv to temp folder
-execute_query = PythonOperator(
+query_pins = PythonOperator(
     task_id=f'query_pins',
     python_callable=query_ttcs,
     provide_context=True,
     op_kwargs={'mode': 'pins'},
+    dag=dag)
+
+upload_pins = S3FileTransferOperator(
+    task_id='upload_pins',
+    source_base_path=conf['prod_data_dir'],
+    source_key='ttcs-pins.csv',
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_INTERNAL_BUCKET }}",
+    dest_s3_key='gis/ttcs-pins.csv',
+    replace=True,
     dag=dag)
 
 # Execute queries
@@ -77,9 +92,38 @@ upload_subdag = SubDagOperator(
     subdag=create_upload_operators(),
     dag=dag)
 
+stage_snowflake = SnowflakeOperator(
+  task_id="stage_snowflake",
+  sql=snowflake_stage,
+  snowflake_conn_id="SNOWFLAKE",
+  warehouse="etl_load",
+  database="businesses",
+  schema="public",
+  dag=dag)
+
+delete_snowflake = SnowflakeOperator(
+  task_id="del_snowflake",
+  sql=snowflake_del,
+  snowflake_conn_id="SNOWFLAKE",
+  warehouse="etl_load",
+  database="businesses",
+  schema="public",
+  dag=dag)
+
+copy_snowflake = SnowflakeOperator(
+  task_id="copy_snowflake",
+  sql=snowflake_copy,
+  snowflake_conn_id="SNOWFLAKE",
+  warehouse="etl_load",
+  database="businesses",
+  schema="public",
+  dag=dag)
+
 #: Update portal modified date
 update_ttcs_md = get_seaboard_update_dag('business-listings.md', dag)
 
 #: Execution Rules
 query_subdag >> clean_data >> geocode_data >> addresses_to_S3
 addresses_to_S3 >> create_subsets >> upload_subdag >> update_ttcs_md
+create_subsets >> stage_snowflake >> delete_snowflake >> copy_snowflake
+query_pins >> upload_pins

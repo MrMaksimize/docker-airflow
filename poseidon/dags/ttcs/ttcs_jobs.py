@@ -21,6 +21,25 @@ clean_all = conf['temp_data_dir'] + '/ttcs_all_clean.csv'
 geocoded_active = conf['temp_data_dir'] + '/ttcs_all_geocoded.csv'
 geocoded_addresses = 'ttcs_address_book.csv'
 
+#: Helper function
+def prod_files_prep(subset):
+
+    df = subset.drop(['create_yr'],axis=1)
+    df = df.sort_values(by=['account_key',
+        'date_account_creation'],
+        ascending=[True,
+        False])
+    return df
+
+#: Helper function
+def combine_phone(row):
+    
+    phone_no = ("-").join([row['PHONE_AREA_CD'],row['PHONE_NO']])
+    
+    if not pd.isna(row['PHONE_EXTENSION']):
+        return f"{phone_no}x{row['PHONE_EXTENSION']}"
+    else:
+        return phone_no
 
 #: DAG function
 def query_ttcs(mode='main',**context):
@@ -44,7 +63,12 @@ def query_ttcs(mode='main',**context):
     sql = general.file_to_string(f'./sql/ttcs-{mode}.sql', __file__)
     df = pd.read_sql_query(sql, db)
     logging.info(f'Query for {mode} returned {df.shape[0]} results')
-    output_file = f"{conf['temp_data_dir']}/ttcs-{mode}.csv"
+
+    if mode == "pins":
+        output_file = f"{conf['prod_data_dir']}/ttcs-{mode}.csv"
+    else:
+        output_file = f"{conf['temp_data_dir']}/ttcs-{mode}.csv"
+    
     general.pos_write_csv(
         df,
         output_file,
@@ -56,18 +80,29 @@ def query_ttcs(mode='main',**context):
 def clean_data():
     """Clean business license data coming from TTCS."""
     logging.info('Reading various query output')
+
+    df = pd.read_csv(f"{conf['temp_data_dir']}/ttcs-main.csv",
+                   low_memory=False,
+                   dtype={'ACCOUNT_KEY':str})
     
-    tables = ['main','location','dba','phone','email']
-    dfs = []
+    tables = ['location','dba','phone','email']
 
     for table in tables:
         temp_df = pd.read_csv(f"{conf['temp_data_dir']}/ttcs-{table}.csv",
                    low_memory=False,
                    dtype={'ACCOUNT_KEY':str})
-        dfs.append(temp_df)
+        
+        if table == 'phone':
+            # Do not have a date effective for phone number
+            # To minimize duplicates
+            temp_df = temp_df.drop_duplicates()
+            temp_df['phone_full'] = temp_df.apply(combine_phone,axis=1)
+            merge_df = temp_df.groupby(['ACCOUNT_KEY']).agg({'phone_full': ','.join})
+        else:
+            merge_df = temp_df.copy()
 
-    df = reduce(lambda  left,right: pd.merge(left,right,on=['ACCOUNT_KEY'],
-                                            how='left'), dfs)
+        df = df.merge(merge_df,how='left',on='ACCOUNT_KEY')
+        logging.info(f"Merge with {table} resulted in {df.shape}")
    
     df.columns = [x.lower() for x in df.columns]
 
@@ -75,16 +110,7 @@ def clean_data():
 
     df['naics_sector'] = df['naics_code'].apply(lambda x: str(x)[:2])
 
-    logging.info('Extracting years for filter')
-
-    df['bus_start_yr'] = pd.to_datetime(
-        df['bus_start_dt'], errors='coerce').dt.year
-    df['create_yr'] = pd.to_datetime(
-        df['creation_dt'], errors='coerce').dt.year
-
-    df_rows = df.shape[0]
-
-    logging.info(f'Processed {df_rows} businesses')
+    logging.info(f'Processed {df.shape[0]} businesses')
 
     df = df.sort_values(by=['account_key',
         'creation_dt'],
@@ -334,15 +360,7 @@ def geocode_data():
 
     return "Successfully geocoded all businesses."
 
-#: Helper function
-def prod_files_prep(subset):
 
-    df = subset.drop(['create_yr'],axis=1)
-    df = df.sort_values(by=['account_key',
-        'date_account_creation'],
-        ascending=[True,
-        False])
-    return df
 
 #: DAG function
 def make_prod_files(**context):
@@ -374,7 +392,8 @@ def make_prod_files(**context):
             'zip':'address_zip',
             'pmb_box':'address_pmb_box',
             'po_box':'address_po_box',
-            'primary_naics':'naics_code'
+            'primary_naics':'naics_code',
+            'phone_full':'phone'
             })
 
     public_cols = ['account_key',
@@ -412,9 +431,7 @@ def make_prod_files(**context):
                  'origin',
                  'fee_status',
                  'loc_override',
-                 'phone_no',
-                 'phone_area_cd',
-                 'phone_extension',
+                 'phone',
                  'email',
                  'online_billing_email'
                  ]
@@ -437,7 +454,7 @@ def make_prod_files(**context):
             date_format="%Y-%m-%d")
 
     # Write Snowflake output
-    general.sf_write_csv(df[all_cols],'business_tax_certificates')
+    general.sf_write_csv(df[all_cols],'tax_certs')
     
     # Start outputting Open Data sets
     general.pos_write_csv(
@@ -450,6 +467,7 @@ def make_prod_files(**context):
 
     row_counts = 0
 
+    # Really old certs, pre 1990
     od_inactive_hist = df_public_inactive.loc[
         (df_public_inactive['create_yr'] < 1990)]
 
@@ -460,6 +478,7 @@ def make_prod_files(**context):
             f"{conf['prod_data_dir']}/sd_businesses_pre1990_datasd.csv",
             date_format="%Y-%m-%d") 
 
+    # Certs in 3 10-yr sets
     i = 1990
     while i < 2010:
         inactive_split = df_public_inactive.loc[
@@ -474,6 +493,8 @@ def make_prod_files(**context):
             date_format="%Y-%m-%d")        
 
         i += 10
+
+    # More recent inactive certs in a 5-year set
     
     od_inactive_2010 = df_public_inactive.loc[
         (df_public_inactive['create_yr'] >= 2010) &
@@ -485,6 +506,8 @@ def make_prod_files(**context):
             od_inactive_2010,
             f"{conf['prod_data_dir']}/sd_businesses_2010to2015_datasd.csv",
             date_format="%Y-%m-%d")
+
+    # Most recent inactive certs
 
     od_inactive_2015 = df_public_inactive.loc[
         (df_public_inactive['create_yr'] >= 2015)]
