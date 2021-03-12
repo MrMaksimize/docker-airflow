@@ -11,6 +11,8 @@ import datetime as dt
 import numpy as np
 from airflow.models import Variable
 from functools import reduce
+from arcgis import GIS
+from urllib.parse import unquote
 
 from trident.util import general
 from trident.util import geospatial
@@ -522,3 +524,31 @@ def make_prod_files(**context):
             date_format="%Y-%m-%d")
 
     return "Successfully generated production files."
+
+def send_arcgis():
+    """ Upload shop local files to arcgis portal """
+
+    conn = BaseHook.get_connection(conn_id="ARC_PORTAL")
+    password = unquote(conn.password)
+    conn_host = f"https://{conn.host}/{conn.schema}"
+
+    arc_gis = GIS(conn_host,conn.login,password)
+
+    biz_path = f"{conf['prod_data_dir']}/shop_local_businesses.csv"
+    pin_path = f"{conf['prod_data_dir']}/ttcs-pins.csv"
+
+    biz_props = {'title':'Shop Local Businesses',
+    'description':'Business for publishing on Shop Local from BTC data',
+    'tags':'Shop Local, GIS Dev',
+    'overwrite':'true'
+    }
+    pin_props = {'title':'Business Tax Identification',
+    'description':'Identification for Businesses displayed on Shop Local from BTC data',
+    'tags':'Shop Local, GIS Dev',
+    'overwrite':'true'
+    }
+
+    arc_gis.content.add(item_properties=biz_props,data=biz_path)
+    arc_gis.content.add(item_properties=pin_props,data=pin_path)
+
+    return "Successfully uploaded files to arcgis portal"
