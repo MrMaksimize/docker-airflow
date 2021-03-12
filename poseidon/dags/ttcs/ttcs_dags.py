@@ -86,7 +86,13 @@ upload_pins = S3FileTransferOperator(
     replace=True,
     dag=dag)
 
-# Execute queries
+#: Upload shop local to arcgis
+upload_arcgis = PythonOperator(
+    task_id=f'send_arcgis',
+    python_callable=send_arcgis,
+    dag=dag)
+
+# Upload files
 upload_subdag = SubDagOperator(
     task_id='upload_ttcs',
     subdag=create_upload_operators(),
