@@ -533,9 +533,17 @@ def send_arcgis():
     conn_host = f"https://{conn.host}/{conn.schema}"
 
     arc_gis = GIS(conn_host,conn.login,password)
+    logging.info(f"Connected to ArcGIS portal as {arc_gis.properties.user.username}")
 
     biz_path = f"{conf['prod_data_dir']}/shop_local_businesses.csv"
     pin_path = f"{conf['prod_data_dir']}/ttcs-pins.csv"
+    pin_id = Variable.get("ARC_PORTAL_PIN_ID")
+    biz_id = Variable.get("ARC_PORTAL_BUS_ID")
+
+    biz_item = arc_gis.content.get(biz_id)
+    logging.info(f"Got Portal item {biz_item.title}")
+    pin_item = arc_gis.content.get(pin_id)
+    logging.info(f"Got Portal item {pin_item.title}")
 
     biz_props = {'title':'Shop Local Businesses',
     'description':'Business for publishing on Shop Local from BTC data',
@@ -548,7 +556,10 @@ def send_arcgis():
     'overwrite':'true'
     }
 
-    arc_gis.content.add(item_properties=biz_props,data=biz_path)
-    arc_gis.content.add(item_properties=pin_props,data=pin_path)
 
+    biz_success = biz_item.update(item_properties=biz_props,data=biz_path)
+    logging.info(biz_success)
+    pin_success = pin_item.update(item_properties=pin_props,data=pin_path)
+    logging.info(pin_success)
+    
     return "Successfully uploaded files to arcgis portal"
