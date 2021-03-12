@@ -133,3 +133,5 @@ query_subdag >> clean_data >> geocode_data >> addresses_to_S3
 addresses_to_S3 >> create_subsets >> upload_subdag >> update_ttcs_md
 create_subsets >> stage_snowflake >> delete_snowflake >> copy_snowflake
 query_pins >> upload_pins
+query_pins >> upload_arcgis
+create_subsets >> upload_arcgis
