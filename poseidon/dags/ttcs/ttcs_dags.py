@@ -1,6 +1,8 @@
 """This module contains dags and tasks for extracting data out of TTCS."""
 from airflow.operators.python_operator import PythonOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
+from airflow.operators.subdag_operator import SubDagOperator
+from airflow.contrib.operators.snowflake_operator import SnowflakeOperator
 from airflow.models import DAG
 from datetime import datetime, timedelta
 from trident.util import general
@@ -8,6 +10,9 @@ from trident.util.notifications import afsys_send_email
 
 from dags.ttcs.ttcs_jobs import *
 from trident.util.seaboard_updates import *
+from dags.ttcs.ttcs_subdags import *
+from trident.util.snowflake_client import *
+
 import os
 import glob
 
@@ -15,6 +20,9 @@ args = general.args
 conf = general.config
 schedule = general.schedule
 start_date = general.start_date['ttcs']
+snowflake_stage = format_stage_sql('tax_certs')
+snowflake_del = format_delete_sql('tax_certs')
+snowflake_copy = format_copy_sql('tax_certs')
 
 
 #: Dag definition
@@ -25,11 +33,12 @@ dag = DAG(dag_id='ttcs',
     catchup=False
     )
 
-#: Get active businesses and save as .csv to temp folder
-get_active_businesses = PythonOperator(
-    task_id='get_active_businesses',
-    python_callable=get_active_businesses,
-    dag=dag)
+# Execute queries
+query_subdag = SubDagOperator(
+    task_id='query_ttcs',
+    subdag=create_subdag_operators(),
+    dag=dag,
+  )
 
 #: Process temp data and save as .csv to prod folder
 clean_data = PythonOperator(
@@ -53,50 +62,76 @@ addresses_to_S3 = S3FileTransferOperator(
     replace=True,
     dag=dag)
 
-#: Spatially join BIDs data
-join_bids = PythonOperator(
-    task_id='join_bids',
-    python_callable=join_bids,
-    dag=dag)
-
 #: Create subsets
 create_subsets = PythonOperator(
     task_id='create_subsets',
     python_callable=make_prod_files,
     dag=dag)
 
+#: Get active businesses and save as .csv to temp folder
+query_pins = PythonOperator(
+    task_id=f'query_pins',
+    python_callable=query_ttcs,
+    provide_context=True,
+    op_kwargs={'mode': 'pins'},
+    dag=dag)
+
+upload_pins = S3FileTransferOperator(
+    task_id='upload_pins',
+    source_base_path=conf['prod_data_dir'],
+    source_key='ttcs-pins.csv',
+    dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
+    dest_s3_bucket="{{ var.value.S3_INTERNAL_BUCKET }}",
+    dest_s3_key='gis/ttcs-pins.csv',
+    replace=True,
+    dag=dag)
+
+#: Upload shop local to arcgis
+upload_arcgis = PythonOperator(
+    task_id=f'send_arcgis',
+    python_callable=send_arcgis,
+    dag=dag)
+
+# Upload files
+upload_subdag = SubDagOperator(
+    task_id='upload_ttcs',
+    subdag=create_upload_operators(),
+    dag=dag)
+
+stage_snowflake = SnowflakeOperator(
+  task_id="stage_snowflake",
+  sql=snowflake_stage,
+  snowflake_conn_id="SNOWFLAKE",
+  warehouse="etl_load",
+  database="businesses",
+  schema="public",
+  dag=dag)
+
+delete_snowflake = SnowflakeOperator(
+  task_id="del_snowflake",
+  sql=snowflake_del,
+  snowflake_conn_id="SNOWFLAKE",
+  warehouse="etl_load",
+  database="businesses",
+  schema="public",
+  dag=dag)
+
+copy_snowflake = SnowflakeOperator(
+  task_id="copy_snowflake",
+  sql=snowflake_copy,
+  snowflake_conn_id="SNOWFLAKE",
+  warehouse="etl_load",
+  database="businesses",
+  schema="public",
+  dag=dag)
+
 #: Update portal modified date
 update_ttcs_md = get_seaboard_update_dag('business-listings.md', dag)
 
 #: Execution Rules
-get_active_businesses >> clean_data >> geocode_data >> [addresses_to_S3,join_bids]
-join_bids >> create_subsets
-
-subset_names = [os.path.basename(x) for x in glob.glob(conf['prod_data_dir']+'/sd_businesses_*_datasd_v1.csv')]
-
-for index, subset in enumerate(subset_names):
-
-    file_name = subset.split('.')[0]
-    name_parts = file_name.split('_')
-    if 'v1' in name_parts:
-        name_parts.remove('datasd')
-        name_parts.remove('v1')
-        task_name = '_'.join(name_parts[2:])
-
-        #: Upload prod active file to S3
-        active_to_S3 = S3FileTransferOperator(
-            task_id=f'upload_{task_name}',
-            source_base_path=conf['prod_data_dir'],
-            source_key=f'sd_businesses_{task_name}_datasd_v1.csv',
-            dest_s3_conn_id="{{ var.value.DEFAULT_S3_CONN_ID }}",
-            dest_s3_bucket="{{ var.value.S3_DATA_BUCKET }}",
-            dest_s3_key=f'ttcs/sd_businesses_{task_name}_datasd_v1.csv',
-            replace=True,
-            dag=dag)
-
-        #: make_operating must run after the get task
-        create_subsets >> active_to_S3
-
-        if index == len(subset_names)-1:
-
-            active_to_S3 << update_ttcs_md
+query_subdag >> clean_data >> geocode_data >> addresses_to_S3
+addresses_to_S3 >> create_subsets >> upload_subdag >> update_ttcs_md
+create_subsets >> stage_snowflake >> delete_snowflake >> copy_snowflake
+query_pins >> upload_pins
+query_pins >> upload_arcgis
+create_subsets >> upload_arcgis
