@@ -34,7 +34,8 @@ last_id_file = '/reference/gid/case_history_export_last_id.txt'
 def get_case_history1():
     """Get case history from Salesforce, export to AWS."""
 
-    bucket_name = Variable.get('S3_REF_BUCKET')
+    #bucket_name = Variable.get('S3_REF_BUCKET')
+    bucket_name = Variable.get('S3_GID_CASE_BUCKET')
     s3 = boto3.resource('s3')
     obj = s3.Object(bucket_name, last_id_file)
     try:
