@@ -20,6 +20,8 @@ library(leaflet)
 library(plotly)
 library(rsconnect)
 library(shiny)
+library(purrr)
+library(colorspace)
 
 #setwd("~/Documents/SD_data/TSW_dashboard_050719")
 claims <- read.csv("http://seshat.datasd.org/risk/claims_clean_datasd_tsw.csv", header=T, na.strings=c(""," ","NA"))
@@ -306,36 +308,129 @@ leaflet(filtered) %>% addTiles() %>% addMarkers(
 Time Trends
 =======================================================================
 
+-----------------------------------------------------------------------
+## Frequency
+
+```{r}
+
+renderPlotly({
+
+test<-setDT(claims)[, .(PAID_TOTAL= sum(PAID_TOTAL, na.rm = TRUE),Count=n_distinct(CLAIM_NUMBER)), 
+                by = .(Fiscal_Year, CLAIMANT_REFERENCE2_Desc)]
+
+top_5_count<-setDT(claims)[, .(Count=n_distinct(CLAIM_NUMBER, na.rm = TRUE)), 
+                         by = .(CLAIMANT_REFERENCE2_Desc)]
+
+top_5_count<- top_5_count[order(-Count),]
+top_5_count <- top_5_count[1:5,]
+top_5_count$top<-1
+top_5_count<-top_5_count[,c(1,3)]
+top_5_count<-left_join(top_5_count, test)
+top_5_count<-select(top_5_count, CLAIMANT_REFERENCE2_Desc,Fiscal_Year, Count)
+
+top_5_count<-subset(top_5_count, Fiscal_Year<2021) 
+
+
+top_5_count <- reshape(top_5_count, 
+                     timevar = "CLAIMANT_REFERENCE2_Desc",
+                     idvar = c("Fiscal_Year"),
+                     direction = "wide")
+
+top_5_count<-top_5_count %>%
+  set_names(~stringr::str_replace_all(., "Count.", " ")
+  )
+
+
+x <- top_5_count$Fiscal_Year
+top_1<-unlist(c(top_5_count[,2]))
+top_2<-unlist(c(top_5_count[,3]))
+top_3<-unlist(c(top_5_count[,4]))
+top_4<-unlist(c(top_5_count[,5]))
+top_5<-unlist(c(top_5_count[,6]))
+
+
+freqs <- plot_ly(x = ~x, y = ~top_1, mode = 'lines')%>%
+  add_trace(y = ~top_1, name = names(top_5_count[1,2]), mode = 'lines+markers',marker = list(color = 'grey'), line = list(color = 'grey'))%>%
+  add_trace(y = ~top_2, name = names(top_5_count[1,3]), mode = 'lines+markers')%>%
+  add_trace(y = ~top_3, name = names(top_5_count[1,4]), mode = 'lines+markers' ,marker = list(color = 'saddlebrown'), line = list(color = 'saddlebrown'))%>%
+  add_trace(y = ~top_4, name = names(top_5_count[1,5]), mode = 'lines+markers')%>%
+  add_trace(y = ~top_5, name = names(top_5_count[1,6]), mode = 'lines+markers')%>%
+  layout(
+         xaxis = list(title = "Fiscal Year of Incident", dtick=1),
+         yaxis = list (title = "Frequency (claims count)"))
+
+
+
+
+
+
+})
+
+```
+ 
+-----------------------------------------------------------------------
+## Severity
+
 ```{r}
 
 
 renderPlotly({
 
-##change this if I include a sidebar filter: FILTER BY COUNT OR AMOUNT, and by open/closed
-test<-setDT(claims)[, .(PAID_TOTAL= sum(PAID_TOTAL, na.rm = TRUE), PAID_BIPD= sum(PAID_BI + PAID_PD, na.rm = TRUE), PAID_EXP=sum(PAID_EXPENSE),Count=n_distinct(CLAIM_NUMBER)), by = .(Fiscal_Year)]
+test<-setDT(claims)[, .(PAID_TOTAL= sum(PAID_TOTAL, na.rm = TRUE),Count=n_distinct(CLAIM_NUMBER)), 
+                by = .(Fiscal_Year, CLAIMANT_REFERENCE2_Desc)]
 
-x <- test$Fiscal_Year
-y <- test$PAID_TOTAL
-trace_1<- test$PAID_BIPD
-trace_2<- test$PAID_EXP
+top_5_usd<-setDT(claims)[, .(PAID_TOTAL= sum(PAID_TOTAL, na.rm = TRUE)), 
+                    by = .(CLAIMANT_REFERENCE2_Desc)]
 
-p <- plot_ly(x = ~x, y = ~y, mode = 'lines')%>%
-add_trace(y = ~y, name = 'Total Payments', mode = 'lines+markers')%>%
-add_trace(y = ~trace_1, name = 'Bodily Injury and Property Damage', mode = 'lines+markers')%>%
-add_trace(y = ~trace_2, name = 'Expenses', mode = 'lines+markers') %>%
-  layout(title = "Payment History by Fiscal Year of Incident",
-         xaxis = list(title = "Fiscal Year of Incident"),
-         yaxis = list (title = "Total Amount (USD)"))
+top_5_usd<- top_5_usd[order(-PAID_TOTAL),]
+top_5_usd <- top_5_usd[1:5,]
+top_5_usd$top<-1
+top_5_usd<-top_5_usd[,c(1,3)]
+top_5_usd<-left_join(top_5_usd, test)
+top_5_usd<-select(top_5_usd, CLAIMANT_REFERENCE2_Desc,Fiscal_Year, PAID_TOTAL)
+
+top_5_usd<-subset(top_5_usd, Fiscal_Year<2021) 
+
+
+top_5_usd <- reshape(top_5_usd, 
+             timevar = "CLAIMANT_REFERENCE2_Desc",
+             idvar = c("Fiscal_Year"),
+             direction = "wide")
+
+top_5_usd<-top_5_usd %>%
+  set_names(~stringr::str_replace_all(., "PAID_TOTAL.", " ")
+  )
+
+
+x <- top_5_usd$Fiscal_Year
+top_1<-unlist(c(top_5_usd[,2]))
+top_2<-unlist(c(top_5_usd[,3]))
+top_3<-unlist(c(top_5_usd[,4]))
+top_4<-unlist(c(top_5_usd[,5]))
+top_5<-unlist(c(top_5_usd[,6]))
+
+
+figu <- plot_ly(top_5_usd, x = ~x, y = ~top_1, type = 'bar', name = names(top_5_usd[1,2]))
+figu <- figu %>% add_trace(y = ~top_2, name = names(top_5_usd[1,3]))
+figu <- figu %>% add_trace(y = ~top_3, name = names(top_5_usd[1,4]))
+figu <- figu %>% add_trace(y = ~top_4, name = names(top_5_usd[1,5]) , marker = list(color = 'darkolivegreen'))
+figu <- figu %>% add_trace(y = ~top_5, name = names(top_5_usd[1,6]))
+figu <- figu %>% layout(yaxis = list(title = 'Severity (claims cost)'), barmode = 'group')
+figu <- figu %>% layout(xaxis = list(title = 'Fiscal Year of Incident', dtick=1), barmode = 'group', 
+                        autotick= F, dtick = 1, ticktext=x)
+
+
+figu
+
+
+
 })
 
 
 
 
 ```
-
-
-
-
+ 
 
 
 Claim Level Detail
