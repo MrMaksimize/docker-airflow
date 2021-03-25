@@ -5,12 +5,13 @@ from airflow.models import DAG
 from trident.util import general
 
 from dags.nextrequest.nr_jobs import *
+from datetime import datetime
 
 from trident.util.seaboard_updates import update_seaboard_date, get_seaboard_update_dag, update_json_date
 
 args = general.args
-schedule = general.schedule['nextrequest']
-start_date = general.start_date['nextrequest']
+schedule = '@daily'
+start_date = datetime(2021, 2, 22)
 conf = general.config
 
 dag = DAG(
@@ -34,6 +35,11 @@ update_prod = PythonOperator(
     python_callable=update_prod,
     provide_context=True,
     dag=dag)
+
+#Snowflake SQL to make table
+"""
+Current workflow replaces table, future improvement update changed records, append new records
+"""
 
 request_pra_date >> update_prod
 
