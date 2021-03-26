@@ -23,7 +23,7 @@ def request_pra_date(**context):
     Use execution date to gather 2 months of requests
     """
     pend_request_date = context['execution_date'].in_timezone('America/Los_Angeles')
-    pend_request_date_delta = pend_request_date.subtract(months=6)
+    pend_request_date_delta = pend_request_date.subtract(months=4)
 
     request_date = pendulum_to_datetime(pend_request_date)
     request_date_delta = pendulum_to_datetime(pend_request_date_delta)
@@ -98,5 +98,8 @@ def update_prod(**context):
 
     logging.info(f"Writing {df_final.shape[0]} rows of data to prod file")
     general.pos_write_csv(df_final, nr_prod_csv, index=False, date_format="%Y-%m-%d %H:%M:%S")
+
+    logging.info(f"Writing {df_final.shape[0]} rows of data to snowflake file")
+    general.sf_write_csv(df_final,'nextrequest')
     
     return "Successfully wrote prod file"
