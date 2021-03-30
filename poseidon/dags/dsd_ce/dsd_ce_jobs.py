@@ -4,6 +4,7 @@
 
 from trident.util import general
 import logging
+from airflow.hooks.base_hook import BaseHook
 
 # Required variables
 
@@ -32,14 +33,16 @@ def query_data(**context):
     This is a function for a Python Operator with context
     """
     
-    logging.info("Running Python operator task with context")
+    logging.info("connecting to Azure")
+    conn = BaseHook.get_connection(conn_id="DSD_ACCELA")
+
+    logging.info(conn.host)
 
     # Get context
     exec_date = context['execution_date']
 
     logging.info(f"Run date is {exec_date}")
 
-    # Push context
-    context['task_instance'].xcom_push(key='temp_check', value=True)
+    
 
     return "Successfully completed context function"
