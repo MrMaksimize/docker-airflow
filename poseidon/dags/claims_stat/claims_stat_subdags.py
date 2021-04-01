@@ -19,7 +19,8 @@ schedule = general.schedule['claims_stat']
 start_date = general.start_date['claims_stat']
 
 claims_kwargs = {'tsw':['Storm Water-211612','Street-211611'],
-'pd':['Police-191400']}
+'pd':['Police-191400'],
+'pud':['Wastewater Collection','Wastewater Treatment and Disposal','Water System Operations']}
 
 def create_subdag():
     
