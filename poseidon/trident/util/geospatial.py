@@ -347,11 +347,12 @@ def spatial_join_pt(pt_file, poly_file, lat='lat', lon='lon'):
     pt = df_to_geodf_pt(df, lat, lon)
     logging.info('Loading poly file as geodf')
     poly = geojson_to_geodf(poly_file)
-    pt.crs = poly.crs
-    logging.info(f'Set point to {pt.crs} to match {poly.crs}')
+    #4326
+    pt.crs = "EPSG:4326"
+    logging.info(f'Set point to {pt.crs}')
     
     logging.info('Operating spatial join.')
-    pt_join = sjoin(pt, poly, how='left')
+    pt_join = sjoin(pt, poly, how='left',op='intersects')
     pt_join = pt_join.drop(['geometry', 'index_right'], axis=1)
     
     logging.info('Successfully spatially joined data.')
