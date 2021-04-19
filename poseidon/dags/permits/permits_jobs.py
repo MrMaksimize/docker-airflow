@@ -11,18 +11,19 @@ from shlex import quote
 from datetime import datetime as dt
 from airflow.hooks.base_hook import BaseHook
 from airflow.models import Variable
+import cx_Oracle
 
 conf = general.config
 
 filelist = {'Closed PTS projects':{
-                'name':'P2K_261-Panda_Extract_DSD_Projects_Closed',
-                'ext':'txt'},
+                'name':'04_dsd_projclosed',
+                'ext':None},
             'Closed PTS approvals since 2019':{
-                'name':'P2K_261-Panda_Extract_DSD_Permits_Closed',
-                'ext':'txt'},
+                'name':'03_dsd_permitsclosed',
+                'ext':None},
             'Active PTS approvals since 2003':{
-                'name':'P2K_261-Panda_Extract_DSD_Permits_Active',
-                'ext':'txt'},
+                'name':'02_dsd_permitsactive',
+                'ext':None},
             'Active Accela PV permits all time':{
                 'name':'Accela_Active_PV',
                 'ext':'xls'},
@@ -38,87 +39,47 @@ filelist = {'Closed PTS projects':{
 
 def get_permits_files(mode='pts',**context):
     """ Get permit file from ftp site. """
-    logging.info('Retrieving permits data.')
 
-    exec_date = context['next_execution_date'].in_tz(tz='US/Pacific')
-    # Exec date returns a Pendulum object
-    # Runs on Monday for data extracted Sunday
-    file_date_1 = exec_date.subtract(days=1)
+    logging.info('Retrieving data from Oracle database')
+    # This requires that otherwise optional credentials variable
+    
+    credentials = BaseHook.get_connection(conn_id="DSD_PTS")
+    
+    conn_config = {
+            'user': credentials.login,
+            'password': credentials.password
+        }
+    
+    dsn = credentials.extra_dejson.get('dsn', None)
+    sid = credentials.extra_dejson.get('sid', None)
+    port = credentials.port if credentials.port else 1521
+    conn_config['dsn'] = cx_Oracle.makedsn(dsn, port, sid)
 
-    # Need zero-padded month and date
-    filename_1 = f"{file_date_1.year}" \
-    f"{file_date_1.strftime('%m')}" \
-    f"{file_date_1.strftime('%d')}"
+    db = cx_Oracle.connect(conn_config['user'],
+        conn_config['password'],
+        conn_config['dsn'],
+        encoding="UTF-8")
 
-    file_date_2 = exec_date
+    # OracleHook will not work
+    #db = OracleHook.get_connection("RISK")
 
-    # Need zero-padded month and date
-    filename_2 = f"{file_date_2.year}" \
-    f"{file_date_2.strftime('%m')}" \
-    f"{file_date_2.strftime('%d')}"
-
-    files = [*filelist]
-
-    conn = BaseHook.get_connection(conn_id="SVC_ACCT")
-
+    # Create a sql file containing query for the database
+    # Save this file in a sql folder at the same level as the jobs file
     for file in files:
 
         if mode in file.lower():
-
+            fpath = filelist[file].get('name')
             logging.info(f"Checking for {filelist[file].get('name')}")
+            sql= general.file_to_string(f'./sql/{fpath}.sql', __file__)
+            df = pd.read_sql_query(sql, db)
+            logging.info(f'Query returned {df.shape[0]} results')
 
-            fpath = f"{filelist[file].get('name')}_{filename_1}.{filelist[file].get('ext')}"
+            general.pos_write_csv(
+                df,
+                f"{conf['temp_data_dir']}/{fpath}.csv")
 
-            command = "smbclient //ad.sannet.gov/dfs " \
-            + f"--user={conn.login}%{conn.password} -W ad -c " \
-            + "'prompt OFF;"\
-            + " cd \"DSD-Shared/All_DSD/Panda/\";" \
-            + " lcd \"/data/temp/\";" \
-            + f" get {fpath};'"
+    return 'Successfully retrieved Oracle data.'    
 
-            command = command.format(quote(command))
-
-            p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
-            output, error = p.communicate()
-            
-            if p.returncode != 0:
-
-                logging.info(f"Error with {fpath}")
-
-                logging.info(f"Checking for {filelist[file].get('name')}")
-
-                fpath = f"{filelist[file].get('name')}_{filename_2}.{filelist[file].get('ext')}"
-
-                command = "smbclient //ad.sannet.gov/dfs " \
-                + f"--user={conn.login}%{conn.password} -W ad -c " \
-                + "'prompt OFF;"\
-                + " cd \"DSD-Shared/All_DSD/Panda/\";" \
-                + " lcd \"/data/temp/\";" \
-                + f" get {fpath};'"
-
-                command = command.format(quote(command))
-
-                p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
-                output, error = p.communicate()
-                
-                if p.returncode != 0:
-
-                    logging.info(f"Error with {fpath}")
-                    logging.info("Could not find files for either day")
-                    logging.info(output)
-                    logging.info(error)
-                    raise Exception(p.returncode)
-
-                else:
-
-                    logging.info(f"Found {fpath}")
-                    filedate_final = filename_2
-            else:
-
-                logging.info(f"Found {fpath}")
-                filedate_final = filename_1
-
-    return filedate_final
 
 def build_pts(**context):
     """Get PTS permits and create active and closed"""
@@ -135,8 +96,6 @@ def build_pts(**context):
     'Job ID':'str',
     'Approval ID':'str'}
 
-    filename = context['task_instance'].xcom_pull(dag_id="dsd_permits.get_create_pts",
-        task_ids='get_pts_files')
 
     #filename = "20200906"
     
@@ -176,7 +135,7 @@ def build_pts(**context):
 
     df_new = pd.concat([active,closed,closed_pr],sort=True,ignore_index=True)
 
-    df_new['file_date'] = filename
+    df_new['file_date'] = '04/18/2021'
 
     df_new.columns = [x.lower().strip().replace(' ','_').replace('-','_') for x in df_new.columns]
 
