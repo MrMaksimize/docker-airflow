@@ -16,6 +16,7 @@ services:
             - PYTHONPATH="/usr/local/airflow/poseidon"
             - AIRFLOW__EMAIL__EMAIL_BACKEND=trident.util.notifications.afsys_send_email
             - AIRFLOW__CORE__FERNET_KEY=${FERNET_KEY}
+            - AIRFLOW__WEBSERVER__SECRET_KEY=${FERNET_KEY}
             - 'AIRFLOW__SECRETS__BACKEND_KWARGS={"connections_prefix": "/airflow/connections/${SD_ENV}", "variables_prefix":"/airflow/variables/${SD_ENV}", "profile_name": "airflowssm"}'
             
         ports:
