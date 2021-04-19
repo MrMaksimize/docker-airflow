@@ -12,9 +12,9 @@ ENV DEBIAN_FRONTEND noninteractive
 ENV TERM linux
 
 # Airflow
-ARG AIRFLOW_VERSION=1.10.12
+ARG AIRFLOW_VERSION=2.0.0
 ARG AIRFLOW_HOME=/usr/local/airflow
-ARG GDAL_VERSION=2.1.0
+ARG GDAL_VERSION=3.2.2
 # Not currently using this because of snowflake
 ARG CONSTRAINT_URL="https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-3.7.txt"
 
@@ -76,6 +76,7 @@ RUN apt-get update -yqq \
         smbclient \
         sqlite3 \
         unzip \
+        unixodbc \
         vim \
         wget
 
@@ -89,30 +90,36 @@ RUN sed -i 's/^# en_US.UTF-8 UTF-8$/en_US.UTF-8 UTF-8/g' /etc/locale.gen \
 # NodeJS packages
 RUN curl -sL https://deb.nodesource.com/setup_10.x | bash - \
     && apt-get install -y nodejs \
-    && npm install -g mapshaper \
-    && npm install -g geobuf
+    && npm install -g mapshaper
 
-RUN pip install -U pip setuptools wheel \
-    && pip install apache-airflow[crypto,celery,postgres,s3,jdbc,mysql,mssql,oracle,ssh,password,rabbitmq,samba]==${AIRFLOW_VERSION} \
-    "arcgis==1.8.1" \
-    "boto3==1.12.26" \
-    "fiona==1.8.13.post1" \
-    "gdal==2.1.0" \
-    git+https://github.com/jguthmiller/pygeobuf.git@geobuf-v3 \
-    "geojson==2.5.0" \
-    "geopandas==0.8.0" \
-    "google-api-python-client==1.9.3" \
-    "oauth2client==4.1.3" \
+# populate "ocbcinst.ini" as this is where ODBC driver config sits
+#RUN echo "[FreeTDS]\n\
+    #Description = FreeTDS Driver\n\
+    #Driver = /usr/lib/x86_64-linux-gnu/odbc/libtdsodbc.so\n\
+    #Setup = /usr/lib/x86_64-linux-gnu/odbc/libtdsS.so" >> /etc/odbcinst.ini
+
+RUN pip install -U pip==20.2.4 setuptools wheel \
+    && pip install apache-airflow[amazon,celery,jdbc,mysql,microsoft.azure,microsoft.mssql,odbc,oracle,postgres,snowflake,ssh,redis,rabbitmq,samba]==${AIRFLOW_VERSION} \
+    apache-airflow-providers-amazon \
+    arcgis \
+    boto3 \
+    fiona \
+    #GDAL==$(gdal-config --version | awk -F'[.]' '{print $1"."$2}') --global-option=build_ext --global-option="-I/usr/include/gdal" \
+    geobuf \
+    geojson \
+    geopandas \
+    google-api-python-client \
+    oauth2client \
     openpyxl \
-    "pandas==1.0.5" \
-    "PyGithub==1.51" \
-    "redis==3.5.3" \
-    "requests>=2.20" \
+    pyodbc \
+    pandas \
+    PyGithub \
+    requests \
     rtree \
     s3fs \
-    "shapely==1.7.0" \
-    "snowflake-connector-python==2.2.8" \
-    xlrd
+    shapely \
+    xlrd \
+    --constraint "${CONSTRAINT_URL}"
 
 # R Installs
 

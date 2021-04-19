@@ -1,7 +1,7 @@
 version: '2.1'
 services:
     webserver:
-        image: cityofsandiego/airflow:latest
+        image: cityofsandiego/airflow:odbc
         restart: always
         volumes:
             - ./poseidon:/usr/local/airflow/poseidon
@@ -13,7 +13,6 @@ services:
             - EXECUTOR=Sequential
               # From environment specific .env
             - SD_ENV=${SD_ENV}
-            - SECRETLY_NAMESPACE=${SD_ENV}
             - PYTHONPATH="/usr/local/airflow/poseidon"
             - AIRFLOW__EMAIL__EMAIL_BACKEND=trident.util.notifications.afsys_send_email
             - AIRFLOW__CORE__FERNET_KEY=${FERNET_KEY}
