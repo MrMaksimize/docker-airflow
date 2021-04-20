@@ -37,7 +37,91 @@ filelist = {'Closed PTS projects':{
                 'name':'Accela_Closed_NonPV',
                 'ext':'xls'}}
 
-def get_permits_files(mode='pts',**context):
+def get_accela_files(**context):
+    """ Get permit file from ftp site. """
+    logging.info('Retrieving Accela data.')
+
+    exec_date = context['next_execution_date'].in_tz(tz='US/Pacific')
+    # Exec date returns a Pendulum object
+    # Runs on Monday for data extracted Sunday
+    file_date_1 = exec_date.subtract(days=1)
+
+    # Need zero-padded month and date
+    filename_1 = f"{file_date_1.year}" \
+    f"{file_date_1.strftime('%m')}" \
+    f"{file_date_1.strftime('%d')}"
+
+    file_date_2 = exec_date
+
+    # Need zero-padded month and date
+    filename_2 = f"{file_date_2.year}" \
+    f"{file_date_2.strftime('%m')}" \
+    f"{file_date_2.strftime('%d')}"
+
+    files = [*filelist]
+
+    conn = BaseHook.get_connection(conn_id="SVC_ACCT")
+
+    for file in files:
+
+        if 'accela' in file.lower():
+
+            logging.info(f"Checking for {filelist[file].get('name')}")
+
+            fpath = f"{filelist[file].get('name')}_{filename_1}.{filelist[file].get('ext')}"
+
+            command = "smbclient //ad.sannet.gov/dfs " \
+            + f"--user={conn.login}%{conn.password} -W ad -c " \
+            + "'prompt OFF;"\
+            + " cd \"DSD-Shared/All_DSD/Panda/\";" \
+            + " lcd \"/data/temp/\";" \
+            + f" get {fpath};'"
+
+            command = command.format(quote(command))
+
+            p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
+            output, error = p.communicate()
+            
+            if p.returncode != 0:
+
+                logging.info(f"Error with {fpath}")
+
+                logging.info(f"Checking for {filelist[file].get('name')}")
+
+                fpath = f"{filelist[file].get('name')}_{filename_2}.{filelist[file].get('ext')}"
+
+                command = "smbclient //ad.sannet.gov/dfs " \
+                + f"--user={conn.login}%{conn.password} -W ad -c " \
+                + "'prompt OFF;"\
+                + " cd \"DSD-Shared/All_DSD/Panda/\";" \
+                + " lcd \"/data/temp/\";" \
+                + f" get {fpath};'"
+
+                command = command.format(quote(command))
+
+                p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
+                output, error = p.communicate()
+                
+                if p.returncode != 0:
+
+                    logging.info(f"Error with {fpath}")
+                    logging.info("Could not find files for either day")
+                    logging.info(output)
+                    logging.info(error)
+                    raise Exception(p.returncode)
+
+                else:
+
+                    logging.info(f"Found {fpath}")
+                    filedate_final = filename_2
+            else:
+
+                logging.info(f"Found {fpath}")
+                filedate_final = filename_1
+
+    return filedate_final
+
+def get_pts_views():
     """ Get permit file from ftp site. """
 
     logging.info('Retrieving data from Oracle database')
@@ -67,7 +151,7 @@ def get_permits_files(mode='pts',**context):
     # Save this file in a sql folder at the same level as the jobs file
     for file in files:
 
-        if mode in file.lower():
+        if 'pts' in file.lower():
             fpath = filelist[file].get('name')
             logging.info(f"Checking for {filelist[file].get('name')}")
             sql= general.file_to_string(f'./sql/{fpath}.sql', __file__)
@@ -96,38 +180,40 @@ def build_pts(**context):
     'Job ID':'str',
     'Approval ID':'str'}
 
+    exec_date = context['next_execution_date'].in_tz(tz='US/Pacific')
+    old_file_date = exec_date.subtract(days=1)
+    new_file_date = exec_date
 
-    #filename = "20200906"
+    # Get zero-padded month and date
+    old_filename = f"{old_file_date.year}" \
+    f"{old_file_date.strftime('%m')}" \
+    f"{old_file_date.strftime('%d')}"
+
+    # Get zero-padded month and date
+    new_filename = f"{new_file_date.year}" \
+    f"{new_file_date.strftime('%m')}" \
+    f"{new_file_date.strftime('%d')}"
     
     logging.info(f"Reading active permits {filename}")
     active = pd.read_csv(f"{conf['temp_data_dir']}/" \
-        + f"{filelist['Active PTS approvals since 2003'].get('name')}_" \
-        + f"{filename}.{filelist['Active PTS approvals since 2003'].get('ext')}",
+        + f"{filelist['Active PTS approvals since 2003'].get('name')}.csv",
         low_memory=False,
-        sep=",",
-        encoding="ISO-8859-1",
         parse_dates=date_cols,
         dtype=dtypes)    
 
     # Closed permits
     logging.info(f"Reading closed permits {filename}")
     closed = pd.read_csv(f"{conf['temp_data_dir']}/" \
-        + f"{filelist['Closed PTS approvals since 2019'].get('name')}_{filename}." \
-        + f"{filelist['Closed PTS approvals since 2019'].get('ext')}",
+        + f"{filelist['Closed PTS approvals since 2019'].get('name')}.csv",
         low_memory=False,
-        sep=",",
-        encoding="ISO-8859-1",
         parse_dates=date_cols,
         dtype=dtypes)
 
     # Closed projects, open approvals
     logging.info(f"Reading closed projects {filename}")
     closed_pr = pd.read_csv(f"{conf['temp_data_dir']}/" \
-        + f"{filelist['Closed PTS projects'].get('name')}_{filename}." \
-        + f"{filelist['Closed PTS projects'].get('ext')}",
+        + f"{filelist['Closed PTS projects'].get('name')}.csv",
         low_memory=False,
-        sep=",",
-        encoding="ISO-8859-1",
         parse_dates=date_cols,
         dtype=dtypes)
 
@@ -135,7 +221,7 @@ def build_pts(**context):
 
     df_new = pd.concat([active,closed,closed_pr],sort=True,ignore_index=True)
 
-    df_new['file_date'] = '04/18/2021'
+    df_new['file_date'] = new_filename
 
     df_new.columns = [x.lower().strip().replace(' ','_').replace('-','_') for x in df_new.columns]
 
@@ -156,16 +242,6 @@ def build_pts(**context):
         dtype={'approval_id':str})
 
     prod_cols = df_old.columns.tolist()
-
-    prev_exec_date = context['execution_date'].in_tz(tz='US/Pacific')
-    old_file_date = prev_exec_date.subtract(days=1)
-
-    # Need zero-padded month and date
-    old_filename = f"{old_file_date.year}" \
-    f"{old_file_date.strftime('%m')}" \
-    f"{old_file_date.strftime('%d')}"
-
-    #old_filename = "20200830"
 
     df_old['file_date'] = old_filename
 
