@@ -31,8 +31,7 @@ def get_create_accela_subdag():
   get_files = PythonOperator(
     task_id='get_accela_files',
     provide_context=True,
-    python_callable=get_permits_files,
-    op_kwargs={'mode': 'accela'},
+    python_callable=get_accela_files,
     dag=dag_subdag)
 
   create = PythonOperator(
@@ -74,9 +73,7 @@ def get_create_pts_subdag():
   #: Get permits reports
   get_files = PythonOperator(
     task_id='get_pts_files',
-    provide_context=True,
-    python_callable=get_permits_files,
-    op_kwargs={'mode': 'pts'},
+    python_callable=get_pts_views,
     dag=dag_subdag)
 
   create = PythonOperator(
