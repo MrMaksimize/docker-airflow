@@ -25,9 +25,9 @@ FROM CLAIMSTAT.CLAIMSTAT
 WHERE ORGANIZATION_DESC = 'Storm Water-211612' 
 OR ORGANIZATION_DESC = 'Street-211611' 
 OR ORGANIZATION_DESC = 'Police-191400'
-OR ORGANIZATION_DESC = 'Wastewater Collection'
-OR ORGANIZATION_DESC = 'Wastewater Treatment and Disposal'
-OR ORGANIZATION_DESC =  'Water System Operations'
+OR ORGANIZATION_DESC = 'Wastewater Collection-200018'
+OR ORGANIZATION_DESC = 'Wastewater Treatment and Disposal-200019'
+OR ORGANIZATION_DESC =  'Water System Operations-200020'
 
 
 AND INCIDENT_DATE >=  date '2008-07-01' 
