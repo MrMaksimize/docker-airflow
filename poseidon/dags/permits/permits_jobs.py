@@ -32,7 +32,7 @@ filelist = {'Closed PTS projects':{
                 'ext':'xls'},
             'All other active Accela permits all time':{
                 'name':'Accela_Active_NonPV',
-                'ext':'xls'},
+
             'All other closed Accela permits all time':{
                 'name':'Accela_Closed_NonPV',
                 'ext':'xls'}}
@@ -195,7 +195,7 @@ def build_pts(**context):
     f"{new_file_date.strftime('%m')}" \
     f"{new_file_date.strftime('%d')}"
     
-    logging.info(f"Reading active permits {filename}")
+    logging.info(f"Reading active permits {new_filename}")
     active = pd.read_csv(f"{conf['temp_data_dir']}/" \
         + f"{filelist['Active PTS approvals since 2003'].get('name')}.csv",
         low_memory=False,
@@ -203,7 +203,7 @@ def build_pts(**context):
         dtype=dtypes)    
 
     # Closed permits
-    logging.info(f"Reading closed permits {filename}")
+    logging.info(f"Reading closed permits {new_filename}")
     closed = pd.read_csv(f"{conf['temp_data_dir']}/" \
         + f"{filelist['Closed PTS approvals since 2019'].get('name')}.csv",
         low_memory=False,
@@ -211,7 +211,7 @@ def build_pts(**context):
         dtype=dtypes)
 
     # Closed projects, open approvals
-    logging.info(f"Reading closed projects {filename}")
+    logging.info(f"Reading closed projects {new_filename}")
     closed_pr = pd.read_csv(f"{conf['temp_data_dir']}/" \
         + f"{filelist['Closed PTS projects'].get('name')}.csv",
         low_memory=False,
