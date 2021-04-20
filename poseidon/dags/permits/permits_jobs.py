@@ -65,6 +65,7 @@ def get_permits_files(mode='pts',**context):
 
     # Create a sql file containing query for the database
     # Save this file in a sql folder at the same level as the jobs file
+    files = [*filelist]
     for file in files:
 
         if mode in file.lower():
