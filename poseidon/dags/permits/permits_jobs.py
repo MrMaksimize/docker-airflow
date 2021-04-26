@@ -32,7 +32,7 @@ filelist = {'Closed PTS projects':{
                 'ext':'xls'},
             'All other active Accela permits all time':{
                 'name':'Accela_Active_NonPV',
-
+                'ext':'xls'},
             'All other closed Accela permits all time':{
                 'name':'Accela_Closed_NonPV',
                 'ext':'xls'}}
