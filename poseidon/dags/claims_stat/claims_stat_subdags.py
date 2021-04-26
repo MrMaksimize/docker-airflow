@@ -18,9 +18,9 @@ conf = general.config
 schedule = general.schedule['claims_stat']
 start_date = general.start_date['claims_stat']
 
-claims_kwargs = {'tsw':['Storm Water-211612','Street-211611'],
-'pd':['Police-191400'],
-'pud':['Wastewater Collection','Wastewater Treatment and Disposal','Water System Operations']}
+claims_kwargs = {'tsw':['2116'],
+'pd':['1914'],
+'pud':['2000']}
 
 def create_subdag():
     
@@ -32,8 +32,8 @@ def create_subdag():
             catchup=False)
 
     for org_name in [*claims_kwargs]:
-        # dataset is tsw or pd
-        # temp_kwargs = ORGANIZATION_DESC
+        # dataset is tsw, pd, or pud
+        # temp_kwargs = ORG_CODE_SUBSTR
         claim_orgs = claims_kwargs[org_name]
         email_org = org_name.upper()
 
