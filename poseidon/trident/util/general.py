@@ -145,7 +145,7 @@ schedule = {
     'ga_portal': '@monthly',
     'pv_prod':'@hourly',
     'fleet':"0 12 * * *", # Daily at 4p UTC / 5a PST
-    'pd_docs':"0 9 * * *", # Daily at 9a UTC / 2a PST
+    'pd_docs':"0 8 * * *", # Daily at 8a UTC / 1a PST
 }
 
 default_date = datetime(2019, 10, 8)
