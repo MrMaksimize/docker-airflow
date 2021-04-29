@@ -194,7 +194,7 @@ def claims_by_department(org_name='',
     **kwargs):
     
     df_temp = pd.read_csv(f"{prod}/claim_stat_datasd.csv")
-    df_dept = df_temp.loc[df_temp["ORGANIZATION_DESC"].isin(claim_orgs),:]
+    df_dept = df_temp.loc[df_temp["ORG_CODE_SUBSTR"].isin(claim_orgs),:]
     general.pos_write_csv(df_dept,
         f'{prod}/claims_clean_datasd_{org_name}.csv')
 

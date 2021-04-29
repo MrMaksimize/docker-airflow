@@ -145,6 +145,7 @@ schedule = {
     'ga_portal': '@monthly',
     'pv_prod':'@hourly',
     'fleet':"0 12 * * *", # Daily at 4p UTC / 5a PST
+    'pd_docs':"0 8 * * *", # Daily at 8a UTC / 1a PST
 }
 
 default_date = datetime(2019, 10, 8)
@@ -195,7 +196,8 @@ start_date = {
     'pv_prod': datetime(2020, 2, 26),
     'sidewalks':  default_date,
     'ga_portal': datetime(2020, 5, 19),
-    'fleet': datetime(2020, 8, 26)
+    'fleet': datetime(2020, 8, 26),
+    'pd_docs': datetime(2021, 4, 27),
 }
 
 args = {
