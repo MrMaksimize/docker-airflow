@@ -23,10 +23,12 @@ library(shiny)
 library(purrr)
 library(colorspace)
 
-claims <- read.csv("http://seshat.datasd.org/risk/claims_clean_datasd_pud.csv", header=T, na.strings=c(""," ","NA"))
+#claims <- read.csv("http://seshat.datasd.org/risk/claims_clean_datasd_pud.csv", header=T, na.strings=c(""," ","NA"))
+claims <-read.csv("http://datasd.dev.s3.amazonaws.com/risk/claims_clean_datasd_pud.csv") #change me for production URL
+#claims<- read.csv("claimstat_raw.csv")
+#claims<-subset(claims, ORG_CODE_SUBSTR=="2000")
+  
 
-# CHANGE ME FOR PRODUCTION URL!!!!!!!
-# claims <- read.csv("http://datasd-dev.s3.amazonaws.com/risk/claims_clean_datasd_v1.csv", header=T, na.strings=c("", " ", "NA"))
 claims<-unique(claims)
 
 claims <-data.table(claims)
