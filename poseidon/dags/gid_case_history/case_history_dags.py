@@ -26,9 +26,17 @@ dag = DAG(dag_id='gid_case_history',
         )
 
 #: Get GID CaseHistory from Salesforce
-get_streets_requests = PythonOperator(
-    task_id='get_case_history',
-    python_callable=get_case_history,
+get_last_timestamp = PythonOperator(
+    task_id='get_last_timestamp',
+    python_callable=get_last_timestamp,
     dag=dag)
+
+backup_case_history = PythonOperator(
+    task_id='backup_case_history',
+    python_callable=backup_case_history,
+    provide_context=True,
+    dag=dag)
+
           
 #: Execution rules
+get_last_timestamp >> backup_case_history
