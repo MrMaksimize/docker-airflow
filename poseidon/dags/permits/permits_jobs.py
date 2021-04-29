@@ -181,7 +181,7 @@ def build_pts(**context):
     'Job ID':'str',
     'Approval ID':'str'}
 
-    exec_date = context['next_execution_date'].in_tz(tz='US/Pacific')
+    exec_date = context['next_execution_date'].in_tz(tz='UTC')
     old_file_date = exec_date.subtract(days=1)
     new_file_date = exec_date
 
@@ -222,7 +222,7 @@ def build_pts(**context):
 
     df_new = pd.concat([active,closed,closed_pr],sort=True,ignore_index=True)
 
-    df_new['file_date'] = new_filename
+    df_new['date_last_updated'] = new_filename
 
     df_new.columns = [x.lower().strip().replace(' ','_').replace('-','_') for x in df_new.columns]
 
@@ -243,8 +243,9 @@ def build_pts(**context):
         dtype={'approval_id':str})
 
     prod_cols = df_old.columns.tolist()
+    prod_cols.append('date_last_updated')
 
-    df_old['file_date'] = old_filename
+    df_old['date_last_updated'] = old_filename
 
     all_records = pd.concat([df_new,df_old],
         sort=True,
@@ -254,7 +255,7 @@ def build_pts(**context):
     logging.info(f"Old file contains {df_old.shape[0]} records")
     logging.info(f"Combined is {all_records.shape[0]} records")
 
-    all_sorted = all_records.sort_values(['approval_id','file_date'],ascending=[True,False])
+    all_sorted = all_records.sort_values(['approval_id','date_last_updated'],ascending=[True,False])
     logging.info(f"All sorted has {all_sorted.shape[0]} records")
     deduped = all_sorted.drop_duplicates(subset='approval_id')
 
@@ -264,8 +265,7 @@ def build_pts(**context):
 
     general.pos_write_csv(
     deduped[prod_cols],
-    f"{conf['temp_data_dir']}/dsd_permits_all_pts.csv",
-    date_format="%Y-%m-%d %H:%M:%S")
+    f"{conf['temp_data_dir']}/dsd_permits_all_pts.csv")
 
     return 'Created new PTS file'
 
@@ -519,7 +519,8 @@ def create_subsets(mode='set1',**context):
     'date_approval_issue',
     'date_approval_create',
     'date_approval_close',
-    'date_approval_expire'
+    'date_approval_expire',
+    'date_last_updated'
     ]
 
     dtypes = {'development_id':str,
@@ -553,6 +554,8 @@ def create_subsets(mode='set1',**context):
 
     logging.info(f"Writing compressed csv")
     general.sf_write_csv(df,comp_csv_path)
+
+    df = df.drop(columns=['date_last_updated'])
 
     closed = df.loc[~df['date_approval_close'].isna()]
 
