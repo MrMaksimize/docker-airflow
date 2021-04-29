@@ -682,8 +682,10 @@ def create_pw_sap_subset():
 
     traffic_title = accela_all.loc[accela_all['approval_type'] == 'Traffic Control Plan-Permit',:].apply(lambda x: f"{x['approval_type']} {x['address_job'].split(',')[0]}", axis=1)
 
-    accela_all.loc[accela_all['approval_type'] == 'Traffic Control Plan-Permit',
-    'project_id'] = accela_all.loc[accela_all['approval_type'] == 'Traffic Control Plan-Permit','approval_id']
+    accela_all.loc[accela_all['approval_type'].isin(['Traffic Control Plan-Permit',
+        'Traffic Control Permit']),
+    'project_id'] = accela_all.loc[accela_all['approval_type'].isin(['Traffic Control Plan-Permit',
+        'Traffic Control Permit']),'approval_id']
 
     accela_all.loc[accela_all['approval_type'] == 'Traffic Control Plan-Permit',
     'project_title'] = traffic_title
