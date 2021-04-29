@@ -11,18 +11,19 @@ from shlex import quote
 from datetime import datetime as dt
 from airflow.hooks.base_hook import BaseHook
 from airflow.models import Variable
+import cx_Oracle
 
 conf = general.config
 
 filelist = {'Closed PTS projects':{
-                'name':'P2K_261-Panda_Extract_DSD_Projects_Closed',
-                'ext':'txt'},
+                'name':'04_dsd_projclosed',
+                'ext':None},
             'Closed PTS approvals since 2019':{
-                'name':'P2K_261-Panda_Extract_DSD_Permits_Closed',
-                'ext':'txt'},
+                'name':'03_dsd_permitsclosed',
+                'ext':None},
             'Active PTS approvals since 2003':{
-                'name':'P2K_261-Panda_Extract_DSD_Permits_Active',
-                'ext':'txt'},
+                'name':'02_dsd_permitsactive',
+                'ext':None},
             'Active Accela PV permits all time':{
                 'name':'Accela_Active_PV',
                 'ext':'xls'},
@@ -36,9 +37,9 @@ filelist = {'Closed PTS projects':{
                 'name':'Accela_Closed_NonPV',
                 'ext':'xls'}}
 
-def get_permits_files(mode='pts',**context):
+def get_accela_files(**context):
     """ Get permit file from ftp site. """
-    logging.info('Retrieving permits data.')
+    logging.info('Retrieving Accela data.')
 
     exec_date = context['next_execution_date'].in_tz(tz='US/Pacific')
     # Exec date returns a Pendulum object
@@ -63,7 +64,7 @@ def get_permits_files(mode='pts',**context):
 
     for file in files:
 
-        if mode in file.lower():
+        if 'accela' in file.lower():
 
             logging.info(f"Checking for {filelist[file].get('name')}")
 
@@ -120,6 +121,51 @@ def get_permits_files(mode='pts',**context):
 
     return filedate_final
 
+def get_pts_views():
+    """ Get permit file from ftp site. """
+
+    logging.info('Retrieving data from Oracle database')
+    # This requires that otherwise optional credentials variable
+    
+    credentials = BaseHook.get_connection(conn_id="DSD_PTS")
+    
+    conn_config = {
+            'user': credentials.login,
+            'password': credentials.password
+        }
+    
+    dsn = credentials.extra_dejson.get('dsn', None)
+    sid = credentials.extra_dejson.get('sid', None)
+    port = credentials.port if credentials.port else 1521
+    conn_config['dsn'] = cx_Oracle.makedsn(dsn, port, sid)
+
+    db = cx_Oracle.connect(conn_config['user'],
+        conn_config['password'],
+        conn_config['dsn'],
+        encoding="UTF-8")
+
+    # OracleHook will not work
+    #db = OracleHook.get_connection("RISK")
+
+    # Create a sql file containing query for the database
+    # Save this file in a sql folder at the same level as the jobs file
+    files = [*filelist]
+    for file in files:
+
+        if 'pts' in file.lower():
+            fpath = filelist[file].get('name')
+            logging.info(f"Checking for {filelist[file].get('name')}")
+            sql= general.file_to_string(f'./sql/{fpath}.sql', __file__)
+            df = pd.read_sql_query(sql, db)
+            logging.info(f'Query returned {df.shape[0]} results')
+
+            general.pos_write_csv(
+                df,
+                f"{conf['temp_data_dir']}/{fpath}.csv")
+
+    return 'Successfully retrieved Oracle data.'    
+
+
 def build_pts(**context):
     """Get PTS permits and create active and closed"""
 
@@ -135,40 +181,40 @@ def build_pts(**context):
     'Job ID':'str',
     'Approval ID':'str'}
 
-    filename = context['task_instance'].xcom_pull(dag_id="dsd_permits.get_create_pts",
-        task_ids='get_pts_files')
+    exec_date = context['next_execution_date'].in_tz(tz='UTC')
+    old_file_date = exec_date.subtract(days=1)
+    new_file_date = exec_date
 
-    #filename = "20200906"
+    # Get zero-padded month and date
+    old_filename = f"{old_file_date.year}" \
+    f"{old_file_date.strftime('%m')}" \
+    f"{old_file_date.strftime('%d')}"
+
+    # Get zero-padded month and date
+    new_filename = f"{new_file_date.year}" \
+    f"{new_file_date.strftime('%m')}" \
+    f"{new_file_date.strftime('%d')}"
     
-    logging.info(f"Reading active permits {filename}")
+    logging.info(f"Reading active permits {new_filename}")
     active = pd.read_csv(f"{conf['temp_data_dir']}/" \
-        + f"{filelist['Active PTS approvals since 2003'].get('name')}_" \
-        + f"{filename}.{filelist['Active PTS approvals since 2003'].get('ext')}",
+        + f"{filelist['Active PTS approvals since 2003'].get('name')}.csv",
         low_memory=False,
-        sep=",",
-        encoding="ISO-8859-1",
         parse_dates=date_cols,
         dtype=dtypes)    
 
     # Closed permits
-    logging.info(f"Reading closed permits {filename}")
+    logging.info(f"Reading closed permits {new_filename}")
     closed = pd.read_csv(f"{conf['temp_data_dir']}/" \
-        + f"{filelist['Closed PTS approvals since 2019'].get('name')}_{filename}." \
-        + f"{filelist['Closed PTS approvals since 2019'].get('ext')}",
+        + f"{filelist['Closed PTS approvals since 2019'].get('name')}.csv",
         low_memory=False,
-        sep=",",
-        encoding="ISO-8859-1",
         parse_dates=date_cols,
         dtype=dtypes)
 
     # Closed projects, open approvals
-    logging.info(f"Reading closed projects {filename}")
+    logging.info(f"Reading closed projects {new_filename}")
     closed_pr = pd.read_csv(f"{conf['temp_data_dir']}/" \
-        + f"{filelist['Closed PTS projects'].get('name')}_{filename}." \
-        + f"{filelist['Closed PTS projects'].get('ext')}",
+        + f"{filelist['Closed PTS projects'].get('name')}.csv",
         low_memory=False,
-        sep=",",
-        encoding="ISO-8859-1",
         parse_dates=date_cols,
         dtype=dtypes)
 
@@ -176,7 +222,7 @@ def build_pts(**context):
 
     df_new = pd.concat([active,closed,closed_pr],sort=True,ignore_index=True)
 
-    df_new['file_date'] = filename
+    df_new['date_last_updated'] = new_filename
 
     df_new.columns = [x.lower().strip().replace(' ','_').replace('-','_') for x in df_new.columns]
 
@@ -197,18 +243,9 @@ def build_pts(**context):
         dtype={'approval_id':str})
 
     prod_cols = df_old.columns.tolist()
+    prod_cols.append('date_last_updated')
 
-    prev_exec_date = context['execution_date'].in_tz(tz='US/Pacific')
-    old_file_date = prev_exec_date.subtract(days=1)
-
-    # Need zero-padded month and date
-    old_filename = f"{old_file_date.year}" \
-    f"{old_file_date.strftime('%m')}" \
-    f"{old_file_date.strftime('%d')}"
-
-    #old_filename = "20200830"
-
-    df_old['file_date'] = old_filename
+    df_old['date_last_updated'] = old_filename
 
     all_records = pd.concat([df_new,df_old],
         sort=True,
@@ -218,7 +255,7 @@ def build_pts(**context):
     logging.info(f"Old file contains {df_old.shape[0]} records")
     logging.info(f"Combined is {all_records.shape[0]} records")
 
-    all_sorted = all_records.sort_values(['approval_id','file_date'],ascending=[True,False])
+    all_sorted = all_records.sort_values(['approval_id','date_last_updated'],ascending=[True,False])
     logging.info(f"All sorted has {all_sorted.shape[0]} records")
     deduped = all_sorted.drop_duplicates(subset='approval_id')
 
@@ -228,8 +265,7 @@ def build_pts(**context):
 
     general.pos_write_csv(
     deduped[prod_cols],
-    f"{conf['temp_data_dir']}/dsd_permits_all_pts.csv",
-    date_format="%Y-%m-%d %H:%M:%S")
+    f"{conf['temp_data_dir']}/dsd_permits_all_pts.csv")
 
     return 'Created new PTS file'
 
@@ -483,7 +519,8 @@ def create_subsets(mode='set1',**context):
     'date_approval_issue',
     'date_approval_create',
     'date_approval_close',
-    'date_approval_expire'
+    'date_approval_expire',
+    'date_last_updated'
     ]
 
     dtypes = {'development_id':str,
@@ -517,6 +554,8 @@ def create_subsets(mode='set1',**context):
 
     logging.info(f"Writing compressed csv")
     general.sf_write_csv(df,comp_csv_path)
+
+    df = df.drop(columns=['date_last_updated'])
 
     closed = df.loc[~df['date_approval_close'].isna()]
 
@@ -682,8 +721,10 @@ def create_pw_sap_subset():
 
     traffic_title = accela_all.loc[accela_all['approval_type'] == 'Traffic Control Plan-Permit',:].apply(lambda x: f"{x['approval_type']} {x['address_job'].split(',')[0]}", axis=1)
 
-    accela_all.loc[accela_all['approval_type'] == 'Traffic Control Plan-Permit',
-    'project_id'] = accela_all.loc[accela_all['approval_type'] == 'Traffic Control Plan-Permit','approval_id']
+    accela_all.loc[accela_all['approval_type'].isin(['Traffic Control Plan-Permit',
+        'Traffic Control Permit']),
+    'project_id'] = accela_all.loc[accela_all['approval_type'].isin(['Traffic Control Plan-Permit',
+        'Traffic Control Permit']),'approval_id']
 
     accela_all.loc[accela_all['approval_type'] == 'Traffic Control Plan-Permit',
     'project_title'] = traffic_title

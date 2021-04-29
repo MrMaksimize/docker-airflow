@@ -118,7 +118,7 @@ schedule = {
     'parking_meters': '0 19 * * *', # daily at 7pm UTC, Noon PST
     'traffic_counts': "@weekly",
     'read': "0 8 * * *", # daily at 8am UTC / 1am PST
-    'dsd_approvals': "0 16 * * 1", # Weekly on Monday at 4p UTC / 8a PST
+    'dsd_approvals': "0 10 * * *", # Daily at 10a UTC / 3a PST
     'streets':"0 0,1,2,3,4,14,15,16,17,18,19,20,21,22,23 * * 1-6", # every hour, 6am to 7pm, Mon-Fri PST
     'get_it_done': "0 7 * * *", # daily at 7am UTC / 11pm PST
     'special_events': "0 8 * * *", # daily at 8am UTC / 1am PST
@@ -145,6 +145,7 @@ schedule = {
     'ga_portal': '@monthly',
     'pv_prod':'@hourly',
     'fleet':"0 12 * * *", # Daily at 4p UTC / 5a PST
+    'pd_docs':"0 8 * * *", # Daily at 8a UTC / 1a PST
 }
 
 default_date = datetime(2019, 10, 8)
@@ -195,7 +196,8 @@ start_date = {
     'pv_prod': datetime(2020, 2, 26),
     'sidewalks':  default_date,
     'ga_portal': datetime(2020, 5, 19),
-    'fleet': datetime(2020, 8, 26)
+    'fleet': datetime(2020, 8, 26),
+    'pd_docs': datetime(2021, 4, 27),
 }
 
 args = {
