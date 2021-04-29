@@ -4,6 +4,7 @@
 
 from trident.util import general
 import logging
+from airflow.models import Variable
 
 # Required variables
 
@@ -59,10 +60,30 @@ temp_path = conf['temp_data_dir']
 
 # Generic functions called in template dags
 
-def python_basic():
+def get_latest_timecard(**context):
     """ 
-    This is a function for the basic Python Operator
+    Download latest timecard extract from S3
     """
+    exec_date = context['execution_date']
+
+    # Relate execution date and PPE date
+    # Use Wednesday after pay period ending
+
+    
+    logging.info("Running basic Python operator task")
+
+    return "Successfully completed basic function"
+
+def process_latest_timecard():
+    """ 
+    Process new records from latest timecard extract
+    """
+    absence_list = Variable.get("ABSENCE_LEAVE_CODES")
+    overtime_list = Variable.get("OVERTIME_TIMECARD_CODES")
+    light_duty_list = Variable.get("LIGHT_DUTY_TIMECARD_CODES")
+    training_list = Variable.get("TRAINING_TIMECARD_CODES")
+    regular_list = Variable.get("REGULAR_TIMECARD_CODES")
+
     
     logging.info("Running basic Python operator task")
 

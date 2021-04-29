@@ -42,9 +42,9 @@ dag = DAG(dag_id='timecards',
 # Optional tasks. Use what you need.
 
 #: Basic Python operator
-template_task_basic = PythonOperator(
-    task_id='python_task_basic',
-    python_callable=python_basic,
+get_latest = PythonOperator(
+    task_id='get_latest_timecard',
+    python_callable=get_latest_timecard,
     dag=dag
 
 #: Upload to S3
