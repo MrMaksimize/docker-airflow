@@ -312,7 +312,7 @@ top_5_count<-top_5_count[,c(1,3)]
 top_5_count<-left_join(top_5_count, test)
 top_5_count<-select(top_5_count, CLAIMANT_REFERENCE2_Desc,Fiscal_Year, Count)
 
-top_5_count<-subset(top_5_count, Fiscal_Year<2020) #TEMPORARILY, JUST FOR PROTOTYPE:
+top_5_count<-subset(top_5_count, Fiscal_Year<2021) 
 
 
 top_5_count <- reshape(top_5_count, 
@@ -373,7 +373,7 @@ top_5_usd<-top_5_usd[,c(1,3)]
 top_5_usd<-left_join(top_5_usd, test)
 top_5_usd<-select(top_5_usd, CLAIMANT_REFERENCE2_Desc,Fiscal_Year, PAID_TOTAL)
 
-top_5_usd<-subset(top_5_usd, Fiscal_Year<2020) #TEMPORARILY, JUST FOR PROTOTYPE:
+top_5_usd<-subset(top_5_usd, Fiscal_Year<2021) 
 
 
 top_5_usd <- reshape(top_5_usd, 
