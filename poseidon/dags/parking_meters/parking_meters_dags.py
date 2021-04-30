@@ -34,7 +34,6 @@ get_parking_files = PythonOperator(
     task_id='get_parking_files',
     python_callable=download_latest,
     provide_context=True,
-    
     dag=dag)
 
 #: Joins downloaded files from ftp to production
@@ -43,7 +42,6 @@ build_prod_file = PythonOperator(
     python_callable=build_prod_file,
     provide_context=True,
     op_kwargs={'year': run_year},
-    
     dag=dag)
 
 #: Create aggregation files

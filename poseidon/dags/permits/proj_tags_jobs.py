@@ -9,86 +9,41 @@ import logging
 from subprocess import Popen, PIPE
 from shlex import quote
 from airflow.hooks.base_hook import BaseHook
+import cx_Oracle
 
 conf = general.config
 
 def get_tags_file(**context):
     """ Get permit file from ftp site. """
-    logging.info('Retrieving project tags from ftp.')
-
-    exec_date = context['next_execution_date'].in_tz(tz='US/Pacific')
-    # Exec date returns a Pendulum object
-    # Runs on Monday for data extracted Sunday
-    file_date_1 = exec_date.subtract(days=1)
-
-    # Need zero-padded month and date
-    filename_1 = f"{file_date_1.year}" \
-    f"{file_date_1.strftime('%m')}" \
-    f"{file_date_1.strftime('%d')}"
-
-    file_date_2 = exec_date
-
-    # Need zero-padded month and date
-    filename_2 = f"{file_date_2.year}" \
-    f"{file_date_2.strftime('%m')}" \
-    f"{file_date_2.strftime('%d')}"
-
-    logging.info(f"Checking FTP for {filename_1}")
-
-    fpath = f"P2K_261-Panda_Extract_DSD_Projects_Tags_{filename_1}.txt"
-
-    conn = BaseHook.get_connection(conn_id="SVC_ACCT")
-
-    command = "smbclient //ad.sannet.gov/dfs " \
-        + f"--user={conn.login}%{conn.password} -W ad -c " \
-        + "'prompt OFF;"\
-        + " cd \"DSD-Shared/All_DSD/Panda/\";" \
-        + " lcd \"/data/temp/\";" \
-        + f" get {fpath};'"
-
-    command = command.format(quote(command))
-
-    p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
-    output, error = p.communicate()
+    logging.info('Retrieving data from Oracle database')
+    # This requires that otherwise optional credentials variable
     
-    if p.returncode != 0:
+    credentials = BaseHook.get_connection(conn_id="DSD_PTS")
+    
+    conn_config = {
+            'user': credentials.login,
+            'password': credentials.password
+        }
+    
+    dsn = credentials.extra_dejson.get('dsn', None)
+    sid = credentials.extra_dejson.get('sid', None)
+    port = credentials.port if credentials.port else 1521
+    conn_config['dsn'] = cx_Oracle.makedsn(dsn, port, sid)
 
-        logging.info(f"Error with {fpath}")
+    db = cx_Oracle.connect(conn_config['user'],
+        conn_config['password'],
+        conn_config['dsn'],
+        encoding="UTF-8")
 
-        logging.info(f"Checking FTP for {filename_2}")
+    sql= general.file_to_string(f'./sql/01_dsd_projecttags.sql', __file__)
+    df = pd.read_sql_query(sql, db)
+    logging.info(f'Query returned {df.shape[0]} results')
 
-        fpath = f"P2K_261-Panda_Extract_DSD_Projects_Tags_{filename_2}.txt"
+    general.pos_write_csv(
+    df,
+    f"{conf['temp_data_dir']}/01_dsd_projecttags.csv")
 
-        command = "smbclient //ad.sannet.gov/dfs " \
-        + f"--user={conn.login}%{conn.password} -W ad -c " \
-        + "'prompt OFF;"\
-        + " cd \"DSD-Shared/All_DSD/Panda/\";" \
-        + " lcd \"/data/temp/\";" \
-        + f" get {fpath};'"
-
-        command = command.format(quote(command))
-
-        p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
-        output, error = p.communicate()
-        
-        if p.returncode != 0:
-
-            logging.info(f"Error with {fpath}")
-            logging.info("Could not find files for either day")
-            logging.info(output)
-            logging.info(error)
-            raise Exception(p.returncode)
-
-        else:
-
-            logging.info(f"Found {fpath}")
-            filedate_final = filename_2
-    else:
-
-        logging.info(f"Found {fpath}")
-        filedate_final = filename_1
-
-    return filedate_final
+    return 'Successfully retrieved Oracle data.' 
 
 def build_tags(**context):
     """Get PTS permits and create active and closed"""
@@ -97,14 +52,10 @@ def build_tags(**context):
     'PROJ_ID':'str',
     'PROJ_TAG_ID':'str'}
 
-    filename = context['task_instance'].xcom_pull(dag_id="dsd_proj_tags",
-        task_ids='get_tags_files')
 
     logging.info("Reading in project tag file")
-    df = pd.read_csv(f"{conf['temp_data_dir']}/P2K_261-Panda_Extract_DSD_Projects_Tags_{filename}.txt",
+    df = pd.read_csv(f"{conf['temp_data_dir']}/01_dsd_projecttags.csv",
         low_memory=False,
-        sep=",",
-        encoding="ISO-8859-1",
         dtype=dtypes)
 
     logging.info("File read successfully, renaming columns")

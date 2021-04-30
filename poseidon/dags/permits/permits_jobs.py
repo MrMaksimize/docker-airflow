@@ -42,6 +42,7 @@ def get_accela_files(**context):
     logging.info('Retrieving Accela data.')
 
     exec_date = context['next_execution_date'].in_tz(tz='US/Pacific')
+
     # Exec date returns a Pendulum object
     # Runs on Monday for data extracted Sunday
     file_date_1 = exec_date.subtract(days=1)
@@ -165,7 +166,6 @@ def get_pts_views():
 
     return 'Successfully retrieved Oracle data.'    
 
-
 def build_pts(**context):
     """Get PTS permits and create active and closed"""
 
@@ -182,17 +182,11 @@ def build_pts(**context):
     'Approval ID':'str'}
 
     exec_date = context['next_execution_date'].in_tz(tz='UTC')
-    old_file_date = exec_date.subtract(days=1)
     new_file_date = exec_date
 
     # Get zero-padded month and date
-    old_filename = f"{old_file_date.year}" \
-    f"{old_file_date.strftime('%m')}" \
-    f"{old_file_date.strftime('%d')}"
-
-    # Get zero-padded month and date
-    new_filename = f"{new_file_date.year}" \
-    f"{new_file_date.strftime('%m')}" \
+    new_filename = f"{new_file_date.year}-" \
+    f"{new_file_date.strftime('%m')}-" \
     f"{new_file_date.strftime('%d')}"
     
     logging.info(f"Reading active permits {new_filename}")
@@ -236,16 +230,19 @@ def build_pts(**context):
         'approval_create_date':'date_approval_create',
         'approval_close_date':'date_approval_close'})
 
+    df_new['date_last_updated'] = df_new['date_last_updated'].apply(lambda x: pd.to_datetime(x))
+
     logging.info("Reading in existing")
 
     df_old = pd.read_csv(f"{conf['temp_data_dir']}/dsd_permits_all_pts.csv",
         low_memory=False,
         dtype={'approval_id':str})
+        #parse_dates=['date_last_updated'])
+
+    df_old['date_last_updated'] = '2021-04-26'
+    df_old['date_last_updated'] = df_old['date_last_updated'].apply(lambda x: pd.to_datetime(x))
 
     prod_cols = df_old.columns.tolist()
-    prod_cols.append('date_last_updated')
-
-    df_old['date_last_updated'] = old_filename
 
     all_records = pd.concat([df_new,df_old],
         sort=True,
@@ -268,6 +265,18 @@ def build_pts(**context):
     f"{conf['temp_data_dir']}/dsd_permits_all_pts.csv")
 
     return 'Created new PTS file'
+
+def check_day_of_week(**context):
+    """
+    Check to see if new Accela files are available
+    If not, skip to end
+    """
+    currTime = context['next_execution_date'].in_tz(tz='US/Pacific')
+    
+    if currTime.day_of_week == 0:
+        return "get_accela_files"
+    else:
+        return "subset_accela"
 
 def build_accela(**context):
     """ Get Accela permits and create open and closed """
@@ -551,6 +560,8 @@ def create_subsets(mode='set1',**context):
     logging.info("Converting datetime cols")
     for col in date_cols:
         df[col] = pd.to_datetime(df[col],errors='coerce')
+
+    logging.info(df.columns)
 
     logging.info(f"Writing compressed csv")
     general.sf_write_csv(df,comp_csv_path)
