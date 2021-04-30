@@ -44,7 +44,7 @@ def get_last_timestamp():
     last_timestamp = obj.get()['Body'].read()
 
     if last_timestamp != None:
-        return last_timestamp
+        return last_timestamp.decode()
     else:
         return None
 
@@ -62,21 +62,22 @@ def backup_case_history(**context):
     last_timestamp = context['task_instance'].xcom_pull(task_ids='get_last_timestamp')
 
     if last_timestamp == None:
-        last_timestamp = '2021-04-29T20:30:22.000Z' # from manual load
+        last_timestamp = '2021-04-30T20:50:35.000Z' # from manual load
 
     query = f"SELECT CaseId, CreatedById, CreatedDate, Field, Id, IsDeleted, NewValue, OldValue FROM CaseHistory WHERE CreatedDate > {last_timestamp} ORDER BY CreatedDate LIMIT {query_limit}"
 
-    logging.info(f'Process report data last timestamp: {last_timestamp}.')
+    logging.info(f'Querying case history equal or newer than {last_timestamp}.')
     job = bulk.create_job("CaseHistory", contentType='CSV', operation="queryAll")
     batch = bulk.query(job, query)
     bulk.wait_for_batch(job, batch)
     bulk.close_job(job)
-    history = bulk.get_batch_result_iter(job, batch, parse_csv=True)
+    history = bulk.get_batch_result_iter(job, batch, parse_csv=True, logger=logging.info)
 
     bucket_name = Variable.get('S3_GID_CASE_BUCKET')
     session = boto3.session.Session(profile_name='airflowssm')
     s3 = session.resource('s3')
 
+    line_num = 0
     new_last_timestamp = None
     for history_line in history:
         obj = s3.Object(bucket_name, history_line['CaseId'] + '/' + history_line['Id'])
@@ -84,6 +85,10 @@ def backup_case_history(**context):
         obj.put(Body=json_history_line.encode())
 
         new_last_timestamp = history_line['CreatedDate']
+
+        line_num = line_num + 1
+        #if line_num % 100 == 0:
+        #    logging.info(f'Uploaded {line_num} {obj} {new_last_timestamp}')
 
 
     if new_last_timestamp != None:

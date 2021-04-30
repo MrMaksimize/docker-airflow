@@ -447,8 +447,7 @@ class SalesforceBulkipy(object):
             return None
         elif logger:
             if 'numberRecordsProcessed' in status:
-                logger("Bulk batch %d processed %s records" %
-                       (batch_id, status['numberRecordsProcessed']))
+                logger(f"Bulk batch {batch_id} processed {status['numberRecordsProcessed']} records")
             if 'numberRecordsFailed' in status:
                 failed = int(status['numberRecordsFailed'])
                 if failed > 0:
