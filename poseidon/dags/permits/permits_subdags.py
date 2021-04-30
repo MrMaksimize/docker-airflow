@@ -1,5 +1,5 @@
 """DSD Permits subdags file."""
-from airflow.operators.python_operator import PythonOperator
+from airflow.operators.python_operator import PythonOperator, BranchPythonOperator
 from trident.operators.s3_file_transfer_operator import S3FileTransferOperator
 from airflow.contrib.operators.snowflake_operator import SnowflakeOperator
 from airflow.models import DAG
@@ -34,6 +34,12 @@ def get_create_accela_subdag():
     python_callable=get_accela_files,
     dag=dag_subdag)
 
+  check_day = BranchPythonOperator(
+    task_id='check_for_Monday',
+    provide_context=True,
+    python_callable=check_day_of_week,
+    dag=dag_subdag)
+
   create = PythonOperator(
     task_id=f"create_set2",
     provide_context=True,
@@ -53,7 +59,8 @@ def get_create_accela_subdag():
     op_kwargs={'mode': 'set2'},
     dag=dag_subdag)
 
-  get_files>>create>>join>>subset
+  check_day>>get_files>>create>>join>>subset
+  check_day>>subset
 
   return dag_subdag
 
