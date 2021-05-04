@@ -24,17 +24,11 @@ filelist = {'Closed PTS projects':{
             'Active PTS approvals since 2003':{
                 'name':'02_dsd_permitsactive',
                 'ext':None},
-            'Active Accela PV permits all time':{
-                'name':'Accela_Active_PV',
+            'Active Accela permits all time':{
+                'name':'Accela_Active_ALL',
                 'ext':'xls'},
-            'Closed Accela PV permits all time':{
-                'name':'Accela_Closed_PV',
-                'ext':'xls'},
-            'All other active Accela permits all time':{
-                'name':'Accela_Active_NonPV',
-                'ext':'xls'},
-            'All other closed Accela permits all time':{
-                'name':'Accela_Closed_NonPV',
+            'Closed Accela permits all time':{
+                'name':'Accela_Closed_ALL',
                 'ext':'xls'}}
 
 def get_accela_files(**context):
@@ -236,11 +230,8 @@ def build_pts(**context):
 
     df_old = pd.read_csv(f"{conf['temp_data_dir']}/dsd_permits_all_pts.csv",
         low_memory=False,
-        dtype={'approval_id':str})
-        #parse_dates=['date_last_updated'])
-
-    df_old['date_last_updated'] = '2021-04-26'
-    df_old['date_last_updated'] = df_old['date_last_updated'].apply(lambda x: pd.to_datetime(x))
+        dtype={'approval_id':str},
+        parse_dates=['date_last_updated'])
 
     prod_cols = df_old.columns.tolist()
 
@@ -273,7 +264,7 @@ def check_day_of_week(**context):
     """
     currTime = context['next_execution_date'].in_tz(tz='US/Pacific')
     
-    if currTime.day_of_week == 0:
+    if currTime.day_of_week == 1:
         return "get_accela_files"
     else:
         return "subset_accela"
@@ -299,40 +290,26 @@ def build_accela(**context):
     filename = context['task_instance'].xcom_pull(dag_id="dsd_permits.get_create_accela",
         task_ids='get_accela_files')
 
-    #filename = "20201116"
+    #filename = "20210503"
         
     logging.info(f"Reading active PV permits for {filename}")
-    pv_active = pd.read_excel(f"{conf['temp_data_dir']}/" \
-        + f"{filelist['Active Accela PV permits all time'].get('name')}_{filename}." \
-        + f"{filelist['Active Accela PV permits all time'].get('ext')}",
-        dtype=dtypes,
-        na_values=' null')
-
-    logging.info(f"Reading active non PV permits for {filename}")
-    other_active = pd.read_excel(f"{conf['temp_data_dir']}/" \
-        + f"{filelist['All other active Accela permits all time'].get('name')}_{filename}." \
-        + f"{filelist['All other active Accela permits all time'].get('ext')}",
+    active = pd.read_excel(f"{conf['temp_data_dir']}/" \
+        + f"{filelist['Active Accela permits all time'].get('name')}_{filename}." \
+        + f"{filelist['Active Accela permits all time'].get('ext')}",
         dtype=dtypes,
         na_values=' null')
         
     logging.info(f"Reading inactive PV permits for {filename}")
-    pv_closed = pd.read_excel(f"{conf['temp_data_dir']}/" \
-        + f"{filelist['Closed Accela PV permits all time'].get('name')}_{filename}." \
-        + f"{filelist['Closed Accela PV permits all time'].get('ext')}",
-        dtype=dtypes,
-        na_values=' null')
-    
-    logging.info(f"Reading inactive non PV permits for {filename}")
-    other_closed = pd.read_excel(f"{conf['temp_data_dir']}/" \
-        + f"{filelist['All other closed Accela permits all time'].get('name')}_{filename}." \
-        + f"{filelist['All other closed Accela permits all time'].get('ext')}",
+    closed = pd.read_excel(f"{conf['temp_data_dir']}/" \
+        + f"{filelist['Closed Accela permits all time'].get('name')}_{filename}." \
+        + f"{filelist['Closed Accela permits all time'].get('ext')}",
         dtype=dtypes,
         na_values=' null')
     
     logging.info("Files read successfully")
     
     logging.info("Concatting all")
-    df = pd.concat([pv_active,pv_closed,other_active,other_closed],
+    df = pd.concat([active,closed],
         sort=True,
         ignore_index=True)
     
@@ -362,28 +339,19 @@ def build_accela(**context):
 
     df = df.drop(columns=['project_expiration_date','project_expiration_code'])    
 
-    df['file_date'] = filename
+    df['date_last_updated'] = filename
+
+    df['date_last_updated'] = df['date_last_updated'].apply(lambda x: pd.to_datetime(x,errors='coerce'))
 
     logging.info("Reading in existing file")
 
     df_old = pd.read_csv(f"{conf['temp_data_dir']}/dsd_permits_all_accela.csv",
         low_memory=False,
-        dtype={'approval_id':str}
+        dtype={'approval_id':str},
+        parse_dates=['date_last_updated']
         )
 
     prod_cols = df_old.columns.tolist()
-
-    prev_exec_date = context['execution_date'].in_tz(tz='US/Pacific')
-    old_file_date = prev_exec_date.subtract(days=1)
-
-    # Need zero-padded month and date
-    old_filename = f"{old_file_date.year}" \
-    f"{old_file_date.strftime('%m')}" \
-    f"{old_file_date.strftime('%d')}"
-
-    #old_filename = "20201102"
-
-    df_old['file_date'] = old_filename
 
     all_records = pd.concat([df,df_old],
         sort=True,
@@ -393,7 +361,7 @@ def build_accela(**context):
     logging.info(f"Old file contains {df_old.shape[0]} records")
     logging.info(f"Combined is {all_records.shape[0]} records")
 
-    all_sorted = all_records.sort_values(['approval_id','file_date'],ascending=[True,False])
+    all_sorted = all_records.sort_values(['approval_id','date_last_updated'],ascending=[True,False])
     deduped = all_sorted.drop_duplicates(subset='approval_id')
 
     logging.info(f"Deduped file has {deduped.shape[0]} records")
@@ -560,8 +528,6 @@ def create_subsets(mode='set1',**context):
     logging.info("Converting datetime cols")
     for col in date_cols:
         df[col] = pd.to_datetime(df[col],errors='coerce')
-
-    logging.info(df.columns)
 
     logging.info(f"Writing compressed csv")
     general.sf_write_csv(df,comp_csv_path)
