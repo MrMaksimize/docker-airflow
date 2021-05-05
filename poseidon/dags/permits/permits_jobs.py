@@ -263,6 +263,8 @@ def check_day_of_week(**context):
     If not, skip to end
     """
     currTime = context['next_execution_date'].in_tz(tz='US/Pacific')
+    logging.info(f"The time for next execution in PST is {currTime}")
+    logging.info(f"The day of week for this current time is {currTime.day_of_week}")
     
     if currTime.day_of_week == 1:
         return "get_accela_files"
