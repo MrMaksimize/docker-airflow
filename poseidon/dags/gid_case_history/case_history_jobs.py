@@ -62,7 +62,7 @@ def backup_case_history(**context):
     last_timestamp = context['task_instance'].xcom_pull(task_ids='get_last_timestamp')
 
     if last_timestamp == None:
-        last_timestamp = '2021-04-30T20:50:35.000Z' # from manual load
+        last_timestamp = '2021-05-05T15:00:31.000Z' # from manual load
 
     query = f"SELECT CaseId, CreatedById, CreatedDate, Field, Id, IsDeleted, NewValue, OldValue FROM CaseHistory WHERE CreatedDate > {last_timestamp} ORDER BY CreatedDate LIMIT {query_limit}"
 
