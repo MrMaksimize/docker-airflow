@@ -60,8 +60,7 @@ def get_create_accela_subdag():
     dag=dag_subdag)
 
   check_day>>get_files>>create>>join>>subset
-  check_day>>subset
-
+  
   return dag_subdag
 
 def get_create_pts_subdag():
