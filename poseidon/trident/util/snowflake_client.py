@@ -43,7 +43,7 @@ def format_copy_sql(table_name):
 	query_string = f"COPY INTO {table_name} from " \
 	+ f"@airflow_etl/{table_name}/" \
 	+ f"{today.year}/{today.month}/{today.day}" \
-	+ " on_error=abort_statement purge=true" \
+	+ " on_error=abort_statement" \
 
 	query_string = query_string.format(quote(query_string))
 
