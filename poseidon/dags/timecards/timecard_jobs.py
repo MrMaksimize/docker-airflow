@@ -46,12 +46,6 @@ import time
 from dateutil.parser import parse
 import pendulum # This is the date library Airflow uses with context
 
-from shapely.geometry import Point
-from trident.util import geospatial
-from trident.util.geospatial import geocode_address_google
-from trident.util.geospatial import get_address_for_apn
-from trident.util.geospatial import spatial_join_pt
-import geopandas as gpd
 
 # Optional variables
 
@@ -64,13 +58,33 @@ def get_latest_timecard(**context):
     """ 
     Download latest timecard extract from S3
     """
-    exec_date = context['execution_date']
+    exec_date = context['execution_date'].in_timezone('America/Los_Angeles')
+
+    #date_delta = exec_date.subtract(weeks=2)
+
+    # Do not need zero-padded month and date
+    filedate = f"{file_date_2.strftime('%-m')}." \
+    f"{file_date_2.strftime('%-d')}." \
+    f"{file_date_2.year}"
+
+    filename = f"Time Report for PANDA_PPE {filedate}.xls"
+
+    logging.info(f"Looking for file named {filename}")
 
     # Relate execution date and PPE date
     # Use Wednesday after pay period ending
+    bucket_name=Variable.get('S3_INTERNAL_BUCKET')
+    s3_url = f"s3://{bucket_name}/dof/{filename}"
 
+    df = pd.read_excel(s3_url,
+        engine='openpyxl')
+
+    general.pos_write_csv(
+    df,
+    f"{conf['temp_data_dir']}/timecard_hours_{filedate}.csv",
+    date_format="%Y-%m-%d")
     
-    logging.info("Running basic Python operator task")
+    logging.info("Created temp timecard data")
 
     return "Successfully completed basic function"
 
@@ -83,6 +97,7 @@ def process_latest_timecard():
     light_duty_list = Variable.get("LIGHT_DUTY_TIMECARD_CODES")
     training_list = Variable.get("TRAINING_TIMECARD_CODES")
     regular_list = Variable.get("REGULAR_TIMECARD_CODES")
+    covid_list = Variable.get("COVID_TIMECARD_CODES")
 
     
     logging.info("Running basic Python operator task")

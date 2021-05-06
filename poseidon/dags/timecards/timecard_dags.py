@@ -27,8 +27,8 @@ from trident.operators.poseidon_email_operator import PoseidonEmailWithPythonOpe
 from airflow.models import Variable
 args = general.args
 conf = general.config
-schedule = '@daily' # Replace
-start_date = general.default_date # Replace
+schedule = general.schedule['timecards'] # Replace
+start_date = general.start_date['timecards'] # Replace
 
 
 #: Required DAG definition
@@ -45,7 +45,7 @@ dag = DAG(dag_id='timecards',
 get_latest = PythonOperator(
     task_id='get_latest_timecard',
     python_callable=get_latest_timecard,
-    dag=dag
+    dag=dag)
 
 #: Upload to S3
 upload_data = S3FileTransferOperator(
@@ -60,4 +60,4 @@ upload_data = S3FileTransferOperator(
 
 
 #: Required execution rules
-template_task_basic >> upload_data
+get_latest >> upload_data
